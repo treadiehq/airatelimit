@@ -12,6 +12,7 @@ import { Response } from 'express';
 import { ProjectsService } from '../projects/projects.service';
 import { UsageService } from '../usage/usage.service';
 import { RuleEngineService } from '../usage/rule-engine.service';
+import { RuleAnalyticsService } from '../usage/rule-analytics.service';
 import { ProxyService } from './proxy.service';
 import { ChatProxyRequestDto } from './dto/chat-proxy-request.dto';
 
@@ -21,6 +22,7 @@ export class ProxyController {
     private readonly projectsService: ProjectsService,
     private readonly usageService: UsageService,
     private readonly ruleEngineService: RuleEngineService,
+    private readonly ruleAnalyticsService: RuleAnalyticsService,
     private readonly proxyService: ProxyService,
   ) {}
 
@@ -47,11 +49,11 @@ export class ProxyController {
       // Estimate tokens (actual will be updated after OpenAI response)
       const estimatedTokens = body.max_tokens || 0;
 
-      // Phase 2: Check and update usage with tier support
+      // Check and update usage with tier support
       const usageCheck = await this.usageService.checkAndUpdateUsage({
         project,
         identity: body.identity,
-        tier: body.tier, // Phase 2: Pass tier from request
+        tier: body.tier,
         periodStart: today,
         requestedTokens: estimatedTokens,
         requestedRequests: 1,
@@ -66,7 +68,7 @@ export class ProxyController {
         latency: Date.now() - startTime,
       });
 
-      // Phase 3: Evaluate rules if configured
+      // Evaluate rules if configured
       if (usageCheck.allowed && usageCheck.usageCounter && usageCheck.usagePercent) {
         const ruleResult = this.ruleEngineService.evaluateRules({
           project,
@@ -80,6 +82,24 @@ export class ProxyController {
 
         // If a rule matched and action is block or custom_response
         if (ruleResult.matched && ruleResult.action) {
+          // Log the rule trigger for analytics
+          if (ruleResult.ruleId && ruleResult.ruleName) {
+            await this.ruleAnalyticsService.logTrigger({
+              project,
+              ruleId: ruleResult.ruleId,
+              ruleName: ruleResult.ruleName,
+              identity: body.identity,
+              tier: body.tier,
+              condition: ruleResult.condition,
+              action: ruleResult.action,
+              context: {
+                usagePercent: usageCheck.usagePercent,
+                requestsUsed: usageCheck.usageCounter.requestsUsed,
+                tokensUsed: usageCheck.usageCounter.tokensUsed,
+              },
+            });
+          }
+
           if (ruleResult.action.type === 'block') {
             throw new HttpException(
               ruleResult.action.response || { error: 'Blocked by rule' },
@@ -167,17 +187,17 @@ export class ProxyController {
       // Estimate tokens
       const estimatedTokens = body.max_tokens || 0;
 
-      // Phase 2: Check usage limits BEFORE streaming with tier support
+      // Check usage limits BEFORE streaming with tier support
       const usageCheck = await this.usageService.checkAndUpdateUsage({
         project,
         identity: body.identity,
-        tier: body.tier, // Phase 2: Pass tier from request
+        tier: body.tier,
         periodStart: today,
         requestedTokens: estimatedTokens,
         requestedRequests: 1,
       });
 
-      // Phase 3: Evaluate rules if configured
+      // Evaluate rules if configured
       if (usageCheck.allowed && usageCheck.usageCounter && usageCheck.usagePercent) {
         const ruleResult = this.ruleEngineService.evaluateRules({
           project,
@@ -191,6 +211,24 @@ export class ProxyController {
 
         // If a rule matched and action is block or custom_response
         if (ruleResult.matched && ruleResult.action) {
+          // Log the rule trigger for analytics
+          if (ruleResult.ruleId && ruleResult.ruleName) {
+            await this.ruleAnalyticsService.logTrigger({
+              project,
+              ruleId: ruleResult.ruleId,
+              ruleName: ruleResult.ruleName,
+              identity: body.identity,
+              tier: body.tier,
+              condition: ruleResult.condition,
+              action: ruleResult.action,
+              context: {
+                usagePercent: usageCheck.usagePercent,
+                requestsUsed: usageCheck.usageCounter.requestsUsed,
+                tokensUsed: usageCheck.usageCounter.tokensUsed,
+              },
+            });
+          }
+
           if (ruleResult.action.type === 'block' || ruleResult.action.type === 'custom_response') {
             res.status(HttpStatus.TOO_MANY_REQUESTS).json(
               ruleResult.action.response || { error: 'Blocked by rule' }

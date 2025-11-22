@@ -15,7 +15,7 @@ export class CreateUserProjectDto {
   @IsInt()
   dailyTokenLimit?: number;
 
-  // Phase 1: Limit type
+  // Limit type
   @IsOptional()
   @IsIn(['requests', 'tokens', 'both'])
   limitType?: 'requests' | 'tokens' | 'both';
@@ -24,12 +24,12 @@ export class CreateUserProjectDto {
   @IsObject()
   limitExceededResponse?: any;
 
-  // Phase 2: Tier configuration
+  // Tier configuration
   @IsOptional()
   @IsObject()
   tiers?: Record<string, { requestLimit?: number; tokenLimit?: number; customResponse?: any }>;
 
-  // Phase 3: Rules configuration
+  // Rules configuration
   @IsOptional()
   @IsArray()
   rules?: Array<{

@@ -14,6 +14,9 @@ export interface RuleEvaluationContext {
 
 export interface RuleEvaluationResult {
   matched: boolean;
+  ruleId?: string;
+  ruleName?: string;
+  condition?: any;
   action?: {
     type: 'allow' | 'block' | 'custom_response';
     response?: any;
@@ -24,7 +27,7 @@ export interface RuleEvaluationResult {
 @Injectable()
 export class RuleEngineService {
   /**
-   * Phase 3: Evaluate all enabled rules for a project
+   * Evaluate all enabled rules for a project
    * Returns the first matching rule's action, or null if no rules match
    */
   evaluateRules(context: RuleEvaluationContext): RuleEvaluationResult {
@@ -44,6 +47,9 @@ export class RuleEngineService {
       if (this.evaluateCondition(rule.condition, context)) {
         return {
           matched: true,
+          ruleId: rule.id,
+          ruleName: rule.name,
+          condition: rule.condition,
           action: rule.action,
         };
       }

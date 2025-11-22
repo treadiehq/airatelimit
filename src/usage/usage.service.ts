@@ -12,7 +12,7 @@ const DEFAULT_LIMIT_RESPONSE = {
 interface CheckAndUpdateParams {
   project: Project;
   identity: string;
-  tier?: string; // Phase 2: User's tier/plan
+  tier?: string; // User's tier/plan
   periodStart: Date;
   requestedTokens?: number;
   requestedRequests?: number;
@@ -67,10 +67,10 @@ export class UsageService {
     const nextRequests = usage.requestsUsed + requestedRequests;
     const nextTokens = usage.tokensUsed + requestedTokens;
 
-    // Phase 2: Get tier-specific limits or fall back to project defaults
+    // Get tier-specific limits or fall back to project defaults
     const limits = this.getLimitsForTier(project, tier);
 
-    // Phase 1: Check limits based on limit type
+    // Check limits based on limit type
     const shouldCheckRequests = project.limitType === 'requests' || project.limitType === 'both';
     const shouldCheckTokens = project.limitType === 'tokens' || project.limitType === 'both';
 
@@ -108,7 +108,7 @@ export class UsageService {
     };
   }
 
-  // Phase 2: Get tier-specific limits or project defaults
+  // Get tier-specific limits or project defaults
   private getLimitsForTier(
     project: Project,
     tier?: string,

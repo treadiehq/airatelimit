@@ -22,7 +22,7 @@ export class ChatProxyRequestDto {
 
   @IsOptional()
   @IsString()
-  tier?: string; // Phase 2: Plan/tier identifier (e.g., 'free', 'pro', 'enterprise')
+  tier?: string; // Plan/tier identifier (e.g., 'free', 'pro', 'enterprise')
 
   @IsString()
   model: string;

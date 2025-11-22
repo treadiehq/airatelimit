@@ -56,7 +56,7 @@ export class Project {
   @Column({ nullable: true })
   dailyTokenLimit: number;
 
-  // Phase 1: Limit type configuration
+  // Limit type configuration
   @Column({ 
     type: 'enum', 
     enum: ['requests', 'tokens', 'both'], 
@@ -67,12 +67,12 @@ export class Project {
   @Column({ type: 'text', nullable: true })
   limitExceededResponse: string;
 
-  // Phase 2: Tier-based limits (JSON structure)
+  // Tier-based limits (JSON structure)
   // Example: { "free": { "requestLimit": 5, "tokenLimit": 1000 }, "pro": { ... } }
   @Column({ type: 'jsonb', nullable: true })
   tiers: Record<string, { requestLimit?: number; tokenLimit?: number; customResponse?: any }>;
 
-  // Phase 3: Visual rule engine (JSON structure)
+  // Visual rule engine (JSON structure)
   // Example: [{ "condition": { "type": "usage_percent", "threshold": 80 }, "action": { "type": "response", "data": {...} } }]
   @Column({ type: 'jsonb', nullable: true })
   rules: Array<{

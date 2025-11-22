@@ -14,7 +14,7 @@ export class ProjectsService {
     private projectsRepository: Repository<Project>,
   ) {}
 
-  // Admin methods (Phase 0 compatibility)
+  // Admin methods (legacy compatibility)
   async create(createProjectDto: CreateProjectDto): Promise<Project> {
     const project = this.projectsRepository.create(createProjectDto);
     return this.projectsRepository.save(project);
@@ -36,7 +36,7 @@ export class ProjectsService {
     return this.projectsRepository.find();
   }
 
-  // User-facing methods (Phase 1)
+  // User-facing methods
   async createForUser(
     userId: string,
     organizationId: string,
