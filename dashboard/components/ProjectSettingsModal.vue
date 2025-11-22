@@ -475,11 +475,56 @@
                 </div>
 
                 <!-- Empty State -->
-                <div v-if="Object.keys(editForm.modelLimits || {}).length === 0" class="text-center py-12 bg-gray-500/10 border border-gray-500/20 rounded-lg">
-                  <p class="text-white text-sm mb-1">No model-specific limits configured</p>
-                  <p class="text-gray-400 text-xs">
-                    Add limits for specific models below
-                  </p>
+                <div v-if="Object.keys(editForm.modelLimits || {}).length === 0" class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-8">
+                  <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-300/10 mb-4">
+                      <svg class="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                      </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2">No Model-Specific Limits Yet</h3>
+                    <p class="text-sm text-gray-400 max-w-md mx-auto">
+                      Set different limits for each AI model to control costs and usage patterns. Perfect for multi-model apps.
+                    </p>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg p-4">
+                      <div class="text-xs font-semibold text-blue-300 mb-2">💰 Cost Control</div>
+                      <p class="text-xs text-gray-400">
+                        Limit expensive models (gpt-4o) while giving unlimited access to cheaper ones (gemini-2.5)
+                      </p>
+                    </div>
+                    <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg p-4">
+                      <div class="text-xs font-semibold text-blue-300 mb-2">🧪 Beta Testing</div>
+                      <p class="text-xs text-gray-400">
+                        Set conservative limits on new model releases until you validate quality
+                      </p>
+                    </div>
+                    <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg p-4">
+                      <div class="text-xs font-semibold text-blue-300 mb-2">🎯 Use Case Specific</div>
+                      <p class="text-xs text-gray-400">
+                        Different limits for chat (high volume) vs reasoning (low volume) models
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-4">
+                    <div class="flex items-start">
+                      <svg class="w-5 h-5 text-gray-400 mt-0.5 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div class="text-xs text-gray-400">
+                        <p class="mb-2"><strong class="text-white">Common Models:</strong></p>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                          <span>• gpt-4o, gpt-4o-mini</span>
+                          <span>• claude-3-5-sonnet</span>
+                          <span>• gemini-1.5-pro, gemini-2.5</span>
+                          <span>• o1-preview, o1-mini</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div v-for="(modelLimit, modelName) in editForm.modelLimits" :key="modelName" class="border border-gray-500/10 rounded-lg p-4">
