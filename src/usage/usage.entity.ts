@@ -8,8 +8,9 @@ import {
 } from 'typeorm';
 
 @Entity('usage_counters')
-@Index(['projectId', 'identity', 'periodStart'], { unique: true })
+@Index(['projectId', 'identity', 'periodStart', 'model'], { unique: true })
 @Index(['projectId', 'periodStart'])
+@Index(['projectId', 'model'])
 export class UsageCounter {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -22,6 +23,9 @@ export class UsageCounter {
 
   @Column({ type: 'date' })
   periodStart: Date;
+
+  @Column({ default: '' })
+  model: string;
 
   @Column({ default: 0 })
   requestsUsed: number;

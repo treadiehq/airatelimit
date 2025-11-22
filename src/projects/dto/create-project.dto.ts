@@ -32,10 +32,20 @@ export class CreateProjectDto {
   @IsObject()
   limitExceededResponse?: any;
 
+  // Model-specific limits
+  @IsOptional()
+  @IsObject()
+  modelLimits?: Record<string, { requestLimit?: number; tokenLimit?: number }>;
+
   // Tier configuration
   @IsOptional()
   @IsObject()
-  tiers?: Record<string, { requestLimit?: number; tokenLimit?: number; customResponse?: any }>;
+  tiers?: Record<string, { 
+    requestLimit?: number; 
+    tokenLimit?: number; 
+    customResponse?: any;
+    modelLimits?: Record<string, { requestLimit?: number; tokenLimit?: number }>;
+  }>;
 
   // Rules configuration
   @IsOptional()

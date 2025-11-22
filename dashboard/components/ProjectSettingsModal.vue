@@ -49,6 +49,13 @@
                     Plan Tiers
                   </button>
                   <button
+                    @click="configTab = 'models'"
+                    :class="configTab === 'models' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
+                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
+                  >
+                    Model Limits
+                  </button>
+                  <button
                     @click="configTab = 'rules'"
                     :class="configTab === 'rules' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
                     class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
@@ -298,6 +305,93 @@
                 </button>
               </div>
 
+              <!-- Model Limits Tab -->
+              <div v-show="configTab === 'models'" class="space-y-4 px-6">
+                <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg p-4">
+                  <h3 class="font-semibold text-white mb-2">How Model Limits Work</h3>
+                  <p class="text-sm text-white mb-2">
+                    Set different limits for each AI model (e.g., <strong>gpt-4o</strong>, <strong>claude-3-5-sonnet</strong>, <strong>gemini-pro</strong>).
+                    Usage is tracked separately per model, and you can configure limits at both the project and tier level.
+                  </p>
+                  <div class="mt-3 p-3 bg-gray-500/5 border border-gray-500/10 rounded-lg">
+                    <p class="text-xs text-gray-300 font-semibold mb-1">Priority Order</p>
+                    <p class="text-xs text-gray-400">
+                      <strong>Tier Model Limits</strong> → <strong>Project Model Limits</strong> → <strong>Tier General Limits</strong> → <strong>Project General Limits</strong>
+                    </p>
+                    <p class="text-xs text-gray-400 mt-2">
+                      Model-specific limits override general limits. Configure model limits per tier in the Plan Tiers tab.
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Empty State -->
+                <div v-if="Object.keys(editForm.modelLimits || {}).length === 0" class="text-center py-12 bg-gray-500/10 border border-gray-500/20 rounded-lg">
+                  <p class="text-white text-sm mb-1">No model-specific limits configured</p>
+                  <p class="text-gray-400 text-xs">
+                    Add limits for specific models below
+                  </p>
+                </div>
+
+                <div v-for="(modelLimit, modelName) in editForm.modelLimits" :key="modelName" class="border border-gray-500/10 rounded-lg p-4">
+                  <div class="flex justify-between items-center mb-3">
+                    <h4 class="font-semibold text-white">{{ modelName }}</h4>
+                    <button
+                      @click="deleteModelLimit(String(modelName))"
+                      class="text-gray-500 hover:text-red-500 text-xs"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+                        <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <!-- Limits -->
+                  <div class="grid grid-cols-2 gap-4">
+                    <div>
+                      <label class="block text-xs font-medium text-white mb-1">Request Limit</label>
+                      <input
+                        v-model.number="modelLimit.requestLimit"
+                        type="number"
+                        min="0"
+                        class="w-full px-3 py-2 text-sm text-white bg-gray-500/10 border border-gray-500/10 rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-white mb-1">Token Limit</label>
+                      <input
+                        v-model.number="modelLimit.tokenLimit"
+                        type="number"
+                        min="0"
+                        class="w-full px-3 py-2 text-sm text-white bg-gray-500/10 border border-gray-500/10 rounded-lg"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                  <input
+                    v-model="newModelName"
+                    type="text"
+                    placeholder="e.g., gpt-4o, claude-3-5-sonnet, gemini-pro"
+                    class="flex-1 px-4 py-2 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg text-sm"
+                  />
+                  <button
+                    @click="addModelLimit"
+                    class="px-4 py-2 bg-gray-500/10 border border-gray-500/10 text-white text-sm font-medium rounded-lg hover:bg-gray-500/15 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    + Add Model
+                  </button>
+                </div>
+
+                <button
+                  @click="handleUpdate"
+                  :disabled="updating"
+                  class="w-full px-6 py-2 bg-blue-300 text-black text-sm font-medium rounded-lg hover:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {{ updating ? 'Saving...' : 'Save Model Limits' }}
+                </button>
+              </div>
+
               <!-- Rules Tab -->
               <div v-show="configTab === 'rules'" class="px-6">
                 <RuleBuilder v-model="editForm.rules" />
@@ -467,6 +561,7 @@ const emit = defineEmits<{
 
 const configTab = ref('basic')
 const newTierName = ref('')
+const newModelName = ref('')
 const analytics = ref<any>(null)
 const analyticsLoading = ref(false)
 const analyticsError = ref('')
@@ -494,6 +589,20 @@ const addTier = () => {
 
 const deleteTier = (tierName: string) => {
   delete props.editForm.tiers[tierName]
+}
+
+const addModelLimit = () => {
+  if (newModelName.value && !props.editForm.modelLimits[newModelName.value]) {
+    props.editForm.modelLimits[newModelName.value] = {
+      requestLimit: 0,
+      tokenLimit: 0,
+    }
+    newModelName.value = ''
+  }
+}
+
+const deleteModelLimit = (modelName: string) => {
+  delete props.editForm.modelLimits[modelName]
 }
 
 const handleUpdate = () => {

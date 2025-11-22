@@ -309,6 +309,7 @@ const editForm = ref({
   dailyRequestLimit: null as number | null,
   dailyTokenLimit: null as number | null,
   limitMessage: '',
+  modelLimits: {} as Record<string, { requestLimit?: number; tokenLimit?: number }>,
   tiers: {} as Record<string, { requestLimit?: number; tokenLimit?: number; customMessage?: string }>,
   rules: [] as any[],
 })
@@ -351,6 +352,9 @@ const loadProject = async () => {
         }
       }
     }
+    
+    // Load model limits
+    editForm.value.modelLimits = project.value.modelLimits || {}
     
     editForm.value.rules = project.value.rules || []
     
@@ -424,6 +428,9 @@ const handleUpdate = async () => {
         }
       }
     }
+
+    // Model limits
+    payload.modelLimits = editForm.value.modelLimits
 
     // Tiers - transform customMessage into customResponse
     payload.tiers = {}

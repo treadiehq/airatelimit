@@ -80,10 +80,20 @@ export class Project {
   @Column({ type: 'text', nullable: true })
   limitExceededResponse: string;
 
-  // Tier-based limits (JSON structure)
-  // Example: { "free": { "requestLimit": 5, "tokenLimit": 1000 }, "pro": { ... } }
+  // Model-specific limits (JSON structure)
+  // Example: { "gpt-4o": { "requestLimit": 100, "tokenLimit": 50000 }, "claude-3-5-sonnet": { ... } }
   @Column({ type: 'jsonb', nullable: true })
-  tiers: Record<string, { requestLimit?: number; tokenLimit?: number; customResponse?: any }>;
+  modelLimits: Record<string, { requestLimit?: number; tokenLimit?: number }>;
+
+  // Tier-based limits (JSON structure)
+  // Example: { "free": { "requestLimit": 5, "tokenLimit": 1000, "modelLimits": { "gpt-4o": {...} } }, "pro": { ... } }
+  @Column({ type: 'jsonb', nullable: true })
+  tiers: Record<string, { 
+    requestLimit?: number; 
+    tokenLimit?: number; 
+    customResponse?: any;
+    modelLimits?: Record<string, { requestLimit?: number; tokenLimit?: number }>;
+  }>;
 
   // Visual rule engine (JSON structure)
   // Example: [{ "condition": { "type": "usage_percent", "threshold": 80 }, "action": { "type": "response", "data": {...} } }]

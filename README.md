@@ -367,6 +367,137 @@ await client.chat({ tier: 'pro', identity: 'user-456', ... });
 // → Gets pro limits + pro tier message
 ```
 
+## Per-Model Limits
+
+Track and limit usage separately for each AI model. Perfect for apps that use multiple models with different costs.
+
+### How It Works
+
+**Usage Tracking:**
+- Each model's usage is tracked independently
+- No cross-model interference
+- Clear visibility into which models users prefer
+
+**Limit Priority (Hierarchical):**
+1. **Tier Model Limits** (highest priority)
+2. **Project Model Limits**
+3. **Tier General Limits**
+4. **Project General Limits** (lowest priority)
+
+### Configuration
+
+Configure model limits in the **Model Limits** tab of your project settings:
+
+```json
+{
+  "modelLimits": {
+    "gpt-4o": {
+      "requestLimit": 10,
+      "tokenLimit": 50000
+    },
+    "claude-3-5-sonnet": {
+      "requestLimit": 5,
+      "tokenLimit": 100000
+    },
+    "gemini-1.5-pro": {
+      "requestLimit": 20,
+      "tokenLimit": 75000
+    }
+  }
+}
+```
+
+### Per-Tier Model Limits
+
+You can also set model-specific limits within tiers for fine-grained control:
+
+```json
+{
+  "tiers": {
+    "free": {
+      "requestLimit": 50,
+      "tokenLimit": 10000,
+      "modelLimits": {
+        "gpt-4o": {
+          "requestLimit": 5,
+          "tokenLimit": 5000
+        },
+        "claude-3-5-sonnet": {
+          "requestLimit": 3,
+          "tokenLimit": 7500
+        }
+      }
+    },
+    "pro": {
+      "requestLimit": 1000,
+      "tokenLimit": 500000,
+      "modelLimits": {
+        "gpt-4o": {
+          "requestLimit": 500,
+          "tokenLimit": 250000
+        },
+        "claude-3-5-sonnet": {
+          "requestLimit": 300,
+          "tokenLimit": 300000
+        }
+      }
+    }
+  }
+}
+```
+
+### Use Cases
+
+**Different Model Costs:**
+```typescript
+// Expensive model - lower limit
+await client.chat({
+  identity: 'user-123',
+  tier: 'free',
+  model: 'gpt-4o',  // 5 requests/day for free tier
+  messages: [...]
+});
+
+// Cheaper model - higher limit
+await client.chat({
+  identity: 'user-123',
+  tier: 'free',
+  model: 'gpt-4o-mini',  // 50 requests/day for free tier
+  messages: [...]
+});
+```
+
+**Testing New Models:**
+```typescript
+// Limit beta model usage
+modelLimits: {
+  "gpt-4o-2024-11-20": {
+    requestLimit: 10  // Conservative limit for new release
+  }
+}
+```
+
+**Specialized Models:**
+```typescript
+// Different limits for different capabilities
+modelLimits: {
+  "claude-3-opus": {
+    requestLimit: 5,  // Complex reasoning - expensive
+  },
+  "claude-3-haiku": {
+    requestLimit: 100  // Fast tasks - cheap
+  }
+}
+```
+
+### Dashboard Analytics
+
+View per-model usage in the analytics tab:
+- Requests per model
+- Tokens per model
+- Most popular models
+- Cost optimization insights
+
 ## Rule Engine
 
 Create smart limits in the dashboard:

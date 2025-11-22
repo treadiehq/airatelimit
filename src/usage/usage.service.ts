@@ -13,6 +13,7 @@ interface CheckAndUpdateParams {
   project: Project;
   identity: string;
   tier?: string; // User's tier/plan
+  model?: string; // Model being used (e.g., "gpt-4o", "claude-3-5-sonnet")
   periodStart: Date;
   requestedTokens?: number;
   requestedRequests?: number;
@@ -28,6 +29,7 @@ interface CheckAndUpdateResult {
 interface FinalizeParams {
   project: Project;
   identity: string;
+  model?: string; // Model being used
   periodStart: Date;
   actualTokensUsed: number;
 }
@@ -42,13 +44,14 @@ export class UsageService {
   async checkAndUpdateUsage(
     params: CheckAndUpdateParams,
   ): Promise<CheckAndUpdateResult> {
-    const { project, identity, tier, periodStart, requestedTokens = 0, requestedRequests = 0 } = params;
+    const { project, identity, tier, model = '', periodStart, requestedTokens = 0, requestedRequests = 0 } = params;
 
-    // Load or create usage counter
+    // Load or create usage counter (per-model tracking)
     let usage = await this.usageRepository.findOne({
       where: {
         projectId: project.id,
         identity,
+        model,
         periodStart,
       },
     });
@@ -57,6 +60,7 @@ export class UsageService {
       usage = this.usageRepository.create({
         projectId: project.id,
         identity,
+        model,
         periodStart,
         requestsUsed: 0,
         tokensUsed: 0,
@@ -67,8 +71,8 @@ export class UsageService {
     const nextRequests = usage.requestsUsed + requestedRequests;
     const nextTokens = usage.tokensUsed + requestedTokens;
 
-    // Get tier-specific limits or fall back to project defaults
-    const limits = this.getLimitsForTier(project, tier);
+    // Get limits with model-aware hierarchy
+    const limits = this.getLimitsForTier(project, tier, model);
 
     // Check limits based on limit type
     const shouldCheckRequests = project.limitType === 'requests' || project.limitType === 'both';
@@ -122,30 +126,66 @@ export class UsageService {
     };
   }
 
-  // Get tier-specific limits or project defaults
+  // Get limits with model-aware hierarchy
+  // Priority: tier.modelLimits[model] > project.modelLimits[model] > tier general > project general
   private getLimitsForTier(
     project: Project,
     tier?: string,
+    model?: string,
   ): { requestLimit?: number; tokenLimit?: number; customResponse?: any } {
-    // If tier is specified and tiers are configured
+    let limits: { requestLimit?: number; tokenLimit?: number; customResponse?: any } = {};
+
+    // Start with project-level general limits as base
+    limits.requestLimit = project.dailyRequestLimit;
+    limits.tokenLimit = project.dailyTokenLimit;
+
+    // Override with tier general limits if available
     if (tier && project.tiers && project.tiers[tier]) {
-      return project.tiers[tier];
+      const tierConfig = project.tiers[tier];
+      if (tierConfig.requestLimit !== undefined) {
+        limits.requestLimit = tierConfig.requestLimit;
+      }
+      if (tierConfig.tokenLimit !== undefined) {
+        limits.tokenLimit = tierConfig.tokenLimit;
+      }
+      if (tierConfig.customResponse !== undefined) {
+        limits.customResponse = tierConfig.customResponse;
+      }
     }
 
-    // Fall back to project-level limits
-    return {
-      requestLimit: project.dailyRequestLimit,
-      tokenLimit: project.dailyTokenLimit,
-    };
+    // Override with project-level model-specific limits if available
+    if (model && project.modelLimits && project.modelLimits[model]) {
+      const modelConfig = project.modelLimits[model];
+      if (modelConfig.requestLimit !== undefined) {
+        limits.requestLimit = modelConfig.requestLimit;
+      }
+      if (modelConfig.tokenLimit !== undefined) {
+        limits.tokenLimit = modelConfig.tokenLimit;
+      }
+    }
+
+    // Override with tier model-specific limits (highest priority)
+    if (tier && model && project.tiers && project.tiers[tier]?.modelLimits && project.tiers[tier].modelLimits[model]) {
+      const tierModelConfig = project.tiers[tier].modelLimits[model];
+      if (tierModelConfig.requestLimit !== undefined) {
+        limits.requestLimit = tierModelConfig.requestLimit;
+      }
+      if (tierModelConfig.tokenLimit !== undefined) {
+        limits.tokenLimit = tierModelConfig.tokenLimit;
+      }
+    }
+
+    return limits;
   }
 
   async finalizeUsage(params: FinalizeParams): Promise<void> {
-    const { project, identity, periodStart, actualTokensUsed } = params;
+    const { project, identity, model = '', periodStart, actualTokensUsed } = params;
 
     const usage = await this.usageRepository.findOne({
       where: {
         projectId: project.id,
         identity,
+        model,
         periodStart,
       },
     });
@@ -159,12 +199,14 @@ export class UsageService {
   async getUsage(params: {
     projectId: string;
     identity: string;
+    model?: string;
     periodStart: Date;
   }): Promise<UsageCounter | null> {
     return this.usageRepository.findOne({
       where: {
         projectId: params.projectId,
         identity: params.identity,
+        model: params.model || '',
         periodStart: params.periodStart,
       },
     });
@@ -194,7 +236,7 @@ export class UsageService {
     projectId: string,
     periodStart: Date,
   ): Promise<
-    Array<{ identity: string; requestsUsed: number; tokensUsed: number }>
+    Array<{ identity: string; model: string; requestsUsed: number; tokensUsed: number }>
   > {
     const counters = await this.usageRepository.find({
       where: {
@@ -208,9 +250,36 @@ export class UsageService {
 
     return counters.map((c) => ({
       identity: c.identity,
+      model: c.model,
       requestsUsed: c.requestsUsed,
       tokensUsed: c.tokensUsed,
     }));
+  }
+
+  async getByModel(
+    projectId: string,
+    periodStart: Date,
+  ): Promise<
+    Array<{ model: string; requestsUsed: number; tokensUsed: number }>
+  > {
+    const counters = await this.usageRepository.find({
+      where: {
+        projectId,
+        periodStart,
+      },
+    });
+
+    // Aggregate by model
+    const byModel = counters.reduce((acc, c) => {
+      if (!acc[c.model]) {
+        acc[c.model] = { model: c.model, requestsUsed: 0, tokensUsed: 0 };
+      }
+      acc[c.model].requestsUsed += c.requestsUsed;
+      acc[c.model].tokensUsed += c.tokensUsed;
+      return acc;
+    }, {} as Record<string, { model: string; requestsUsed: number; tokensUsed: number }>);
+
+    return Object.values(byModel).sort((a, b) => b.requestsUsed - a.requestsUsed);
   }
 
   private getLimitResponse(project: Project): any {

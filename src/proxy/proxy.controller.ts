@@ -49,11 +49,12 @@ export class ProxyController {
       // Estimate tokens (actual will be updated after OpenAI response)
       const estimatedTokens = body.max_tokens || 0;
 
-      // Check and update usage with tier support
+      // Check and update usage with tier and model support
       const usageCheck = await this.usageService.checkAndUpdateUsage({
         project,
         identity: body.identity,
         tier: body.tier,
+        model: body.model,
         periodStart,
         requestedTokens: estimatedTokens,
         requestedRequests: 1,
@@ -132,6 +133,7 @@ export class ProxyController {
       await this.usageService.finalizeUsage({
         project,
         identity: body.identity,
+        model: body.model,
         periodStart,
         actualTokensUsed: actualTokens,
       });
@@ -187,11 +189,12 @@ export class ProxyController {
       // Estimate tokens
       const estimatedTokens = body.max_tokens || 0;
 
-      // Check usage limits BEFORE streaming with tier support
+      // Check usage limits BEFORE streaming with tier and model support
       const usageCheck = await this.usageService.checkAndUpdateUsage({
         project,
         identity: body.identity,
         tier: body.tier,
+        model: body.model,
         periodStart,
         requestedTokens: estimatedTokens,
         requestedRequests: 1,
@@ -276,6 +279,7 @@ export class ProxyController {
           await this.usageService.finalizeUsage({
             project,
             identity: body.identity,
+            model: body.model,
             periodStart,
             actualTokensUsed: totalTokens,
           });
