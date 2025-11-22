@@ -39,13 +39,12 @@
                   <span class="w-1.5 h-1.5 rounded-full bg-green-300 mr-1.5"></span>
                   Active
                 </span>
-                <span class="text-xs text-gray-500">•</span>
-                <span 
-                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                  :class="project.provider ? 'bg-gray-500/20 text-gray-400' : 'bg-amber-300/10 text-amber-300'"
-                >
-                  {{ providerLabel }}
-                </span>
+                <template v-if="project.provider">
+                  <span class="text-xs text-gray-500">•</span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400">
+                    {{ providerLabel }}
+                  </span>
+                </template>
               </div>
             </div>
             <div class="flex items-center space-x-2">
