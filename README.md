@@ -126,7 +126,7 @@ RESEND_API_KEY=re_your_resend_api_key_here
 EMAIL_FROM=noreply@yourdomain.com
 ```
 
-**Note**: In development, magic links are printed to the console. In production, set `RESEND_API_KEY` to send emails via Resend. See [MAGIC_LINK_SETUP.md](./MAGIC_LINK_SETUP.md) for details.
+**Note**: In development, magic links are printed to the console. In production, set `RESEND_API_KEY` to send emails via Resend.
 
 ## API Endpoints
 
