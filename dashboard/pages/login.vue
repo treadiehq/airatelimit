@@ -72,7 +72,7 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'Login - AI Rate Limiting'
+  title: 'Login - AI Ratelimit'
 })
 
 const api = useApi()
