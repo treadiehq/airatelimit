@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+dashboard/node_modules/
+sdk/*/node_modules/
+
+# Build outputs
+dist/
+dashboard/.nuxt/
+dashboard/.output/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+.cache/

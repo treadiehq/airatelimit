@@ -1,0 +1,68 @@
+### Create a project
+POST http://localhost:3000/api/admin/projects
+x-admin-key: super-secret-admin-key
+Content-Type: application/json
+
+{
+  "name": "Justin's App",
+  "projectKey": "justin-key-123",
+  "openaiApiKey": "sk-YOUR-OPENAI-KEY-HERE",
+  "dailyRequestLimit": 100,
+  "dailyTokenLimit": 50000,
+  "limitExceededResponse": {
+    "error": "limit_exceeded",
+    "message": "Daily limit reached. Please upgrade to continue!"
+  }
+}
+
+###
+
+### Send chat request (under limit)
+POST http://localhost:3000/api/v1/proxy/chat
+x-project-key: justin-key-123
+Content-Type: application/json
+
+{
+  "identity": "user-123",
+  "model": "gpt-4-turbo-preview",
+  "messages": [
+    { "role": "user", "content": "Say hello in one sentence." }
+  ],
+  "max_tokens": 100
+}
+
+###
+
+### Check usage for identity
+GET http://localhost:3000/api/admin/projects/justin-key-123/usage/user-123
+x-admin-key: super-secret-admin-key
+
+###
+
+### Test with missing project key (should fail)
+POST http://localhost:3000/api/v1/proxy/chat
+Content-Type: application/json
+
+{
+  "identity": "user-456",
+  "model": "gpt-4-turbo-preview",
+  "messages": [
+    { "role": "user", "content": "Test" }
+  ]
+}
+
+###
+
+### Test with invalid project key (should fail)
+POST http://localhost:3000/api/v1/proxy/chat
+x-project-key: invalid-key
+Content-Type: application/json
+
+{
+  "identity": "user-789",
+  "model": "gpt-4-turbo-preview",
+  "messages": [
+    { "role": "user", "content": "Test" }
+  ]
+}
+

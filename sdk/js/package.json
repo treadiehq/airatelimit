@@ -1,0 +1,20 @@
+{
+  "name": "@ai-ratelimit/sdk",
+  "version": "1.0.0",
+  "description": "JavaScript SDK for AI Rate Limit proxy",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch"
+  },
+  "keywords": ["ai", "ratelimit", "openai", "proxy"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3"
+  }
+}
+
