@@ -10,7 +10,7 @@ export class EmailService {
 
   constructor(private configService: ConfigService) {
     this.isProduction = this.configService.get('nodeEnv') === 'production';
-    
+
     if (this.isProduction) {
       const apiKey = this.configService.get<string>('resendApiKey');
       if (apiKey) {
@@ -21,7 +21,11 @@ export class EmailService {
     }
   }
 
-  async sendMagicLink(email: string, magicLink: string, isNewUser: boolean = false): Promise<void> {
+  async sendMagicLink(
+    email: string,
+    magicLink: string,
+    isNewUser: boolean = false,
+  ): Promise<void> {
     if (this.isProduction && this.resend) {
       await this.sendViaResend(email, magicLink, isNewUser);
     } else {
@@ -29,24 +33,30 @@ export class EmailService {
     }
   }
 
-  private async sendViaResend(email: string, magicLink: string, isNewUser: boolean): Promise<void> {
+  private async sendViaResend(
+    email: string,
+    magicLink: string,
+    isNewUser: boolean,
+  ): Promise<void> {
     try {
-      const fromEmail = this.configService.get<string>('emailFrom') || 'onboarding@resend.dev';
-      
-      const subject = isNewUser 
-        ? 'Welcome to AI Rate Limiting' 
+      const fromEmail =
+        this.configService.get<string>('emailFrom') ||
+        'AI Ratelimit <noreply@airatelimit.com>';
+
+      const subject = isNewUser
+        ? 'Welcome to AI Rate Limiting'
         : 'Sign in to AI Rate Limiting';
-      
-      const heading = isNewUser 
-        ? 'Welcome! Complete your signup' 
+
+      const heading = isNewUser
+        ? 'Welcome! Complete your signup'
         : 'Sign in to your account';
-      
+
       const description = isNewUser
         ? 'Click the link below to complete your account setup. This link will expire in 15 minutes.'
         : 'Click the link below to sign in to your account. This link will expire in 15 minutes.';
-      
+
       const buttonText = isNewUser ? 'Complete Signup' : 'Sign In';
-      
+
       await this.resend.emails.send({
         from: fromEmail,
         to: email,
@@ -72,23 +82,29 @@ export class EmailService {
         `,
       });
 
-      this.logger.log(`Magic link email sent to ${email} via Resend (${isNewUser ? 'new user' : 'existing user'})`);
+      this.logger.log(
+        `Magic link email sent to ${email} via Resend (${isNewUser ? 'new user' : 'existing user'})`,
+      );
     } catch (error) {
       this.logger.error(`Failed to send email via Resend: ${error.message}`);
       throw new Error('Failed to send magic link email');
     }
   }
 
-  private logMagicLinkToConsole(email: string, magicLink: string, isNewUser: boolean): void {
+  private logMagicLinkToConsole(
+    email: string,
+    magicLink: string,
+    isNewUser: boolean,
+  ): void {
     const type = isNewUser ? 'SIGNUP' : 'LOGIN';
-    
+
     this.logger.log('\n' + '='.repeat(80));
     this.logger.log(`🔐 MAGIC LINK ${type}`);
     this.logger.log('='.repeat(80));
     this.logger.log(`📧 Email: ${email}`);
     this.logger.log(`🔗 Magic Link: ${magicLink}`);
     this.logger.log('='.repeat(80) + '\n');
-    
+
     console.log('\n' + '='.repeat(80));
     console.log(`🔐 MAGIC LINK ${type}`);
     console.log('='.repeat(80));
@@ -97,4 +113,3 @@ export class EmailService {
     console.log('='.repeat(80) + '\n');
   }
 }
-

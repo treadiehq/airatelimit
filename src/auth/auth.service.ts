@@ -106,7 +106,8 @@ export class AuthService {
     await this.usersService.saveMagicLinkToken(user, token, expiresAt);
 
     // Generate magic link
-    const frontendUrl = this.configService.get('corsOrigin') || 'http://localhost:3001';
+    const frontendUrl =
+      this.configService.get('corsOrigin') || 'http://localhost:3001';
     const magicLink = `${frontendUrl}/auth/verify?token=${token}`;
 
     // Send email (or log to console in development)
@@ -151,4 +152,3 @@ export class AuthService {
     };
   }
 }
-
