@@ -44,6 +44,13 @@ export class ProviderRouterService {
           project.baseUrl,
           payload,
         );
+      case 'other':
+        // Treat "other" providers as OpenAI-compatible
+        return this.openaiProvider.chat(
+          project.openaiApiKey,
+          project.baseUrl,
+          payload,
+        );
       default:
         throw new Error(`Unsupported provider: ${project.provider}`);
     }
@@ -80,6 +87,14 @@ export class ProviderRouterService {
         return;
       case 'xai':
         yield* this.xaiProvider.chatStream(
+          project.openaiApiKey,
+          project.baseUrl,
+          payload,
+        );
+        return;
+      case 'other':
+        // Treat "other" providers as OpenAI-compatible
+        yield* this.openaiProvider.chatStream(
           project.openaiApiKey,
           project.baseUrl,
           payload,

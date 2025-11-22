@@ -80,9 +80,32 @@
                 <div>
                   <label class="block text-sm font-medium text-white mb-2">AI Provider</label>
                   <div class="w-full px-4 py-2 text-gray-400 bg-gray-500/5 border border-gray-500/10 rounded-lg">
-                    {{ providerLabels[project.provider] || 'OpenAI (GPT-4, GPT-3.5)' }}
+                    {{ providerLabels[project.provider] || 'OpenAI' }}
                   </div>
                   <p class="text-xs text-gray-500 mt-1">Provider cannot be changed after project creation</p>
+                </div>
+
+                <!-- Limit Period -->
+                <div>
+                  <label class="block text-sm font-medium text-white mb-2">Limit Period</label>
+                  <div class="relative">
+                    <select
+                      v-model="editForm.limitPeriod"
+                      class="w-full px-4 py-2.5 text-white bg-gray-500/10 border border-gray-500/20 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-transparent appearance-none cursor-pointer pr-10 transition-all hover:bg-gray-500/20"
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p class="text-xs text-gray-400 mt-1">
+                    Reset limits daily, weekly, or monthly
+                  </p>
                 </div>
 
                 <!-- Limit Type -->
@@ -109,7 +132,7 @@
                 </div>
 
                 <div v-if="editForm.limitType !== 'tokens'">
-                  <label class="block text-sm font-medium text-white mb-2">Daily Request Limit</label>
+                  <label class="block text-sm font-medium text-white mb-2">Request Limit</label>
                   <input
                     v-model.number="editForm.dailyRequestLimit"
                     type="number"
@@ -120,7 +143,7 @@
                 </div>
 
                 <div v-if="editForm.limitType !== 'requests'">
-                  <label class="block text-sm font-medium text-white mb-2">Daily Token Limit</label>
+                  <label class="block text-sm font-medium text-white mb-2">Token Limit</label>
                   <input
                     v-model.number="editForm.dailyTokenLimit"
                     type="number"
@@ -418,10 +441,11 @@ const analyticsError = ref('')
 const api = useApi()
 
 const providerLabels: Record<string, string> = {
-  openai: 'OpenAI (GPT-4o, GPT-4, o1)',
-  anthropic: 'Anthropic (Claude 3.5 Sonnet)',
-  google: 'Google (Gemini 1.5 Pro)',
-  xai: 'xAI (Grok)',
+  openai: 'OpenAI',
+  anthropic: 'Anthropic',
+  google: 'Google',
+  xai: 'xAI',
+  other: 'Other (OpenAI-compatible)',
 }
 
 const addTier = () => {

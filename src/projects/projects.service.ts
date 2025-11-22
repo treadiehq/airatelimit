@@ -44,7 +44,9 @@ export class ProjectsService {
   ): Promise<Project> {
     const projectKey = this.generateProjectKey();
     const provider = dto.provider || 'openai';
-    const baseUrl = this.getDefaultBaseUrl(provider);
+    
+    // Use custom baseUrl if provided (for "other" provider), otherwise use default
+    const baseUrl = dto.baseUrl || this.getDefaultBaseUrl(provider);
     
     const project = this.projectsRepository.create({
       ...dto,
@@ -107,6 +109,7 @@ export class ProjectsService {
       anthropic: 'https://api.anthropic.com/v1/messages',
       google: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent',
       xai: 'https://api.x.ai/v1/chat/completions',
+      other: '', // For "other", baseUrl must be provided by user
     };
     return baseUrls[provider] || baseUrls.openai;
   }

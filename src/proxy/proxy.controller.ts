@@ -43,8 +43,8 @@ export class ProxyController {
       // Get project
       const project = await this.projectsService.findByProjectKey(projectKey);
 
-      // Get today's date (UTC midnight)
-      const today = this.getTodayUTC();
+      // Get period start based on project's limit period (daily/weekly/monthly)
+      const periodStart = this.getPeriodStart(project.limitPeriod || 'daily');
 
       // Estimate tokens (actual will be updated after OpenAI response)
       const estimatedTokens = body.max_tokens || 0;
@@ -54,7 +54,7 @@ export class ProxyController {
         project,
         identity: body.identity,
         tier: body.tier,
-        periodStart: today,
+        periodStart,
         requestedTokens: estimatedTokens,
         requestedRequests: 1,
       });
@@ -181,8 +181,8 @@ export class ProxyController {
       // Get project
       const project = await this.projectsService.findByProjectKey(projectKey);
 
-      // Get today's date (UTC midnight)
-      const today = this.getTodayUTC();
+      // Get period start based on project's limit period (daily/weekly/monthly)
+      const periodStart = this.getPeriodStart(project.limitPeriod || 'daily');
 
       // Estimate tokens
       const estimatedTokens = body.max_tokens || 0;
@@ -192,7 +192,7 @@ export class ProxyController {
         project,
         identity: body.identity,
         tier: body.tier,
-        periodStart: today,
+        periodStart,
         requestedTokens: estimatedTokens,
         requestedRequests: 1,
       });
@@ -319,5 +319,32 @@ export class ProxyController {
     const now = new Date();
     return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   }
+
+  private getPeriodStart(limitPeriod: 'daily' | 'weekly' | 'monthly'): Date {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const date = now.getUTCDate();
+    const day = now.getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
+
+    switch (limitPeriod) {
+      case 'daily':
+        return new Date(Date.UTC(year, month, date));
+      
+      case 'weekly':
+        // Start of week (Monday)
+        const daysToMonday = (day + 6) % 7; // Calculate days back to Monday
+        const weekStart = new Date(Date.UTC(year, month, date - daysToMonday));
+        return weekStart;
+      
+      case 'monthly':
+        // Start of month
+        return new Date(Date.UTC(year, month, 1));
+      
+      default:
+        return new Date(Date.UTC(year, month, date));
+    }
+  }
 }
+
 

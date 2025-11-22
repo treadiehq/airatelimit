@@ -42,10 +42,10 @@ export class Project {
   // Provider configuration
   @Column({
     type: 'enum',
-    enum: ['openai', 'anthropic', 'google', 'xai'],
+    enum: ['openai', 'anthropic', 'google', 'xai', 'other'],
     default: 'openai',
   })
-  provider: 'openai' | 'anthropic' | 'google' | 'xai';
+  provider: 'openai' | 'anthropic' | 'google' | 'xai' | 'other';
 
   @Column({ default: 'https://api.openai.com/v1/chat/completions' })
   baseUrl: string;
@@ -60,6 +60,14 @@ export class Project {
 
   @Column({ nullable: true })
   dailyTokenLimit: number;
+
+  // Limit period configuration
+  @Column({ 
+    type: 'enum', 
+    enum: ['daily', 'weekly', 'monthly'], 
+    default: 'daily' 
+  })
+  limitPeriod: 'daily' | 'weekly' | 'monthly';
 
   // Limit type configuration
   @Column({ 

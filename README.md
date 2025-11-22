@@ -18,7 +18,7 @@ That's what this does.
 - Per-user/session/device usage tracking
 - Privacy-first (never stores prompts or AI responses)
 - Works with anonymous users (no auth required)
-- Multi-provider support (OpenAI, Anthropic Claude, Google Gemini, xAI Grok)
+- Multi-provider support (OpenAI, Anthropic, Google, xAI, and any OpenAI-compatible provider)
 - Streaming support for all providers
 - JavaScript SDK
 
@@ -34,8 +34,6 @@ That's what this does.
 **Recommended Stack:**
 - **Hosting:** [Railway](https://railway.app) (Backend + Dashboard + PostgreSQL)
 - **Email:** [Resend](https://resend.com) (Magic link authentication)
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete deployment guide.
 
 **Quick Deploy:**
 1. Push to GitHub
@@ -75,8 +73,9 @@ Dashboard: `http://localhost:3001`
 1. Visit `http://localhost:3001/signup`
 2. Enter your email (magic link sent to console in dev)
 3. Create a project:
-   - Choose your AI provider (OpenAI, Anthropic, Google, or xAI)
+   - Choose your AI provider (OpenAI, Anthropic, Google, xAI, or Other)
    - Enter your API key for that provider
+   - For "Other" providers: specify the API endpoint URL
    - Set limits (e.g., 5 requests/day for free tier)
 4. Copy your project key
 
@@ -177,16 +176,19 @@ else:
 
 When creating a project, you can choose from:
 
-| Provider | Example Models | Base URL |
-|----------|----------------|----------|
-| **OpenAI** | `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o1-preview`, `o1-mini` | `https://api.openai.com/v1/chat/completions` |
-| **Anthropic** | `claude-3-5-sonnet-20241022`, `claude-3-opus-20240229`, `claude-3-haiku-20240307` | `https://api.anthropic.com/v1/messages` |
-| **Google** | `gemini-1.5-pro`, `gemini-1.5-flash`, `gemini-pro` | `https://generativelanguage.googleapis.com/v1/models/{model}:generateContent` |
-| **xAI** | `grok-beta`, `grok-1` | `https://api.x.ai/v1/chat/completions` |
+| Provider | Default Base URL | Notes |
+|----------|------------------|-------|
+| **OpenAI** | `https://api.openai.com/v1/chat/completions` | All GPT models (gpt-4o, o1, etc.) |
+| **Anthropic** | `https://api.anthropic.com/v1/messages` | All Claude models |
+| **Google** | `https://generativelanguage.googleapis.com/v1/models/{model}:generateContent` | All Gemini models |
+| **xAI** | `https://api.x.ai/v1/chat/completions` | All Grok models |
+| **Other** | *Custom URL required* | Any OpenAI-compatible API (Together.ai, Groq, Perplexity, etc.) |
 
-**Use Any Model:** The proxy doesn't restrict model names. Pass any model ID from your chosen provider - including future models not listed here. The proxy forwards your request directly to the provider's API.
+**Use Any Model:** The proxy doesn't restrict model names. Pass any model ID from your chosen provider - including future models. The proxy forwards your request directly to the provider's API.
 
 **Format Translation:** The proxy handles API format differences automatically. Always use OpenAI-compatible format in your requests, regardless of the provider.
+
+**Custom Providers:** When selecting "Other", you can use any provider that supports OpenAI's chat completions API format. Examples include Together.ai, Groq, Perplexity, Fireworks, or self-hosted LLMs with OpenAI-compatible servers.
 
 ### 5. Handle Limit Exceeded
 

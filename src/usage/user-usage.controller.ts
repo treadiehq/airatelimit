@@ -31,10 +31,10 @@ export class UserUsageController {
       throw new ForbiddenException('Access denied');
     }
 
-    const today = this.getTodayUTC();
+    const periodStart = this.getPeriodStart(project.limitPeriod || 'daily');
     const summary = await this.usageService.getSummaryForProject(
       projectId,
-      today,
+      periodStart,
     );
 
     return {
@@ -42,6 +42,7 @@ export class UserUsageController {
       tokensUsed: summary.totalTokens,
       dailyRequestLimit: project.dailyRequestLimit,
       dailyTokenLimit: project.dailyTokenLimit,
+      limitPeriod: project.limitPeriod || 'daily',
       withinLimits:
         (!project.dailyRequestLimit ||
           summary.totalRequests < project.dailyRequestLimit) &&
@@ -65,7 +66,7 @@ export class UserUsageController {
       throw new ForbiddenException('Access denied');
     }
 
-    const periodStart = date ? new Date(date) : this.getTodayUTC();
+    const periodStart = date ? new Date(date) : this.getPeriodStart(project.limitPeriod || 'daily');
     const identities = await this.usageService.getByIdentity(
       projectId,
       periodStart,
@@ -79,6 +80,32 @@ export class UserUsageController {
     return new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
     );
+  }
+
+  private getPeriodStart(limitPeriod: 'daily' | 'weekly' | 'monthly'): Date {
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const date = now.getUTCDate();
+    const day = now.getUTCDay(); // 0 = Sunday, 1 = Monday, etc.
+
+    switch (limitPeriod) {
+      case 'daily':
+        return new Date(Date.UTC(year, month, date));
+      
+      case 'weekly':
+        // Start of week (Monday)
+        const daysToMonday = (day + 6) % 7; // Calculate days back to Monday
+        const weekStart = new Date(Date.UTC(year, month, date - daysToMonday));
+        return weekStart;
+      
+      case 'monthly':
+        // Start of month
+        return new Date(Date.UTC(year, month, 1));
+      
+      default:
+        return new Date(Date.UTC(year, month, date));
+    }
   }
 }
 

@@ -22,6 +22,11 @@ export class UpdateProjectDto {
   @IsInt()
   dailyTokenLimit?: number;
 
+  // Limit period
+  @IsOptional()
+  @IsIn(['daily', 'weekly', 'monthly'])
+  limitPeriod?: 'daily' | 'weekly' | 'monthly';
+
   // Limit type
   @IsOptional()
   @IsIn(['requests', 'tokens', 'both'])

@@ -304,6 +304,7 @@ const toggleProjectKeyVisibility = () => {
 const editForm = ref({
   name: '',
   provider: 'openai' as 'openai' | 'anthropic' | 'google' | 'xai',
+  limitPeriod: 'daily' as 'daily' | 'weekly' | 'monthly',
   limitType: 'both' as 'requests' | 'tokens' | 'both',
   dailyRequestLimit: null as number | null,
   dailyTokenLimit: null as number | null,
@@ -332,6 +333,7 @@ const loadProject = async () => {
     // Populate edit form
     editForm.value.name = project.value.name
     editForm.value.provider = project.value.provider || 'openai'
+    editForm.value.limitPeriod = project.value.limitPeriod || 'daily'
     editForm.value.limitType = project.value.limitType || 'both'
     editForm.value.dailyRequestLimit = project.value.dailyRequestLimit
     editForm.value.dailyTokenLimit = project.value.dailyTokenLimit
@@ -385,6 +387,7 @@ const handleUpdate = async () => {
   try {
     const payload: any = {
       name: editForm.value.name,
+      limitPeriod: editForm.value.limitPeriod,
       limitType: editForm.value.limitType,
     }
 

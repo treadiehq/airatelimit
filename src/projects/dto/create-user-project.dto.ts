@@ -5,8 +5,12 @@ export class CreateUserProjectDto {
   name: string;
 
   @IsOptional()
-  @IsIn(['openai', 'anthropic', 'google', 'xai'])
-  provider?: 'openai' | 'anthropic' | 'google' | 'xai';
+  @IsIn(['openai', 'anthropic', 'google', 'xai', 'other'])
+  provider?: 'openai' | 'anthropic' | 'google' | 'xai' | 'other';
+
+  @IsOptional()
+  @IsString()
+  baseUrl?: string;
 
   @IsString()
   openaiApiKey: string;
@@ -18,6 +22,11 @@ export class CreateUserProjectDto {
   @IsOptional()
   @IsInt()
   dailyTokenLimit?: number;
+
+  // Limit period
+  @IsOptional()
+  @IsIn(['daily', 'weekly', 'monthly'])
+  limitPeriod?: 'daily' | 'weekly' | 'monthly';
 
   // Limit type
   @IsOptional()

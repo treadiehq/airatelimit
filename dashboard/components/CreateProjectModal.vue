@@ -57,10 +57,11 @@
                         v-model="form.provider"
                         class="w-full px-4 py-2.5 text-white bg-gray-500/10 border border-gray-500/20 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-transparent appearance-none cursor-pointer pr-10 transition-all hover:bg-gray-500/20"
                       >
-                        <option value="openai">OpenAI (GPT-4o, GPT-4, o1)</option>
-                        <option value="anthropic">Anthropic (Claude 3.5 Sonnet)</option>
-                        <option value="google">Google (Gemini 1.5 Pro)</option>
-                        <option value="xai">xAI (Grok)</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic</option>
+                        <option value="google">Google</option>
+                        <option value="xai">xAI</option>
+                        <option value="other">Other (OpenAI-compatible)</option>
                       </select>
                       <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -68,6 +69,21 @@
                         </svg>
                       </div>
                     </div>
+                  </div>
+
+                  <!-- Base URL (only for Other provider) -->
+                  <div v-if="form.provider === 'other'">
+                    <label class="block text-sm font-medium text-white mb-2">
+                      API Base URL
+                    </label>
+                    <input
+                      v-model="form.baseUrl"
+                      type="text"
+                      required
+                      class="w-full px-4 py-2 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg focus:ring-2 focus:ring-amber-300/50 focus:border-transparent font-mono text-sm"
+                      placeholder="https://api.your-provider.com/v1/chat/completions"
+                    />
+                    <p class="mt-1 text-xs text-gray-400">Full API endpoint URL for your provider</p>
                   </div>
 
                   <!-- API Key -->
@@ -83,6 +99,31 @@
                       :placeholder="providerPlaceholders[form.provider]"
                     />
                     <p class="mt-1 text-xs text-gray-400">{{ providerHints[form.provider] }}</p>
+                  </div>
+
+                  <!-- Limit Period -->
+                  <div>
+                    <label class="block text-sm font-medium text-white mb-2">
+                      Limit Period
+                    </label>
+                    <div class="relative">
+                      <select
+                        v-model="form.limitPeriod"
+                        class="w-full px-4 py-2.5 text-white bg-gray-500/10 border border-gray-500/20 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-transparent appearance-none cursor-pointer pr-10 transition-all hover:bg-gray-500/20"
+                      >
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                      </select>
+                      <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-400">
+                      Reset limits daily, weekly, or monthly
+                    </p>
                   </div>
 
                   <!-- Limit Type -->
@@ -110,10 +151,10 @@
                     </p>
                   </div>
 
-                  <!-- Daily Request Limit -->
+                  <!-- Request Limit -->
                   <div v-if="form.limitType !== 'tokens'">
                     <label class="block text-sm font-medium text-white mb-2">
-                      Daily Request Limit
+                      Request Limit
                     </label>
                     <input
                       v-model.number="form.dailyRequestLimit"
@@ -125,10 +166,10 @@
                     <p class="mt-1 text-xs text-gray-400">Leave empty for unlimited</p>
                   </div>
 
-                  <!-- Daily Token Limit -->
+                  <!-- Token Limit -->
                   <div v-if="form.limitType !== 'requests'">
                     <label class="block text-sm font-medium text-white mb-2">
-                      Daily Token Limit
+                      Token Limit
                     </label>
                     <input
                       v-model.number="form.dailyTokenLimit"
@@ -215,8 +256,10 @@ const nameInput = ref<HTMLInputElement | null>(null)
 
 const form = ref({
   name: '',
-  provider: 'openai' as 'openai' | 'anthropic' | 'google' | 'xai',
+  provider: 'openai' as 'openai' | 'anthropic' | 'google' | 'xai' | 'other',
   openaiApiKey: '',
+  baseUrl: '',
+  limitPeriod: 'daily' as 'daily' | 'weekly' | 'monthly',
   limitType: 'both' as 'requests' | 'tokens' | 'both',
   dailyRequestLimit: null as number | null,
   dailyTokenLimit: null as number | null,
@@ -228,6 +271,7 @@ const providerLabels = {
   anthropic: 'Anthropic',
   google: 'Google',
   xai: 'xAI',
+  other: 'Provider',
 }
 
 const providerPlaceholders = {
@@ -235,6 +279,7 @@ const providerPlaceholders = {
   anthropic: 'sk-ant-...',
   google: 'AIza...',
   xai: 'xai-...',
+  other: 'your-api-key-...',
 }
 
 const providerHints = {
@@ -242,6 +287,7 @@ const providerHints = {
   anthropic: 'Your Anthropic API key will be encrypted',
   google: 'Your Google API key will be encrypted',
   xai: 'Your xAI API key will be encrypted',
+  other: 'Your API key will be encrypted',
 }
 
 const loading = ref(false)
@@ -258,9 +304,13 @@ const handleSubmit = async () => {
       name: form.value.name,
       provider: form.value.provider,
       openaiApiKey: form.value.openaiApiKey,
+      limitPeriod: form.value.limitPeriod,
       limitType: form.value.limitType,
     }
 
+    if (form.value.provider === 'other' && form.value.baseUrl) {
+      payload.baseUrl = form.value.baseUrl
+    }
     if (form.value.dailyRequestLimit) {
       payload.dailyRequestLimit = form.value.dailyRequestLimit
     }
@@ -286,6 +336,8 @@ const handleSubmit = async () => {
       name: '',
       provider: 'openai',
       openaiApiKey: '',
+      baseUrl: '',
+      limitPeriod: 'daily',
       limitType: 'both',
       dailyRequestLimit: null,
       dailyTokenLimit: null,
@@ -314,6 +366,8 @@ const close = () => {
         name: '',
         provider: 'openai',
         openaiApiKey: '',
+        baseUrl: '',
+        limitPeriod: 'daily',
         limitType: 'both',
         dailyRequestLimit: null,
         dailyTokenLimit: null,
