@@ -15,24 +15,27 @@ import { createClient } from '@ai-ratelimit/sdk';
 
 const client = createClient({
   baseUrl: 'http://localhost:3000/api',
-  projectKey: 'pk_your_key_here',
+  projectKey: 'pk_your_key_here',  // From your dashboard
 });
 
-// Regular chat
+// Works with OpenAI, Anthropic, Google Gemini, or xAI
+// Model restrictions come from your provider - not the proxy
+
+// Regular chat - use ANY model from your configured provider
 const result = await client.chat({
   identity: 'user-123',
   tier: 'free',
-  model: 'gpt-4-turbo-preview',
+  model: 'gpt-4o',  // Any model: gpt-4o, claude-3-5-sonnet-20241022, gemini-1.5-pro, etc.
   messages: [{ role: 'user', content: 'Hello!' }],
 });
 
 console.log(result.raw.choices[0].message.content);
 
-// Streaming
+// Streaming - works with all providers
 for await (const chunk of client.chatStream({
   identity: 'user-123',
   tier: 'free',
-  model: 'gpt-4-turbo-preview',
+  model: 'gpt-4o',  // Future models work automatically
   messages: [{ role: 'user', content: 'Tell me a story' }],
 })) {
   process.stdout.write(chunk);

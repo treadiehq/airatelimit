@@ -75,12 +75,19 @@ const client = createClient({
   projectKey: 'pk_your_key_here',
 });
 
-// Regular request (works with any provider's models)
+// Regular request - use ANY model from your provider
 const result = await client.chat({
   identity: 'user-123',        // User ID, session, or device ID
   tier: 'free',                 // Optional: free, pro, etc.
-  model: 'gpt-4o',              // Or claude-3-5-sonnet-20241022, gemini-1.5-pro, grok-beta
+  model: 'gpt-4o',              // Any model: gpt-4o, claude-3-5-sonnet-20241022, gemini-1.5-pro, etc.
   messages: [{ role: 'user', content: 'Hello!' }],
+});
+
+// Future models work automatically (no code changes needed)
+const result2 = await client.chat({
+  identity: 'user-123',
+  model: 'gpt-5',               // Future models work immediately
+  messages: [{ role: 'user', content: 'Hello from the future!' }],
 });
 
 // Streaming
@@ -155,16 +162,16 @@ else:
 
 When creating a project, you can choose from:
 
-| Provider | Supported Models | Base URL |
-|----------|-----------------|----------|
-| **OpenAI** | GPT-4o, GPT-4o-mini, GPT-4 Turbo, GPT-4, GPT-3.5 Turbo, o1-preview, o1-mini | `https://api.openai.com/v1/chat/completions` |
-| **Anthropic** | Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Sonnet, Claude 3 Haiku | `https://api.anthropic.com/v1/messages` |
-| **Google** | Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini Pro, Gemini Ultra | `https://generativelanguage.googleapis.com/v1/models/{model}:generateContent` |
-| **xAI** | Grok, Grok-1, Grok-beta | `https://api.x.ai/v1/chat/completions` |
+| Provider | Example Models | Base URL |
+|----------|----------------|----------|
+| **OpenAI** | `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o1-preview`, `o1-mini` | `https://api.openai.com/v1/chat/completions` |
+| **Anthropic** | `claude-3-5-sonnet-20241022`, `claude-3-opus-20240229`, `claude-3-haiku-20240307` | `https://api.anthropic.com/v1/messages` |
+| **Google** | `gemini-1.5-pro`, `gemini-1.5-flash`, `gemini-pro` | `https://generativelanguage.googleapis.com/v1/models/{model}:generateContent` |
+| **xAI** | `grok-beta`, `grok-1` | `https://api.x.ai/v1/chat/completions` |
 
-**Note:** The proxy accepts any model ID from these providers. As providers release new models, they'll work automatically without code changes.
+**🎯 Use Any Model:** The proxy doesn't restrict model names. Pass any model ID from your chosen provider - including future models not listed here. The proxy forwards your request directly to the provider's API.
 
-The proxy handles API format differences - you always use OpenAI-compatible format in your requests, regardless of the provider.
+**Format Translation:** The proxy handles API format differences automatically. Always use OpenAI-compatible format in your requests, regardless of the provider.
 
 ### 5. Handle Limit Exceeded
 
