@@ -40,8 +40,11 @@
                   Active
                 </span>
                 <span class="text-xs text-gray-500">•</span>
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400">
-                  OpenAI
+                <span 
+                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  :class="project.provider ? 'bg-gray-500/20 text-gray-400' : 'bg-amber-300/10 text-amber-300'"
+                >
+                  {{ providerLabel }}
                 </span>
               </div>
             </div>
@@ -303,6 +306,18 @@ const maskedProjectKey = computed(() => {
   if (!project.value?.projectKey) return 'pk_xxxxxxxxxxxxxxx'
   // Show first 3 chars (pk_) and mask the rest
   return 'pk_' + 'x'.repeat(project.value.projectKey.length - 3)
+})
+
+const providerLabel = computed(() => {
+  if (!project.value?.provider) return 'Not configured'
+  const labels = {
+    openai: 'OpenAI',
+    anthropic: 'Anthropic',
+    google: 'Google',
+    xai: 'xAI',
+    other: 'OpenAI-compatible'
+  }
+  return labels[project.value.provider as keyof typeof labels] || project.value.provider
 })
 
 const toggleProjectKeyVisibility = () => {
