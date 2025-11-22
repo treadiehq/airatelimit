@@ -333,11 +333,16 @@
                         @click="toggleTierModelLimits(String(tierName))"
                         class="text-xs text-blue-300 hover:text-blue-400"
                       >
-                        {{ tier.modelLimits && Object.keys(tier.modelLimits).length > 0 ? 'Hide' : '+ Add Model Limits' }}
+                        {{ showTierModelLimitsSection[String(tierName)] ? 'Hide' : '+ Add Model Limits' }}
                       </button>
                     </div>
                     
-                    <div v-if="tier.modelLimits && Object.keys(tier.modelLimits).length > 0" class="space-y-2 mt-2">
+                    <div v-if="showTierModelLimitsSection[String(tierName)]" class="space-y-2 mt-2">
+                      <!-- Empty state when expanded but no models -->
+                      <div v-if="!tier.modelLimits || Object.keys(tier.modelLimits).length === 0" class="text-center py-4 bg-gray-500/5 border border-gray-500/10 rounded">
+                        <p class="text-xs text-gray-400">No model-specific limits yet. Add one below.</p>
+                      </div>
+                      
                       <div v-for="(modelLimit, modelName) in tier.modelLimits" :key="modelName" class="bg-gray-500/5 border border-gray-500/10 rounded p-3">
                         <div class="flex justify-between items-center mb-2">
                           <span class="text-xs font-medium text-white">{{ modelName }}</span>
@@ -807,12 +812,24 @@ const newTierName = ref('')
 const newModelName = ref('')
 const showModelSuggestions = ref(false)
 const showTierModelSuggestions = ref<Record<string, boolean>>({})
+const showTierModelLimitsSection = ref<Record<string, boolean>>({})
 const tierNewModelNames = ref<Record<string, string>>({})
 const analytics = ref<any>(null)
 const analyticsLoading = ref(false)
 const analyticsError = ref('')
 
 const api = useApi()
+
+// Initialize visibility for tiers with existing model limits
+watch(() => props.editForm.tiers, (tiers) => {
+  if (tiers) {
+    for (const [tierName, tier] of Object.entries(tiers)) {
+      if ((tier as any).modelLimits && Object.keys((tier as any).modelLimits).length > 0) {
+        showTierModelLimitsSection.value[tierName] = true
+      }
+    }
+  }
+}, { immediate: true, deep: true })
 
 // Known AI models database
 const knownModels = [
@@ -908,6 +925,8 @@ const addTier = () => {
       customMessage: '',
       modelLimits: {},
     }
+    // Auto-show model limits section for new tiers
+    showTierModelLimitsSection.value[newTierName.value] = false
     newTierName.value = ''
   }
 }
@@ -918,12 +937,12 @@ const deleteTier = (tierName: string) => {
 }
 
 const toggleTierModelLimits = (tierName: string) => {
+  // Initialize modelLimits if it doesn't exist
   if (!props.editForm.tiers[tierName].modelLimits) {
     props.editForm.tiers[tierName].modelLimits = {}
-  } else if (Object.keys(props.editForm.tiers[tierName].modelLimits).length === 0) {
-    // Initialize with empty object to show the section
-    props.editForm.tiers[tierName].modelLimits = {}
   }
+  // Toggle visibility
+  showTierModelLimitsSection.value[tierName] = !showTierModelLimitsSection.value[tierName]
 }
 
 const addTierModelLimit = (tierName: string) => {
