@@ -111,4 +111,4 @@ Configure tier limits in the dashboard.
 
 ## License
 
-See [LICENSE](../../LICENSE) for details.
+See [FSL-1.1-MIT](../../LICENSE) for details.

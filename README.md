@@ -169,7 +169,7 @@ When creating a project, you can choose from:
 | **Google** | `gemini-1.5-pro`, `gemini-1.5-flash`, `gemini-pro` | `https://generativelanguage.googleapis.com/v1/models/{model}:generateContent` |
 | **xAI** | `grok-beta`, `grok-1` | `https://api.x.ai/v1/chat/completions` |
 
-**🎯 Use Any Model:** The proxy doesn't restrict model names. Pass any model ID from your chosen provider - including future models not listed here. The proxy forwards your request directly to the provider's API.
+**Use Any Model:** The proxy doesn't restrict model names. Pass any model ID from your chosen provider - including future models not listed here. The proxy forwards your request directly to the provider's API.
 
 **Format Translation:** The proxy handles API format differences automatically. Always use OpenAI-compatible format in your requests, regardless of the provider.
 
