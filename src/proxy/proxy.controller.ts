@@ -132,7 +132,7 @@ export class ProxyController {
       await this.usageService.finalizeUsage({
         project,
         identity: body.identity,
-        periodStart: today,
+        periodStart,
         actualTokensUsed: actualTokens,
       });
 
@@ -276,7 +276,7 @@ export class ProxyController {
           await this.usageService.finalizeUsage({
             project,
             identity: body.identity,
-            periodStart: today,
+            periodStart,
             actualTokensUsed: totalTokens,
           });
         }
