@@ -15,7 +15,7 @@
           @click.stop
         >
           <!-- Header -->
-          <div class="flex items-center justify-between p-6 border-b border-gray-500/20">
+          <div class="flex items-center justify-between p-6 py-4 border-b border-gray-500/20">
             <h2 class="text-xl font-bold text-white">Configurations</h2>
             <button
               @click="$emit('close')"
@@ -160,7 +160,7 @@
                     <h4 class="font-semibold text-white capitalize">{{ tierName }} Tier</h4>
                     <button
                       @click="deleteTier(String(tierName))"
-                      class="text-red-400 hover:text-red-400/80 text-sm"
+                      class="text-red-400 hover:text-red-500 text-xs"
                     >
                       Remove
                     </button>
@@ -259,9 +259,7 @@ const addTier = () => {
 }
 
 const deleteTier = (tierName: string) => {
-  if (confirm(`Delete tier "${tierName}"?`)) {
-    delete props.editForm.tiers[tierName]
-  }
+  delete props.editForm.tiers[tierName]
 }
 
 const handleUpdate = () => {

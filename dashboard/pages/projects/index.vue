@@ -7,7 +7,7 @@
       <!-- Header -->
       <div class="flex justify-between items-center mb-6">
         <div>
-          <h2 class="text-xl font-medium text-white">Projects</h2>
+          <h2 class="text-xl font-bold text-white">Projects</h2>
           <p class="text-sm text-gray-400 mt-1">
             {{ projects.length }} {{ projects.length === 1 ? 'project' : 'projects' }}
           </p>

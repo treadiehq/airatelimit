@@ -33,13 +33,16 @@
         <div class="p-1 px-0">
           <div class="flex justify-between items-start mb-4">
             <div>
-              <h2 class="text-2xl font-bold text-white">{{ project.name }}</h2>
-              <div class="flex items-center space-x-2 mt-2">
+              <h2 class="text-xl font-bold text-white">{{ project.name }}</h2>
+              <div class="flex items-center space-x-1 mt-2">
                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-300/10 text-green-300">
                   <span class="w-1.5 h-1.5 rounded-full bg-green-300 mr-1.5"></span>
                   Active
                 </span>
-                <span class="text-xs text-gray-500">• OpenAI</span>
+                <span class="text-xs text-gray-500">•</span>
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400">
+                  OpenAI
+                </span>
               </div>
             </div>
             <div class="flex items-center space-x-2">
@@ -137,8 +140,8 @@
         </div>
 
         <!-- Usage Summary -->
-        <div class="bg-gray-500/10 border border-gray-500/10 p-6 rounded-lg shadow-md">
-          <h3 class="text-lg font-semibold text-white mb-4">Today's Usage</h3>
+        <div class="space-y-4">
+          <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider">Today's Usage</h3>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <StatCard
               v-if="project.limitType !== 'tokens'"
@@ -172,46 +175,48 @@
         </div>
 
         <!-- Usage by Identity -->
-        <div class="bg-gray-500/10 border border-gray-500/10 p-6 rounded-lg shadow-md">
-          <h3 class="text-lg font-semibold text-white mb-4">Usage by Identity (Today)</h3>
-          <div v-if="identities.length === 0" class="text-center py-12">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-500/10 mb-4">
-              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
+        <div class="space-y-4">
+          <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider">Usage by Identity (Today)</h3>
+          <div class="bg-gray-500/10 border border-gray-500/10 p-6 rounded-lg">
+            <div v-if="identities.length === 0" class="text-center py-12">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-500/10 mb-4">
+                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <p class="text-gray-400 text-sm mb-1">No usage data yet</p>
+              <p class="text-gray-500 text-xs">Make your first API request to see usage by identity</p>
             </div>
-            <p class="text-gray-400 text-sm mb-1">No usage data yet</p>
-            <p class="text-gray-500 text-xs">Make your first API request to see usage by identity</p>
-          </div>
-          <div v-else class="overflow-x-auto">
-            <table class="min-w-full">
-              <thead class="bg-gray-500/10 border border-gray-500/10">
-                <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Identity
-                  </th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                    Requests
-                  </th>
-                  <th class="px-6 py-3 text-left text-gray-400 uppercase tracking-wider">
-                    Tokens
-                  </th>
-                </tr>
-              </thead> 
-              <tbody class="bg-gray-500/10 border border-gray-500/10">
-                <tr v-for="identity in identities" :key="identity.identity">
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-white">
-                    {{ identity.identity }}
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                    {{ identity.requestsUsed }}
-                  </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                    {{ identity.tokensUsed }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <div v-else class="overflow-x-auto">
+              <table class="min-w-full">
+                <thead class="bg-gray-500/10 border border-gray-500/10">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Identity
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                      Requests
+                    </th>
+                    <th class="px-6 py-3 text-left text-gray-400 uppercase tracking-wider">
+                      Tokens
+                    </th>
+                  </tr>
+                </thead> 
+                <tbody class="bg-gray-500/10 border border-gray-500/10">
+                  <tr v-for="identity in identities" :key="identity.identity">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-white">
+                      {{ identity.identity }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      {{ identity.requestsUsed }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      {{ identity.tokensUsed }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
