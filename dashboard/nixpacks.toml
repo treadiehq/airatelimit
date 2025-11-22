@@ -1,9 +1,9 @@
 [phases.install]
-cmd = "npm install"
+cmd = "npm install && npm install -g serve"
 
 [phases.build]
-cmd = "npm run build"
+cmd = "npm run generate"
 
 [start]
-cmd = "node .output/server/index.mjs"
+cmd = "serve .output/public -l 8080"
 

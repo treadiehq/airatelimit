@@ -21,12 +21,7 @@ export default defineNuxtConfig({
     port: 3001,
   },
 
-  // Enable SSR for production deployment
-  ssr: true,
-
-  nitro: {
-    preset: 'node-server',
-    serveStatic: true,
-  },
+  // Use static generation for deployment
+  ssr: false,
 })
 

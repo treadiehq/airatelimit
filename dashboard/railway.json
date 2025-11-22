@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "node .output/server/index.mjs",
+    "startCommand": "npx serve .output/public -l 8080",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
