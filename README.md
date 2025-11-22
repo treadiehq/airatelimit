@@ -386,22 +386,26 @@ Track and limit usage separately for each AI model. Perfect for apps that use mu
 
 ### Configuration
 
-Configure model limits in the **Model Limits** tab of your project settings:
+Configure model limits in the **Model Limits** tab of your project settings.
+
+**Three Options:**
+1. **Specific Limit** - Set a number (e.g., `50`)
+2. **Unlimited** - Set to `-1` (no limit at all)
+3. **Inherit** - Leave undefined/empty (falls back to general limits)
 
 ```json
 {
   "modelLimits": {
-    "gpt-4o": {
-      "requestLimit": 10,
-      "tokenLimit": 50000
+    "gemini-2.5": {
+      "requestLimit": -1,      // Unlimited - no restrictions
+      "tokenLimit": -1
     },
     "claude-3-5-sonnet": {
-      "requestLimit": 5,
+      "requestLimit": 50,      // Limited to 50 requests
       "tokenLimit": 100000
     },
-    "gemini-1.5-pro": {
-      "requestLimit": 20,
-      "tokenLimit": 75000
+    "gpt-4o": {
+      "requestLimit": 10       // Limited, but tokens inherit from general limit
     }
   }
 }
@@ -447,6 +451,34 @@ You can also set model-specific limits within tiers for fine-grained control:
 ```
 
 ### Use Cases
+
+**Unlimited Access to Specific Models:**
+```json
+{
+  "modelLimits": {
+    "gemini-2.5": {
+      "requestLimit": -1  // Unlimited access
+    },
+    "claude-3-5-sonnet": {
+      "requestLimit": 50  // Limited to 50
+    }
+  }
+}
+```
+
+```typescript
+await client.chat({
+  identity: 'user-123',
+  model: 'gemini-2.5',  // Unlimited!
+  messages: [...]
+});
+
+await client.chat({
+  identity: 'user-123',
+  model: 'claude-3-5-sonnet',  // Limited to 50 requests
+  messages: [...]
+});
+```
 
 **Different Model Costs:**
 ```typescript

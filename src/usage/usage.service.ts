@@ -78,8 +78,8 @@ export class UsageService {
     const shouldCheckRequests = project.limitType === 'requests' || project.limitType === 'both';
     const shouldCheckTokens = project.limitType === 'tokens' || project.limitType === 'both';
 
-    // Check request limit
-    if (shouldCheckRequests && limits.requestLimit && nextRequests > limits.requestLimit) {
+    // Check request limit (null means explicitly unlimited, skip check)
+    if (shouldCheckRequests && limits.requestLimit !== null && limits.requestLimit && nextRequests > limits.requestLimit) {
     const response = limits.customResponse || this.getLimitResponse(project);
       return {
         allowed: false,
@@ -93,8 +93,8 @@ export class UsageService {
       };
     }
 
-    // Check token limit
-    if (shouldCheckTokens && limits.tokenLimit && nextTokens > limits.tokenLimit) {
+    // Check token limit (null means explicitly unlimited, skip check)
+    if (shouldCheckTokens && limits.tokenLimit !== null && limits.tokenLimit && nextTokens > limits.tokenLimit) {
     const response = limits.customResponse || this.getLimitResponse(project);
       return {
         allowed: false,
@@ -108,10 +108,10 @@ export class UsageService {
       };
     }
 
-    // Calculate usage percentages for rule engine
+    // Calculate usage percentages for rule engine (null = unlimited, so 0%)
     const usagePercent = {
-      requests: limits.requestLimit ? (nextRequests / limits.requestLimit) * 100 : 0,
-      tokens: limits.tokenLimit ? (nextTokens / limits.tokenLimit) * 100 : 0,
+      requests: (limits.requestLimit !== null && limits.requestLimit) ? (nextRequests / limits.requestLimit) * 100 : 0,
+      tokens: (limits.tokenLimit !== null && limits.tokenLimit) ? (nextTokens / limits.tokenLimit) * 100 : 0,
     };
 
     // Update counters
@@ -128,12 +128,13 @@ export class UsageService {
 
   // Get limits with model-aware hierarchy
   // Priority: tier.modelLimits[model] > project.modelLimits[model] > tier general > project general
+  // Note: -1 or null = explicitly unlimited (no fallback), undefined = fallback to next level
   private getLimitsForTier(
     project: Project,
     tier?: string,
     model?: string,
-  ): { requestLimit?: number; tokenLimit?: number; customResponse?: any } {
-    let limits: { requestLimit?: number; tokenLimit?: number; customResponse?: any } = {};
+  ): { requestLimit?: number | null; tokenLimit?: number | null; customResponse?: any } {
+    let limits: { requestLimit?: number | null; tokenLimit?: number | null; customResponse?: any } = {};
 
     // Start with project-level general limits as base
     limits.requestLimit = project.dailyRequestLimit;
@@ -157,10 +158,11 @@ export class UsageService {
     if (model && project.modelLimits && project.modelLimits[model]) {
       const modelConfig = project.modelLimits[model];
       if (modelConfig.requestLimit !== undefined) {
-        limits.requestLimit = modelConfig.requestLimit;
+        // -1 or null means explicitly unlimited
+        limits.requestLimit = (modelConfig.requestLimit === -1 || modelConfig.requestLimit === null) ? null : modelConfig.requestLimit;
       }
       if (modelConfig.tokenLimit !== undefined) {
-        limits.tokenLimit = modelConfig.tokenLimit;
+        limits.tokenLimit = (modelConfig.tokenLimit === -1 || modelConfig.tokenLimit === null) ? null : modelConfig.tokenLimit;
       }
     }
 
@@ -168,10 +170,11 @@ export class UsageService {
     if (tier && model && project.tiers && project.tiers[tier]?.modelLimits && project.tiers[tier].modelLimits[model]) {
       const tierModelConfig = project.tiers[tier].modelLimits[model];
       if (tierModelConfig.requestLimit !== undefined) {
-        limits.requestLimit = tierModelConfig.requestLimit;
+        // -1 or null means explicitly unlimited
+        limits.requestLimit = (tierModelConfig.requestLimit === -1 || tierModelConfig.requestLimit === null) ? null : tierModelConfig.requestLimit;
       }
       if (tierModelConfig.tokenLimit !== undefined) {
-        limits.tokenLimit = tierModelConfig.tokenLimit;
+        limits.tokenLimit = (tierModelConfig.tokenLimit === -1 || tierModelConfig.tokenLimit === null) ? null : tierModelConfig.tokenLimit;
       }
     }
 

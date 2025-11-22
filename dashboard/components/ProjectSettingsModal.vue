@@ -263,8 +263,94 @@
                     </div>
                   </div>
 
+                  <!-- Tier Model Limits (Optional) -->
+                  <div class="mt-4 pt-4 border-t border-gray-500/10">
+                    <div class="flex items-center justify-between mb-2">
+                      <label class="text-xs font-medium text-white">Model-Specific Limits (Optional)</label>
+                      <button
+                        @click="toggleTierModelLimits(String(tierName))"
+                        class="text-xs text-blue-300 hover:text-blue-400"
+                      >
+                        {{ tier.modelLimits && Object.keys(tier.modelLimits).length > 0 ? 'Hide' : '+ Add Model Limits' }}
+                      </button>
+                    </div>
+                    
+                    <div v-if="tier.modelLimits && Object.keys(tier.modelLimits).length > 0" class="space-y-2 mt-2">
+                      <div v-for="(modelLimit, modelName) in tier.modelLimits" :key="modelName" class="bg-gray-500/5 border border-gray-500/10 rounded p-3">
+                        <div class="flex justify-between items-center mb-2">
+                          <span class="text-xs font-medium text-white">{{ modelName }}</span>
+                          <button
+                            @click="deleteTierModelLimit(String(tierName), String(modelName))"
+                            class="text-gray-500 hover:text-red-500 text-xs"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-3">
+                              <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                          <div>
+                            <label class="block text-xs text-gray-400 mb-1">Requests</label>
+                            <div class="flex items-center space-x-1">
+                              <input
+                                v-model.number="modelLimit.requestLimit"
+                                type="number"
+                                min="-1"
+                                :disabled="modelLimit.requestLimit === -1"
+                                class="flex-1 px-2 py-1 text-xs text-white bg-gray-500/10 border border-gray-500/10 rounded disabled:opacity-50"
+                              />
+                              <label class="flex items-center cursor-pointer" title="Unlimited">
+                                <input
+                                  type="checkbox"
+                                  :checked="modelLimit.requestLimit === -1"
+                                  @change="modelLimit.requestLimit = ($event.target as HTMLInputElement).checked ? -1 : 0"
+                                  class="w-3 h-3 rounded border-gray-500/20 bg-gray-500/10 text-blue-300"
+                                />
+                              </label>
+                            </div>
+                          </div>
+                          <div>
+                            <label class="block text-xs text-gray-400 mb-1">Tokens</label>
+                            <div class="flex items-center space-x-1">
+                              <input
+                                v-model.number="modelLimit.tokenLimit"
+                                type="number"
+                                min="-1"
+                                :disabled="modelLimit.tokenLimit === -1"
+                                class="flex-1 px-2 py-1 text-xs text-white bg-gray-500/10 border border-gray-500/10 rounded disabled:opacity-50"
+                              />
+                              <label class="flex items-center cursor-pointer" title="Unlimited">
+                                <input
+                                  type="checkbox"
+                                  :checked="modelLimit.tokenLimit === -1"
+                                  @change="modelLimit.tokenLimit = ($event.target as HTMLInputElement).checked ? -1 : 0"
+                                  class="w-3 h-3 rounded border-gray-500/20 bg-gray-500/10 text-blue-300"
+                                />
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="flex items-center space-x-2">
+                        <input
+                          v-model="tierNewModelNames[String(tierName)]"
+                          type="text"
+                          placeholder="Model name"
+                          class="flex-1 px-2 py-1 text-xs text-white bg-gray-500/10 border border-gray-500/10 rounded"
+                        />
+                        <button
+                          @click="addTierModelLimit(String(tierName))"
+                          class="px-2 py-1 text-xs bg-gray-500/10 border border-gray-500/10 text-white rounded hover:bg-gray-500/15"
+                        >
+                          + Add
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
                   <!-- Custom Message -->
-                  <div>
+                  <div class="mt-4">
                     <label class="block text-xs font-medium text-white mb-1">
                       Custom Message (Optional)
                       <span class="text-gray-500 font-normal ml-1">- Supports {{"{{"}}tier}}, {{"{{"}}limit}}, {{"{{"}}usage}}, {{"{{"}}limitType}}, {{"{{"}}period}}</span>
@@ -310,16 +396,18 @@
                 <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg p-4">
                   <h3 class="font-semibold text-white mb-2">How Model Limits Work</h3>
                   <p class="text-sm text-white mb-2">
-                    Set different limits for each AI model (e.g., <strong>gpt-4o</strong>, <strong>claude-3-5-sonnet</strong>, <strong>gemini-pro</strong>).
+                    Set different limits for each AI model (e.g., <strong>gpt-4o</strong>, <strong>claude-3-5-sonnet</strong>, <strong>gemini-2.5</strong>).
                     Usage is tracked separately per model, and you can configure limits at both the project and tier level.
                   </p>
                   <div class="mt-3 p-3 bg-gray-500/5 border border-gray-500/10 rounded-lg">
-                    <p class="text-xs text-gray-300 font-semibold mb-1">Priority Order</p>
+                    <p class="text-xs text-gray-300 font-semibold mb-1">Configuration Options</p>
                     <p class="text-xs text-gray-400">
-                      <strong>Tier Model Limits</strong> → <strong>Project Model Limits</strong> → <strong>Tier General Limits</strong> → <strong>Project General Limits</strong>
+                      • <strong>Number</strong> - Specific limit (e.g., 50 requests)<br>
+                      • <strong>Unlimited</strong> - No limit at all (check the box)<br>
+                      • <strong>Empty/0</strong> - Inherits from general limits
                     </p>
                     <p class="text-xs text-gray-400 mt-2">
-                      Model-specific limits override general limits. Configure model limits per tier in the Plan Tiers tab.
+                      <strong>Example:</strong> Give unlimited access to gemini-2.5, but limit sonnet to 50 requests.
                     </p>
                   </div>
                 </div>
@@ -349,21 +437,47 @@
                   <div class="grid grid-cols-2 gap-4">
                     <div>
                       <label class="block text-xs font-medium text-white mb-1">Request Limit</label>
-                      <input
-                        v-model.number="modelLimit.requestLimit"
-                        type="number"
-                        min="0"
-                        class="w-full px-3 py-2 text-sm text-white bg-gray-500/10 border border-gray-500/10 rounded-lg"
-                      />
+                      <div class="flex items-center space-x-2">
+                        <input
+                          v-model.number="modelLimit.requestLimit"
+                          type="number"
+                          min="-1"
+                          :disabled="modelLimit.requestLimit === -1"
+                          class="flex-1 px-3 py-2 text-sm text-white bg-gray-500/10 border border-gray-500/10 rounded-lg disabled:opacity-50"
+                          placeholder="Leave empty to inherit"
+                        />
+                        <label class="flex items-center space-x-1 text-xs text-white whitespace-nowrap cursor-pointer">
+                          <input
+                            type="checkbox"
+                            :checked="modelLimit.requestLimit === -1"
+                            @change="modelLimit.requestLimit = ($event.target as HTMLInputElement).checked ? -1 : 0"
+                            class="rounded border-gray-500/20 bg-gray-500/10 text-blue-300 focus:ring-blue-300/50"
+                          />
+                          <span>Unlimited</span>
+                        </label>
+                      </div>
                     </div>
                     <div>
                       <label class="block text-xs font-medium text-white mb-1">Token Limit</label>
-                      <input
-                        v-model.number="modelLimit.tokenLimit"
-                        type="number"
-                        min="0"
-                        class="w-full px-3 py-2 text-sm text-white bg-gray-500/10 border border-gray-500/10 rounded-lg"
-                      />
+                      <div class="flex items-center space-x-2">
+                        <input
+                          v-model.number="modelLimit.tokenLimit"
+                          type="number"
+                          min="-1"
+                          :disabled="modelLimit.tokenLimit === -1"
+                          class="flex-1 px-3 py-2 text-sm text-white bg-gray-500/10 border border-gray-500/10 rounded-lg disabled:opacity-50"
+                          placeholder="Leave empty to inherit"
+                        />
+                        <label class="flex items-center space-x-1 text-xs text-white whitespace-nowrap cursor-pointer">
+                          <input
+                            type="checkbox"
+                            :checked="modelLimit.tokenLimit === -1"
+                            @change="modelLimit.tokenLimit = ($event.target as HTMLInputElement).checked ? -1 : 0"
+                            class="rounded border-gray-500/20 bg-gray-500/10 text-blue-300 focus:ring-blue-300/50"
+                          />
+                          <span>Unlimited</span>
+                        </label>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -562,6 +676,7 @@ const emit = defineEmits<{
 const configTab = ref('basic')
 const newTierName = ref('')
 const newModelName = ref('')
+const tierNewModelNames = ref<Record<string, string>>({})
 const analytics = ref<any>(null)
 const analyticsLoading = ref(false)
 const analyticsError = ref('')
@@ -582,6 +697,7 @@ const addTier = () => {
       requestLimit: 0,
       tokenLimit: 0,
       customMessage: '',
+      modelLimits: {},
     }
     newTierName.value = ''
   }
@@ -589,6 +705,34 @@ const addTier = () => {
 
 const deleteTier = (tierName: string) => {
   delete props.editForm.tiers[tierName]
+  delete tierNewModelNames.value[tierName]
+}
+
+const toggleTierModelLimits = (tierName: string) => {
+  if (!props.editForm.tiers[tierName].modelLimits) {
+    props.editForm.tiers[tierName].modelLimits = {}
+  } else if (Object.keys(props.editForm.tiers[tierName].modelLimits).length === 0) {
+    // Initialize with empty object to show the section
+    props.editForm.tiers[tierName].modelLimits = {}
+  }
+}
+
+const addTierModelLimit = (tierName: string) => {
+  const modelName = tierNewModelNames.value[tierName]
+  if (modelName && !props.editForm.tiers[tierName].modelLimits[modelName]) {
+    if (!props.editForm.tiers[tierName].modelLimits) {
+      props.editForm.tiers[tierName].modelLimits = {}
+    }
+    props.editForm.tiers[tierName].modelLimits[modelName] = {
+      requestLimit: 0,
+      tokenLimit: 0,
+    }
+    tierNewModelNames.value[tierName] = ''
+  }
+}
+
+const deleteTierModelLimit = (tierName: string, modelName: string) => {
+  delete props.editForm.tiers[tierName].modelLimits[modelName]
 }
 
 const addModelLimit = () => {
