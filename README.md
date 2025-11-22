@@ -568,30 +568,24 @@ UNLICENSED
 
 ## Implementation Status
 
-### ✅ Phase 1: Multi-Type Limits (COMPLETE)
+### ✅ Multi-Type Limits (COMPLETE)
 - Request-based limiting (for image generation)
 - Token-based limiting (for chat)
 - Combined limiting (both metrics)
 - Dashboard UI for limit type configuration
 
-### ✅ Phase 2: Plan/Tier System (COMPLETE)
+### ✅ Plan/Tier System (COMPLETE)
 - Tier-based limits (free, pro, enterprise, etc.)
 - Per-tier request and token limits
 - Tier parameter in SDK
 - Dashboard UI for tier management
 
-### ✅ Phase 3: Visual Rule Engine (COMPLETE)
+### ✅ Visual Rule Engine (COMPLETE)
 - Condition-based rules (usage %, absolute, tier match)
 - Custom response actions
 - Deep link support for upgrade flows
 - Visual rule builder in dashboard
 
-## Next Steps (Future Enhancements)
+## License
 
-- [ ] Add more LLM providers (Anthropic, Cohere, etc.)
-- [ ] Implement API key encryption at rest
-- [ ] Composite rule conditions (AND/OR logic)
-- [ ] Webhooks for limit events
-- [ ] Advanced usage reports (weekly, monthly)
-- [ ] Rate limiting windows (hourly, weekly)
-- [ ] Usage analytics charts in dashboard
+See [FSL-1.1-MIT](LICENSE) for full details.
