@@ -36,7 +36,6 @@ Deploy AI Ratelimit to Railway with Resend for email.
 
    ```bash
    NODE_ENV=production
-   PORT=3000
    
    # Database (auto-provided by Railway)
    DATABASE_URL=${{Postgres.DATABASE_URL}}
