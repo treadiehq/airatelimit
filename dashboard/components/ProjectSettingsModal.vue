@@ -394,19 +394,44 @@
                         </div>
                       </div>
                       
-                      <div class="flex items-center space-x-2">
-                        <input
-                          v-model="tierNewModelNames[String(tierName)]"
-                          type="text"
-                          placeholder="Model name"
-                          class="flex-1 px-2 py-1 text-xs text-white bg-gray-500/10 border border-gray-500/10 rounded"
-                        />
-                        <button
-                          @click="addTierModelLimit(String(tierName))"
-                          class="px-2 py-1 text-xs bg-gray-500/10 border border-gray-500/10 text-white rounded hover:bg-gray-500/15"
-                        >
-                          + Add
-                        </button>
+                      <div class="relative">
+                        <div class="flex items-center space-x-2">
+                          <div class="flex-1 relative">
+                            <input
+                              v-model="tierNewModelNames[String(tierName)]"
+                              @input="showTierModelSuggestions[String(tierName)] = true"
+                              @focus="showTierModelSuggestions[String(tierName)] = true"
+                              @blur="hideTierModelSuggestions(String(tierName))"
+                              type="text"
+                              placeholder="Type model name"
+                              class="w-full px-2 py-1 text-xs text-white bg-gray-500/10 border border-gray-500/10 rounded focus:ring-1 focus:ring-blue-300/50"
+                            />
+                            <!-- Suggestions for tier models -->
+                            <div 
+                              v-if="showTierModelSuggestions[String(tierName)] && getTierFilteredModels(String(tierName)).length > 0" 
+                              class="absolute z-20 w-full mt-1 bg-gray-900 border border-gray-500/20 rounded shadow-xl max-h-48 overflow-y-auto"
+                            >
+                              <div
+                                v-for="model in getTierFilteredModels(String(tierName))"
+                                :key="model.name"
+                                @click="selectTierModelSuggestion(String(tierName), model.name)"
+                                class="px-3 py-2 hover:bg-gray-500/10 cursor-pointer border-b border-gray-500/10 last:border-b-0"
+                              >
+                                <div class="text-xs text-white font-mono">{{ model.name }}</div>
+                                <div class="text-xs text-gray-500">{{ model.provider }}</div>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            @click="addTierModelLimit(String(tierName))"
+                            class="px-2 py-1 text-xs bg-gray-500/10 border border-gray-500/10 text-white rounded hover:bg-gray-500/15"
+                          >
+                            + Add
+                          </button>
+                        </div>
+                        <div v-if="tierNewModelNames[String(tierName)] && !isKnownModel(tierNewModelNames[String(tierName)])" class="mt-1 text-xs text-amber-300/80">
+                          ⚠️ Unknown model
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -487,44 +512,6 @@
                       Set different limits for each AI model to control costs and usage patterns. Perfect for multi-model apps.
                     </p>
                   </div>
-
-                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg p-4">
-                      <div class="text-xs font-semibold text-blue-300 mb-2">💰 Cost Control</div>
-                      <p class="text-xs text-gray-400">
-                        Limit expensive models (gpt-4o) while giving unlimited access to cheaper ones (gemini-2.5)
-                      </p>
-                    </div>
-                    <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg p-4">
-                      <div class="text-xs font-semibold text-blue-300 mb-2">🧪 Beta Testing</div>
-                      <p class="text-xs text-gray-400">
-                        Set conservative limits on new model releases until you validate quality
-                      </p>
-                    </div>
-                    <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg p-4">
-                      <div class="text-xs font-semibold text-blue-300 mb-2">🎯 Use Case Specific</div>
-                      <p class="text-xs text-gray-400">
-                        Different limits for chat (high volume) vs reasoning (low volume) models
-                      </p>
-                    </div>
-                  </div>
-
-                  <div class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-4">
-                    <div class="flex items-start">
-                      <svg class="w-5 h-5 text-gray-400 mt-0.5 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div class="text-xs text-gray-400">
-                        <p class="mb-2"><strong class="text-white">Common Models:</strong></p>
-                        <div class="grid grid-cols-2 gap-x-4 gap-y-1">
-                          <span>• gpt-4o, gpt-4o-mini</span>
-                          <span>• claude-3-5-sonnet</span>
-                          <span>• gemini-1.5-pro, gemini-2.5</span>
-                          <span>• o1-preview, o1-mini</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 <div v-for="(modelLimit, modelName) in editForm.modelLimits" :key="modelName" class="border border-gray-500/10 rounded-lg p-4">
@@ -589,19 +576,54 @@
                   </div>
                 </div>
 
-                <div class="flex items-center space-x-2">
-                  <input
-                    v-model="newModelName"
-                    type="text"
-                    placeholder="e.g., gpt-4o, claude-3-5-sonnet, gemini-pro"
-                    class="flex-1 px-4 py-2 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg text-sm"
-                  />
-                  <button
-                    @click="addModelLimit"
-                    class="px-4 py-2 bg-gray-500/10 border border-gray-500/10 text-white text-sm font-medium rounded-lg hover:bg-gray-500/15 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    + Add Model
-                  </button>
+                <div class="relative">
+                  <div class="flex items-center space-x-2">
+                    <div class="flex-1 relative">
+                      <input
+                        v-model="newModelName"
+                        @input="showModelSuggestions = true"
+                        @focus="showModelSuggestions = true"
+                        @blur="hideModelSuggestions"
+                        type="text"
+                        placeholder="Type model name or select from suggestions"
+                        class="w-full px-4 py-2 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg text-sm focus:ring-2 focus:ring-blue-300/50"
+                      />
+                      <!-- Suggestions Dropdown -->
+                      <div 
+                        v-if="showModelSuggestions && filteredModelSuggestions.length > 0" 
+                        class="absolute z-10 w-full mt-1 bg-gray-900 border border-gray-500/20 rounded-lg shadow-xl max-h-60 overflow-y-auto"
+                      >
+                        <div
+                          v-for="model in filteredModelSuggestions"
+                          :key="model.name"
+                          @click="selectModelSuggestion(model.name)"
+                          class="px-4 py-2 hover:bg-gray-500/10 cursor-pointer transition-colors border-b border-gray-500/10 last:border-b-0"
+                        >
+                          <div class="flex items-center justify-between">
+                            <div>
+                              <div class="text-sm text-white font-mono">{{ model.name }}</div>
+                              <div class="text-xs text-gray-400">{{ model.provider }} • {{ model.type }}</div>
+                            </div>
+                            <span v-if="model.recommended" class="text-xs px-2 py-0.5 bg-blue-300/10 text-blue-300 rounded">Popular</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      @click="addModelLimit"
+                      :disabled="!newModelName.trim()"
+                      class="px-4 py-2 bg-gray-500/10 border border-gray-500/10 text-white text-sm font-medium rounded-lg hover:bg-gray-500/15 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      + Add
+                    </button>
+                  </div>
+                  <!-- Warning for unknown models -->
+                  <div v-if="newModelName && !isKnownModel(newModelName)" class="mt-2 flex items-start text-xs text-amber-300">
+                    <svg class="w-4 h-4 mr-1 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span>Model name not recognized. You can still add it, but make sure it's spelled correctly.</span>
+                  </div>
                 </div>
 
                 <button
@@ -783,12 +805,92 @@ const emit = defineEmits<{
 const configTab = ref('basic')
 const newTierName = ref('')
 const newModelName = ref('')
+const showModelSuggestions = ref(false)
+const showTierModelSuggestions = ref<Record<string, boolean>>({})
 const tierNewModelNames = ref<Record<string, string>>({})
 const analytics = ref<any>(null)
 const analyticsLoading = ref(false)
 const analyticsError = ref('')
 
 const api = useApi()
+
+// Known AI models database
+const knownModels = [
+  // OpenAI
+  { name: 'gpt-4o', provider: 'OpenAI', type: 'Chat', recommended: true },
+  { name: 'gpt-4o-mini', provider: 'OpenAI', type: 'Chat', recommended: true },
+  { name: 'gpt-4-turbo', provider: 'OpenAI', type: 'Chat', recommended: false },
+  { name: 'gpt-4', provider: 'OpenAI', type: 'Chat', recommended: false },
+  { name: 'gpt-3.5-turbo', provider: 'OpenAI', type: 'Chat', recommended: false },
+  { name: 'o1-preview', provider: 'OpenAI', type: 'Reasoning', recommended: true },
+  { name: 'o1-mini', provider: 'OpenAI', type: 'Reasoning', recommended: true },
+  
+  // Anthropic
+  { name: 'claude-3-5-sonnet-20241022', provider: 'Anthropic', type: 'Chat', recommended: true },
+  { name: 'claude-3-5-sonnet-latest', provider: 'Anthropic', type: 'Chat', recommended: true },
+  { name: 'claude-3-opus-20240229', provider: 'Anthropic', type: 'Chat', recommended: false },
+  { name: 'claude-3-sonnet-20240229', provider: 'Anthropic', type: 'Chat', recommended: false },
+  { name: 'claude-3-haiku-20240307', provider: 'Anthropic', type: 'Chat', recommended: false },
+  
+  // Google
+  { name: 'gemini-2.5-flash', provider: 'Google', type: 'Chat', recommended: true },
+  { name: 'gemini-2.0-flash-exp', provider: 'Google', type: 'Chat', recommended: true },
+  { name: 'gemini-1.5-pro', provider: 'Google', type: 'Chat', recommended: true },
+  { name: 'gemini-1.5-flash', provider: 'Google', type: 'Chat', recommended: false },
+  
+  // xAI
+  { name: 'grok-beta', provider: 'xAI', type: 'Chat', recommended: true },
+  { name: 'grok-2-1212', provider: 'xAI', type: 'Chat', recommended: false },
+]
+
+const filteredModelSuggestions = computed(() => {
+  if (!newModelName.value) {
+    // Show popular models first when empty
+    return knownModels.filter(m => m.recommended).slice(0, 8)
+  }
+  const search = newModelName.value.toLowerCase()
+  return knownModels.filter(m => 
+    m.name.toLowerCase().includes(search) ||
+    m.provider.toLowerCase().includes(search)
+  ).slice(0, 10)
+})
+
+const isKnownModel = (modelName: string) => {
+  return knownModels.some(m => m.name.toLowerCase() === modelName.toLowerCase())
+}
+
+const selectModelSuggestion = (modelName: string) => {
+  newModelName.value = modelName
+  showModelSuggestions.value = false
+}
+
+const hideModelSuggestions = () => {
+  setTimeout(() => {
+    showModelSuggestions.value = false
+  }, 200)
+}
+
+const getTierFilteredModels = (tierName: string) => {
+  const search = tierNewModelNames.value[tierName]
+  if (!search) {
+    return knownModels.filter(m => m.recommended).slice(0, 6)
+  }
+  return knownModels.filter(m => 
+    m.name.toLowerCase().includes(search.toLowerCase()) ||
+    m.provider.toLowerCase().includes(search.toLowerCase())
+  ).slice(0, 8)
+}
+
+const selectTierModelSuggestion = (tierName: string, modelName: string) => {
+  tierNewModelNames.value[tierName] = modelName
+  showTierModelSuggestions.value[tierName] = false
+}
+
+const hideTierModelSuggestions = (tierName: string) => {
+  setTimeout(() => {
+    showTierModelSuggestions.value[tierName] = false
+  }, 200)
+}
 
 const providerLabels: Record<string, string> = {
   openai: 'OpenAI',
