@@ -34,3 +34,5 @@ Thumbs.db
 *.tmp
 .cache/
 add-more-reserved-names.sql
+CUSTOMER_DEMO.md
+test.http
