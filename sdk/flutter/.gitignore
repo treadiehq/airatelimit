@@ -1,0 +1,22 @@
+# Files and directories created by pub.
+.dart_tool/
+.packages
+pubspec.lock
+
+# Conventional directory for build output.
+build/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Test coverage
+coverage/
+
+# macOS
+.DS_Store
+

@@ -253,9 +253,11 @@ gpt-4o: 5 requests (free), 500 requests (pro)
 - No AI data leaves your provider
 - Open source—audit the code
 
-## Links
+## SDKs & Integrations
 
-- [SDK Docs](sdk/js/README.md) - JavaScript SDK reference
+- [JavaScript/TypeScript SDK](sdk/js/README.md) - For web and Node.js
+- [Flutter/Dart SDK](sdk/flutter/README.md) - For Flutter mobile apps
+- [Firebase Integration Guide](docs/FIREBASE_INTEGRATION.md) - Use with Firebase Auth
 
 ## License
 
