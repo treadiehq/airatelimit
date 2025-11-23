@@ -67,7 +67,7 @@ try {
 }
 ```
 
-**New in v1.1.0:** Added `SecurityPolicyViolationError` for prompt injection protection. Enable security features in your project dashboard.
+Added `SecurityPolicyViolationError` for prompt injection protection. Enable security features in your project dashboard.
 
 ## API
 
