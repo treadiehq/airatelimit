@@ -1,6 +1,6 @@
 {
   "name": "@ai-ratelimit/sdk",
-  "version": "1.1.0",
+  "version": "1.0.1",
   "description": "JavaScript SDK for AI Rate Limit proxy",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
