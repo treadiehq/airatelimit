@@ -35,9 +35,9 @@
             <div>
               <h2 class="text-xl font-bold text-white">{{ project.name }}</h2>
               <div class="flex items-center space-x-1 mt-2">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-300/10 text-green-300">
-                  <span class="w-1.5 h-1.5 rounded-full bg-green-300 mr-1.5"></span>
-                  Active
+                <span :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium', statusBadge.class]">
+                  <span :class="['w-1.5 h-1.5 rounded-full mr-1.5', statusBadge.dotClass]"></span>
+                  {{ statusBadge.text }}
                 </span>
                 <template v-if="project.provider">
                   <span class="text-xs text-gray-500">•</span>
@@ -317,6 +317,58 @@ const providerLabel = computed(() => {
     other: 'OpenAI-compatible'
   }
   return labels[project.value.provider as keyof typeof labels] || project.value.provider
+})
+
+// Calculate status badge (same logic as ProjectCard)
+const statusBadge = computed(() => {
+  if (!project.value) {
+    return {
+      text: 'Loading',
+      class: 'bg-gray-500/10 text-gray-400',
+      dotClass: 'bg-gray-400'
+    }
+  }
+
+  const hasLimits = project.value.dailyRequestLimit || project.value.dailyTokenLimit
+  if (!hasLimits) {
+    return {
+      text: 'No Limits',
+      class: 'bg-blue-300/10 text-blue-300',
+      dotClass: 'bg-blue-300'
+    }
+  }
+
+  const requestExceeded = project.value.dailyRequestLimit && 
+    (usage.value?.requestsUsed || 0) >= project.value.dailyRequestLimit
+  const tokenExceeded = project.value.dailyTokenLimit && 
+    (usage.value?.tokensUsed || 0) >= project.value.dailyTokenLimit
+
+  if (requestExceeded || tokenExceeded) {
+    return {
+      text: 'Exceeded',
+      class: 'bg-red-400/10 text-red-400',
+      dotClass: 'bg-red-400 animate-pulse'
+    }
+  }
+
+  const requestWarning = project.value.dailyRequestLimit && 
+    (usage.value?.requestsUsed || 0) / project.value.dailyRequestLimit > 0.7
+  const tokenWarning = project.value.dailyTokenLimit && 
+    (usage.value?.tokensUsed || 0) / project.value.dailyTokenLimit > 0.7
+
+  if (requestWarning || tokenWarning) {
+    return {
+      text: 'Near Limit',
+      class: 'bg-yellow-300/10 text-yellow-300',
+      dotClass: 'bg-yellow-300'
+    }
+  }
+
+  return {
+    text: 'Within Limits',
+    class: 'bg-green-300/10 text-green-300',
+    dotClass: 'bg-green-300'
+  }
 })
 
 const toggleProjectKeyVisibility = () => {

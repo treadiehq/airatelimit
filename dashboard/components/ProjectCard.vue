@@ -151,7 +151,7 @@ const statusBadge = computed(() => {
   const hasLimits = props.project.dailyRequestLimit || props.project.dailyTokenLimit
   if (!hasLimits) {
     return {
-      text: 'Unlimited',
+      text: 'No Limits',
       class: 'bg-blue-300/10 text-blue-300',
       dotClass: 'bg-blue-300'
     }
@@ -164,7 +164,7 @@ const statusBadge = computed(() => {
 
   if (requestExceeded || tokenExceeded) {
     return {
-      text: 'Limit Exceeded',
+      text: 'Exceeded',
       class: 'bg-red-400/10 text-red-400',
       dotClass: 'bg-red-400 animate-pulse'
     }
@@ -184,7 +184,7 @@ const statusBadge = computed(() => {
   }
 
   return {
-    text: 'Active',
+    text: 'Within Limits',
     class: 'bg-green-300/10 text-green-300',
     dotClass: 'bg-green-300'
   }
