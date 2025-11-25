@@ -1,5 +1,6 @@
 <template>
-  <div class="min-h-screen bg-black flex items-center justify-center px-4">
+  <div class="min-h-screen bg-black relative flex items-center justify-center px-4">
+    <div class="radial-gradient absolute top-0 md:right-14 right-5"></div>
     <div class="max-w-md w-full text-center">
       <div v-if="loading" class="bg-gray-500/10 border border-gray-500/15 rounded-lg p-8">
         <div class="w-16 h-16 bg-blue-300/10 rounded-full flex items-center justify-center mx-auto mb-4">

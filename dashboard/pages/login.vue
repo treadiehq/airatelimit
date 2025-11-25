@@ -1,5 +1,6 @@
 <template>
   <div class="min-h-screen relative bg-black flex items-center justify-center p-4">
+    <div class="radial-gradient absolute top-0 md:right-14 right-5"></div>
     <div class="max-w-md w-full relative z-10">
       <!-- Logo/Header -->
       <div class="text-center mb-8">
