@@ -65,26 +65,26 @@
             <!-- Code Content -->
             <div class="p-4 px-4 text-left">
               <!-- JavaScript Tab -->
-              <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500">$</span> <span class="text-green-300">npm install</span> @ai-ratelimit/sdk
-<span class="text-gray-500">$</span> <span class="text-blue-300">import</span> { createClient } <span class="text-blue-300">from</span> <span class="text-amber-300">'@ai-ratelimit/sdk'</span>
+              <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500">$</span> <span class="text-blue-300">npm</span> <span class="text-green-300">install @ai-ratelimit/sdk</span>
+<span class="text-gray-500">$</span> <span class="text-purple-300">import</span> { createClient } <span class="text-purple-300">from</span> <span class="text-green-300">'@ai-ratelimit/sdk'</span>
 <span class="text-gray-500">$</span> 
-<span class="text-gray-500">$</span> <span class="text-purple-300">const</span> client = createClient({
-    baseUrl: <span class="text-amber-300">'https://airatelimit.com/api'</span>,
-    projectKey: <span class="text-amber-300">'pk_your_key_here'</span>
+<span class="text-gray-500">$</span> <span class="text-purple-300">const</span> client = <span class="text-blue-300">createClient</span>({
+    baseUrl: <span class="text-green-300">'https://airatelimit.com/api'</span>,
+    projectKey: <span class="text-green-300">'pk_your_key_here'</span>
   })
 <span class="text-gray-500">$</span>
-<span class="text-gray-500">$</span> <span class="text-purple-300">const</span> result = <span class="text-blue-300">await</span> client.chat({
-    identity: <span class="text-amber-300">'user-123'</span>,
-    tier: <span class="text-amber-300">'free'</span>,
-    model: <span class="text-amber-300">'gpt-4o'</span>,
-    messages: [{ role: <span class="text-amber-300">'user'</span>, content: <span class="text-amber-300">'Hello!'</span> }]
+<span class="text-gray-500">$</span> <span class="text-purple-300">const</span> result = <span class="text-purple-300">await</span> <span class="text-red-400">client</span>.<span class="text-blue-300">chat</span>({
+    identity: <span class="text-green-300">'user-123'</span>,
+    tier: <span class="text-green-300">'free'</span>,
+    model: <span class="text-green-300">'gpt-4o'</span>,
+    messages: [{ role: <span class="text-green-300">'user'</span>, content: <span class="text-green-300">'Hello!'</span> }]
   })</code></pre>
 
               <!-- API Tab -->
               <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500">$</span> curl -X POST <span class="text-blue-300">https://airatelimit.com/api/v1/proxy/chat</span> \
-  -H <span class="text-amber-300">"x-project-key: pk_your_key_here"</span> \
-  -H <span class="text-amber-300">"Content-Type: application/json"</span> \
-  -d <span class="text-amber-300">'{
+  -H <span class="text-green-300">"x-project-key: pk_your_key_here"</span> \
+  -H <span class="text-green-300">"Content-Type: application/json"</span> \
+  -d <span class="text-green-300">'{
     "identity": "user-123",
     "tier": "free",
     "model": "gpt-4o",

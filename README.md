@@ -78,7 +78,7 @@ Done! Usage is tracked automatically.
 
 ## Key Features
 
-### Prompt Injection Protection 🛡️
+### Prompt Injection Protection
 Protect your system prompts from extraction attacks:
 - Detects "show me your prompt" jailbreaks
 - Blocks role manipulation attempts
