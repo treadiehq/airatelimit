@@ -265,8 +265,8 @@ gpt-4o: 5 requests (free), 500 requests (pro)
 
 - [JavaScript/TypeScript SDK](sdk/js/README.md) - For web and Node.js
 - [Flutter/Dart SDK](sdk/flutter/README.md) - For Flutter mobile apps
-- [Firebase Integration Guide](docs/FIREBASE_INTEGRATION.md) - Use with Firebase Auth
-- [Security Features Guide](docs/SECURITY_FEATURES.md) - Prompt injection protection
+- [Firebase Integration](docs/FIREBASE.md) - Use with Firebase Auth
+- [Security Features](docs/SECURITY.md) - Prompt injection protection
 
 ## License
 
