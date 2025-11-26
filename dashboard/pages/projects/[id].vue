@@ -179,14 +179,40 @@
         <div class="space-y-4">
           <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider">Usage by Identity (Today)</h3>
           <div class="bg-gray-500/10 border border-gray-500/10 p-6 rounded-lg">
-            <div v-if="identities.length === 0" class="text-center py-12">
-              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-500/10 mb-4">
-                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+            <!-- Guided Empty State -->
+            <div v-if="identities.length === 0" class="space-y-6">
+              <div class="text-center">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-300/10 mb-3">
+                  <svg class="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <h4 class="text-white font-medium mb-1">Make your first request</h4>
+                <p class="text-gray-400 text-sm">Try this curl command to test your setup:</p>
               </div>
-              <p class="text-gray-400 text-sm mb-1">No usage data yet</p>
-              <p class="text-gray-500 text-xs">Make your first API request to see usage by identity</p>
+
+              <!-- Curl Command -->
+              <div class="relative">
+                <pre class="bg-gray-900 border border-gray-500/20 rounded-lg p-4 overflow-x-auto text-xs"><code class="text-gray-300">curl https://api.airatelimit.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-your-openai-key" \
+  -H "x-project-key: <span class="text-blue-300">{{ project.projectKey }}</span>" \
+  -H "x-identity: test-user" \
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'</code></pre>
+                <button
+                  @click="copyCurlCommand"
+                  class="absolute top-2 right-2 px-2 py-1 bg-gray-700 hover:bg-gray-600 text-xs text-white rounded transition-colors"
+                >
+                  {{ curlCopied ? '✓ Copied' : 'Copy' }}
+                </button>
+              </div>
+
+              <p class="text-center text-gray-500 text-xs">
+                Replace <code class="bg-gray-500/20 px-1 rounded">sk-your-openai-key</code> with your actual API key
+              </p>
             </div>
             <div v-else class="overflow-x-auto">
               <table class="min-w-full">
@@ -445,6 +471,22 @@ const { success: showSuccess } = useToast()
 
 const copyProjectKey = () => {
   copy(project.value.projectKey, 'Project key copied!')
+}
+
+const curlCopied = ref(false)
+const copyCurlCommand = () => {
+  const command = `curl https://api.airatelimit.com/v1/chat/completions \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer sk-your-openai-key" \\
+  -H "x-project-key: ${project.value.projectKey}" \\
+  -H "x-identity: test-user" \\
+  -d '{
+    "model": "gpt-4o-mini",
+    "messages": [{"role": "user", "content": "Hello!"}]
+  }'`
+  copy(command, 'Command copied!')
+  curlCopied.value = true
+  setTimeout(() => { curlCopied.value = false }, 2000)
 }
 
 const toggleSettingsDropdown = () => {
