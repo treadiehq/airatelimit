@@ -70,11 +70,11 @@
 
 <span class="text-purple-300">const</span> openai = <span class="text-purple-300">new</span> <span class="text-blue-300">OpenAI</span>({
   apiKey: <span class="text-green-300">'sk-your-key'</span>,
-  baseURL: <span class="text-green-300">'https://api.airatelimit.com/v1'</span>,
+  baseURL: <span class="text-red-400">'https://api.airatelimit.com/v1'</span>,
   defaultHeaders: {
-    <span class="text-green-300">'x-project-key'</span>: <span class="text-green-300">'pk_xxx'</span>,
-    <span class="text-green-300">'x-identity'</span>: <span class="text-green-300">'user-123'</span>,
-    <span class="text-green-300">'x-tier'</span>: <span class="text-green-300">'free'</span>,
+    <span class="text-red-400">'x-project-key'</span>: <span class="text-red-400">'pk_xxx'</span>,
+    <span class="text-red-400">'x-identity'</span>: <span class="text-red-400">'user-123'</span>,
+    <span class="text-red-400">'x-tier'</span>: <span class="text-red-400">'free'</span>,
   },
 })
 
