@@ -146,6 +146,11 @@ export class PricingService {
     // ═══════════════════════════════════════════════════════════════
     // xAI Models (https://x.ai)
     // ═══════════════════════════════════════════════════════════════
+    'grok-4': { input: 3.00, output: 15.00 },
+    'grok-4.1': { input: 3.00, output: 15.00 },
+    'grok-4-vision': { input: 3.00, output: 15.00 },
+    'grok-3': { input: 2.50, output: 12.00 },
+    'grok-3-vision': { input: 2.50, output: 12.00 },
     'grok-beta': { input: 5.00, output: 15.00 },
     'grok-2': { input: 2.00, output: 10.00 },
     'grok-2-1212': { input: 2.00, output: 10.00 },
@@ -243,8 +248,10 @@ export class PricingService {
     { pattern: /^gemini/i, pricing: { input: 1.25, output: 5.00 } }, // Default Gemini
     
     // xAI
+    { pattern: /^grok-4/i, pricing: { input: 3.00, output: 15.00 } },
+    { pattern: /^grok-3/i, pricing: { input: 2.50, output: 12.00 } },
     { pattern: /^grok-2/i, pricing: { input: 2.00, output: 10.00 } },
-    { pattern: /^grok/i, pricing: { input: 5.00, output: 15.00 } },
+    { pattern: /^grok/i, pricing: { input: 3.00, output: 15.00 } },
     
     // Mistral
     { pattern: /^mistral-large/i, pricing: { input: 2.00, output: 6.00 } },
