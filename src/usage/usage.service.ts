@@ -65,8 +65,80 @@ export class UsageService {
       };
     }
 
-    // Load or create usage counter (per-model tracking)
-    let usage = await this.usageRepository.findOne({
+    // Get limits with identity-aware hierarchy (identity > tier > model > project)
+    const limits = this.getLimitsForIdentity(project, tier, model, identityLimit);
+
+    // Determine which limits to check
+    const shouldCheckRequests = project.limitType === 'requests' || project.limitType === 'both';
+    const shouldCheckTokens = project.limitType === 'tokens' || project.limitType === 'both';
+
+    // Effective limits (null = unlimited, so we use a very high number for SQL)
+    const effectiveRequestLimit = (shouldCheckRequests && limits.requestLimit !== null && limits.requestLimit) 
+      ? limits.requestLimit 
+      : null;
+    const effectiveTokenLimit = (shouldCheckTokens && limits.tokenLimit !== null && limits.tokenLimit) 
+      ? limits.tokenLimit 
+      : null;
+
+    // Format periodStart as date string for PostgreSQL
+    const periodStartStr = periodStart.toISOString().split('T')[0];
+
+    // Step 1: Ensure the row exists (atomic upsert)
+    await this.usageRepository.query(
+      `INSERT INTO usage_counters (id, "projectId", identity, model, "periodStart", "requestsUsed", "tokensUsed", "inputTokens", "outputTokens", "costUsd", "blockedRequests", "savedUsd", "createdAt", "updatedAt")
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, 0, 0, 0, 0, 0, 0, 0, NOW(), NOW())
+       ON CONFLICT ("projectId", identity, "periodStart", model) DO NOTHING`,
+      [project.id, identity, model, periodStartStr],
+    );
+
+    // Step 2: Atomic UPDATE with limit check in WHERE clause
+    // This is the key: the UPDATE only succeeds if we're under the limit
+    const updateResult = await this.usageRepository.query(
+      `UPDATE usage_counters
+       SET 
+         "requestsUsed" = "requestsUsed" + $1,
+         "tokensUsed" = "tokensUsed" + $2,
+         "updatedAt" = NOW()
+       WHERE 
+         "projectId" = $3
+         AND identity = $4
+         AND model = $5
+         AND "periodStart" = $6
+         AND ($7::int IS NULL OR "requestsUsed" + $1 <= $7)
+         AND ($8::int IS NULL OR "tokensUsed" + $2 <= $8)
+       RETURNING *`,
+      [
+        requestedRequests,
+        requestedTokens,
+        project.id,
+        identity,
+        model,
+        periodStartStr,
+        effectiveRequestLimit,
+        effectiveTokenLimit,
+      ],
+    );
+
+    // If UPDATE returned a row, the request was allowed
+    if (updateResult.length > 0) {
+      const usage = updateResult[0] as UsageCounter;
+      
+      // Calculate usage percentages for rule engine
+      const usagePercent = {
+        requests: effectiveRequestLimit ? (usage.requestsUsed / effectiveRequestLimit) * 100 : 0,
+        tokens: effectiveTokenLimit ? (usage.tokensUsed / effectiveTokenLimit) * 100 : 0,
+      };
+
+      return {
+        allowed: true,
+        usageCounter: usage,
+        usagePercent,
+      };
+    }
+
+    // Step 3: UPDATE failed - limit was exceeded
+    // Fetch current usage to include in the error message
+    const currentUsage = await this.usageRepository.findOne({
       where: {
         projectId: project.id,
         identity,
@@ -75,73 +147,38 @@ export class UsageService {
       },
     });
 
-    if (!usage) {
-      usage = this.usageRepository.create({
-        projectId: project.id,
-        identity,
-        model,
-        periodStart,
-        requestsUsed: 0,
-        tokensUsed: 0,
-      });
-    }
+    const currentRequests = currentUsage?.requestsUsed || 0;
+    const currentTokens = currentUsage?.tokensUsed || 0;
 
-    // Calculate next usage values
-    const nextRequests = usage.requestsUsed + requestedRequests;
-    const nextTokens = usage.tokensUsed + requestedTokens;
+    // Determine which limit was exceeded
+    const requestsExceeded = effectiveRequestLimit && (currentRequests + requestedRequests > effectiveRequestLimit);
+    const tokensExceeded = effectiveTokenLimit && (currentTokens + requestedTokens > effectiveTokenLimit);
 
-    // Get limits with identity-aware hierarchy (identity > tier > model > project)
-    const limits = this.getLimitsForIdentity(project, tier, model, identityLimit);
-
-    // Check limits based on limit type
-    const shouldCheckRequests = project.limitType === 'requests' || project.limitType === 'both';
-    const shouldCheckTokens = project.limitType === 'tokens' || project.limitType === 'both';
-
-    // Check request limit (null means explicitly unlimited, skip check)
-    if (shouldCheckRequests && limits.requestLimit !== null && limits.requestLimit && nextRequests > limits.requestLimit) {
     const response = limits.customResponse || this.getLimitResponse(project);
+    
+    // Return appropriate error based on which limit was hit
+    if (requestsExceeded) {
       return {
         allowed: false,
-      limitResponse: this.interpolateVariables(response, {
-        tier,
-        limit: limits.requestLimit,
-        usage: nextRequests,
-        limitType: 'requests',
-        period: project.limitPeriod || 'daily',
-      }),
+        limitResponse: this.interpolateVariables(response, {
+          tier,
+          limit: effectiveRequestLimit,
+          usage: currentRequests,
+          limitType: 'requests',
+          period: project.limitPeriod || 'daily',
+        }),
       };
     }
 
-    // Check token limit (null means explicitly unlimited, skip check)
-    if (shouldCheckTokens && limits.tokenLimit !== null && limits.tokenLimit && nextTokens > limits.tokenLimit) {
-    const response = limits.customResponse || this.getLimitResponse(project);
-      return {
-        allowed: false,
+    return {
+      allowed: false,
       limitResponse: this.interpolateVariables(response, {
         tier,
-        limit: limits.tokenLimit,
-        usage: nextTokens,
+        limit: effectiveTokenLimit,
+        usage: currentTokens,
         limitType: 'tokens',
         period: project.limitPeriod || 'daily',
       }),
-      };
-    }
-
-    // Calculate usage percentages for rule engine (null = unlimited, so 0%)
-    const usagePercent = {
-      requests: (limits.requestLimit !== null && limits.requestLimit) ? (nextRequests / limits.requestLimit) * 100 : 0,
-      tokens: (limits.tokenLimit !== null && limits.tokenLimit) ? (nextTokens / limits.tokenLimit) * 100 : 0,
-    };
-
-    // Update counters
-    usage.requestsUsed = nextRequests;
-    usage.tokensUsed = nextTokens;
-    await this.usageRepository.save(usage);
-
-    return {
-      allowed: true,
-      usageCounter: usage,
-      usagePercent,
     };
   }
 
@@ -217,20 +254,15 @@ export class UsageService {
 
   async finalizeUsage(params: FinalizeParams): Promise<void> {
     const { project, identity, model = '', periodStart, actualTokensUsed } = params;
+    const periodStartStr = periodStart.toISOString().split('T')[0];
 
-    const usage = await this.usageRepository.findOne({
-      where: {
-        projectId: project.id,
-        identity,
-        model,
-        periodStart,
-      },
-    });
-
-    if (usage) {
-      usage.tokensUsed += actualTokensUsed;
-      await this.usageRepository.save(usage);
-    }
+    // Atomic increment - no race condition
+    await this.usageRepository.query(
+      `UPDATE usage_counters
+       SET "tokensUsed" = "tokensUsed" + $1, "updatedAt" = NOW()
+       WHERE "projectId" = $2 AND identity = $3 AND model = $4 AND "periodStart" = $5`,
+      [actualTokensUsed, project.id, identity, model, periodStartStr],
+    );
   }
 
   async finalizeUsageWithCost(params: {
@@ -243,23 +275,20 @@ export class UsageService {
     cost: number;
   }): Promise<void> {
     const { project, identity, model = '', periodStart, inputTokens, outputTokens, cost } = params;
+    const periodStartStr = periodStart.toISOString().split('T')[0];
 
-    const usage = await this.usageRepository.findOne({
-      where: {
-        projectId: project.id,
-        identity,
-        model,
-        periodStart,
-      },
-    });
-
-    if (usage) {
-      usage.tokensUsed += inputTokens + outputTokens;
-      usage.inputTokens = (usage.inputTokens || 0) + inputTokens;
-      usage.outputTokens = (usage.outputTokens || 0) + outputTokens;
-      usage.costUsd = Number(usage.costUsd || 0) + cost;
-      await this.usageRepository.save(usage);
-    }
+    // Atomic increment - no race condition
+    await this.usageRepository.query(
+      `UPDATE usage_counters
+       SET 
+         "tokensUsed" = "tokensUsed" + $1,
+         "inputTokens" = "inputTokens" + $2,
+         "outputTokens" = "outputTokens" + $3,
+         "costUsd" = "costUsd" + $4,
+         "updatedAt" = NOW()
+       WHERE "projectId" = $5 AND identity = $6 AND model = $7 AND "periodStart" = $8`,
+      [inputTokens + outputTokens, inputTokens, outputTokens, cost, project.id, identity, model, periodStartStr],
+    );
   }
 
   async trackBlockedRequest(params: {
@@ -270,30 +299,19 @@ export class UsageService {
     estimatedSavings: number;
   }): Promise<void> {
     const { project, identity, model = '', periodStart, estimatedSavings } = params;
+    const periodStartStr = periodStart.toISOString().split('T')[0];
 
-    let usage = await this.usageRepository.findOne({
-      where: {
-        projectId: project.id,
-        identity,
-        model,
-        periodStart,
-      },
-    });
-
-    if (!usage) {
-      usage = this.usageRepository.create({
-        projectId: project.id,
-        identity,
-        model,
-        periodStart,
-        requestsUsed: 0,
-        tokensUsed: 0,
-      });
-    }
-
-    usage.blockedRequests = (usage.blockedRequests || 0) + 1;
-    usage.savedUsd = Number(usage.savedUsd || 0) + estimatedSavings;
-    await this.usageRepository.save(usage);
+    // Atomic upsert + increment - no race condition
+    await this.usageRepository.query(
+      `INSERT INTO usage_counters (id, "projectId", identity, model, "periodStart", "requestsUsed", "tokensUsed", "inputTokens", "outputTokens", "costUsd", "blockedRequests", "savedUsd", "createdAt", "updatedAt")
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, 0, 0, 0, 0, 0, 1, $5, NOW(), NOW())
+       ON CONFLICT ("projectId", identity, "periodStart", model) 
+       DO UPDATE SET 
+         "blockedRequests" = usage_counters."blockedRequests" + 1,
+         "savedUsd" = usage_counters."savedUsd" + $5,
+         "updatedAt" = NOW()`,
+      [project.id, identity, model, periodStartStr, estimatedSavings],
+    );
   }
 
   async getUsage(params: {
