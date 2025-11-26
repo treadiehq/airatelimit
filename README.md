@@ -5,20 +5,18 @@ Add usage limits to your AI app in 5 minutes. Track usage per user, set limits p
 ```typescript
 import OpenAI from 'openai';
 
-// Works with ANY provider using the OpenAI SDK
-const client = new OpenAI({
-  apiKey: 'sk-your-key',  // Your API key (OpenAI, Anthropic, etc.) - we never store it
-  baseURL: 'https://api.airatelimit.com/v1',
+const openai = new OpenAI({
+  apiKey: 'sk-xxx',
+  baseURL: 'https://api.airatelimit.com/v1',  // ← Point to our proxy
   defaultHeaders: {
-    'x-project-key': 'pk_xxx',   // From dashboard
-    'x-identity': 'user-123',     // For rate limiting
-    'x-tier': 'free',             // Optional
+    'x-project-key': 'pk_xxx',   // Your project key
+    'x-identity': 'user-123',     // User ID for rate limiting
   },
 });
 
-// Use any model - we route to the right provider automatically
-const response = await client.chat.completions.create({
-  model: 'gpt-4o',  // or 'claude-3-5-sonnet-20241022', 'gemini-1.5-pro', etc.
+// Use normally - we track usage and enforce limits
+const response = await openai.chat.completions.create({
+  model: 'gpt-4o',
   messages: [{ role: 'user', content: 'Hello!' }],
 });
 ```
