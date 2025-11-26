@@ -1,6 +1,7 @@
 # AI Ratelimit
 
-Add usage limits to your AI app in 5 minutes.
+Add usage limits to your AI app in 5 minutes. Track usage per user, set limits per model, create pricing tiers—all without storing 
+prompts or API keys.
 
 ```
 Your App → AI Ratelimit → OpenAI / Anthropic / Google / Any AI
@@ -10,15 +11,26 @@ Your App → AI Ratelimit → OpenAI / Anthropic / Google / Any AI
           Forward request
 ```
 
-**How it works:** Point your AI requests at our proxy. We check limits, then forward to the real API. Your API key passes through—we never store it.
+**How it works:** Point your AI requests at our proxy. We check limits, then forward to the real API. Your API key passes through, we never store it.
 
 ```diff
 - baseURL: 'https://api.openai.com/v1'
 + baseURL: 'https://api.airatelimit.com/v1'
-+ headers: { 'x-project-key': 'pk_xxx', 'x-identity': userId }
++ headers: { 'x-project-key': 'pk_xxx', 'x-identity': userId, 'x-tier': 'free' }
 ```
 
-Works with any AI provider.
+That's it. Works with any AI provider.
+
+## Why?
+
+Building an AI app? You need:
+- Limit free tier without building billing
+- Track anonymous users (no login required)
+- Different limits per model (gpt-4o: expensive, gemini: cheap)
+- Custom upgrade prompts when limits hit
+- Privacy-first (never store prompts or responses)
+
+This does all that.
 
 ## Quick Start
 
@@ -75,7 +87,7 @@ const response = await openai.chat.completions.create({
 | `Authorization` | Your AI provider API key | `Bearer sk-xxx` |
 | `x-project-key` | Your project key from dashboard | `pk_abc123` |
 | `x-identity` | Your user's ID (from your app) | `user_abc`, `session_xyz` |
-| `x-tier` | (Optional) Pricing tier | `free`, `pro` |
+| `x-tier` | Pricing tier | `free`, `pro` |
 
 > **`x-identity`** is whatever you use to identify users—a user ID, session ID, or device ID. Each identity gets its own usage limits.
 
