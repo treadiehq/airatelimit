@@ -148,13 +148,13 @@
         @click.self="closeModal"
       >
         <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" @click="closeModal"></div>
-        <div class="relative w-full max-w-md bg-gray-900 border border-gray-700 rounded-xl shadow-xl" @click.stop>
-          <div class="flex items-center justify-between p-4 border-b border-gray-700">
+        <div class="relative w-full max-w-md bg-black border border-gray-500/20 rounded-xl shadow-xl" @click.stop>
+          <div class="flex items-center justify-between p-4 border-b border-gray-500/20">
             <h3 class="text-lg font-semibold text-white">
               {{ editingIdentity ? 'Edit Identity Limits' : 'Add Identity Limits' }}
             </h3>
             <button @click="closeModal" class="text-gray-400 hover:text-white">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -209,16 +209,30 @@
               <p class="text-xs text-gray-500 mt-1">JSON object for your reference</p>
             </div>
 
-            <div class="flex items-center justify-between">
-              <label class="flex items-center gap-2 cursor-pointer">
+            <label class="flex items-center gap-3 cursor-pointer group">
+              <div class="relative flex items-center justify-center">
                 <input
                   v-model="form.enabled"
                   type="checkbox"
-                  class="w-4 h-4 rounded border-gray-500 bg-gray-500/10 text-blue-300 focus:ring-blue-300/50"
+                  class="sr-only"
                 />
-                <span class="text-sm text-white">Enabled</span>
-              </label>
-            </div>
+                <div 
+                  :class="form.enabled ? 'bg-blue-300 border-blue-300' : 'border-gray-500 bg-transparent group-hover:border-gray-400'"
+                  class="w-4 h-4 rounded border-2 transition-all flex items-center justify-center"
+                >
+                  <svg 
+                    v-if="form.enabled"
+                    class="w-2.5 h-2.5 text-black" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+              <span class="text-sm text-white">Enabled</span>
+            </label>
 
             <div v-if="saveError" class="p-3 bg-red-500/10 text-red-400 rounded-lg text-sm">
               {{ saveError }}

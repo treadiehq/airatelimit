@@ -31,7 +31,7 @@
           <div class="h-[calc(100vh-81px)] overflow-y-auto">
             <div class="space-y-6">
               <!-- Config Tabs -->
-              <div class="border-b border-gray-500/10">
+              <div class="border-b border-gray-500/20">
                 <nav class="-mb-px flex space-x-1">
                   <button
                     @click="configTab = 'basic'"
