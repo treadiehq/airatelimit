@@ -42,10 +42,11 @@ export class ProjectsService {
     organizationId: string,
     dto: CreateUserProjectDto,
   ): Promise<Project> {
-    // Only generate project key if API key is provided (project is configured)
-    const projectKey = dto.openaiApiKey ? this.generateProjectKey() : null;
+    // TRANSPARENT PROXY MODE: Always generate project key on creation
+    // API keys are now passed per-request, not stored
+    const projectKey = this.generateProjectKey();
     
-    // Only set provider and baseUrl if actually provided in DTO
+    // Only set provider and baseUrl if actually provided in DTO (legacy support)
     const provider = dto.provider || null;
     const baseUrl = dto.baseUrl || (provider ? this.getDefaultBaseUrl(provider) : null);
     

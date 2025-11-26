@@ -49,27 +49,6 @@
                     Plan Tiers
                   </button>
                   <button
-                    @click="configTab = 'models'"
-                    :class="configTab === 'models' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
-                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
-                  >
-                    Model Limits
-                  </button>
-                  <button
-                    @click="configTab = 'rules'"
-                    :class="configTab === 'rules' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
-                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
-                  >
-                    Visual Rules
-                  </button>
-                  <button
-                    @click="loadAnalytics(); configTab = 'analytics'"
-                    :class="configTab === 'analytics' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
-                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
-                  >
-                    Analytics
-                  </button>
-                  <button
                     @click="loadSecurityEvents(); configTab = 'security'"
                     :class="configTab === 'security' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
                     class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
@@ -79,17 +58,22 @@
                 </nav>
               </div>
 
-              <!-- Setup Required Banner -->
-              <div v-if="!project.openaiApiKey && configTab === 'basic'" class="mx-6 mt-4 bg-amber-300/10 border border-amber-300/20 rounded-lg p-4">
+              <!-- Transparent Proxy Mode Info -->
+              <div v-if="configTab === 'basic'" class="mx-6 mt-4 bg-blue-300/10 border border-blue-300/20 rounded-lg p-4">
                 <div class="flex">
-                  <svg class="w-5 h-5 text-amber-300 mt-0.5 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  <svg class="w-5 h-5 text-blue-300 mt-0.5 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   <div>
-                    <p class="font-medium text-amber-200 mb-1">Configuration Required</p>
-                    <p class="text-sm text-amber-300/80">
-                      Add your AI provider's API key below to start using this project. You can configure limits and tiers afterward.
+                    <p class="font-medium text-blue-200 mb-1">Proxy</p>
+                    <p class="text-sm text-blue-300/80">
+                      Your API key is passed per-request, we never store it. Just point your OpenAI SDK to our proxy with your project key.
                     </p>
+                    <div class="mt-3 p-3 bg-black/30 rounded-lg font-mono text-xs text-gray-300">
+                      <div class="text-gray-500 mb-1">// Use with any OpenAI-compatible SDK:</div>
+                      <div><span class="text-blue-300">baseURL:</span> "https://your-proxy.com/v1"</div>
+                      <div><span class="text-blue-300">headers:</span> {{ '{' }} "x-project-key": "{{ project.projectKey || 'pk_...' }}", "x-identity": "user-123" {{ '}' }}</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -103,100 +87,6 @@
                     type="text"
                     class="w-full px-4 py-2 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-transparent"
                   />
-                </div>
-
-                <!-- Multi-Provider Configuration -->
-                <div>
-                  <label class="block text-sm font-medium text-white mb-2">AI Providers</label>
-                  <p class="text-xs text-gray-400 mb-3">Configure one or more AI providers. Models will be auto-routed to the correct provider.</p>
-                  
-                  <div class="space-y-2">
-                    <!-- Provider Cards -->
-                    <div 
-                      v-for="providerOption in availableProviders" 
-                      :key="providerOption.id"
-                      class="border rounded-lg transition-all"
-                      :class="isProviderConfigured(providerOption.id) ? 'border-green-300/30 bg-green-300/5' : 'border-gray-500/20 bg-gray-500/5'"
-                    >
-                      <div 
-                        class="flex items-center justify-between p-2 cursor-pointer"
-                        @click="toggleProviderExpand(providerOption.id)"
-                      >
-                        <div class="flex items-center space-x-2">
-                          <div 
-                            class="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-semibold"
-                            :class="providerOption.bgClass"
-                          >
-                            {{ providerOption.icon }}
-                          </div>
-                          <div>
-                            <div class="text-sm font-medium text-white">{{ providerOption.name }}</div>
-                            <!-- <div class="text-xs text-gray-500">{{ providerOption.models }}</div> -->
-                          </div>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                          <span 
-                            v-if="isProviderConfigured(providerOption.id)" 
-                            class="text-xs px-2 py-0.5 bg-green-500/20 text-green-300 rounded"
-                          >
-                            Configured
-                          </span>
-                          <svg 
-                            class="w-4 h-4 text-gray-400 transition-transform" 
-                            :class="expandedProviders[providerOption.id] ? 'rotate-180' : ''"
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                          >
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                          </svg>
-                        </div>
-                      </div>
-                      
-                      <!-- Expanded Provider Config -->
-                      <div v-if="expandedProviders[providerOption.id]" class="px-3 pb-3 space-y-3 border-t border-gray-500/10 pt-3">
-                        <!-- API Key Input -->
-                        <div>
-                          <label class="block text-xs font-medium text-gray-400 mb-1">API Key</label>
-                          <input
-                            v-model="editForm.providerKeys[providerOption.id].apiKey"
-                            type="password"
-                            class="w-full px-3 py-2 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-transparent font-mono text-sm"
-                            :placeholder="getProviderKeyPlaceholder(providerOption.id)"
-                          />
-                        </div>
-                        
-                        <!-- Base URL (optional, for custom endpoints) -->
-                        <div v-if="providerOption.id === 'other' || showAdvancedProviderConfig[providerOption.id]">
-                          <label class="block text-xs font-medium text-gray-400 mb-1">Base URL (optional)</label>
-                          <input
-                            v-model="editForm.providerKeys[providerOption.id].baseUrl"
-                            type="text"
-                            class="w-full px-3 py-2 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-transparent font-mono text-sm"
-                            :placeholder="providerOption.defaultUrl"
-                          />
-                        </div>
-                        
-                        <!-- Advanced toggle for non-other providers -->
-                        <button 
-                          v-if="providerOption.id !== 'other'"
-                          type="button"
-                          @click="showAdvancedProviderConfig[providerOption.id] = !showAdvancedProviderConfig[providerOption.id]"
-                          class="text-xs text-blue-300 hover:text-blue-200"
-                        >
-                          {{ showAdvancedProviderConfig[providerOption.id] ? 'Hide' : 'Show' }} custom endpoint
-                        </button>
-                        
-                        <!-- Remove provider button -->
-                        <button 
-                          v-if="isProviderConfigured(providerOption.id)"
-                          type="button"
-                          @click="removeProvider(providerOption.id)"
-                          class="text-xs text-red-400 hover:text-red-300"
-                        >
-                          Remove this provider
-                        </button>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 <!-- Limit Period -->
@@ -528,308 +418,6 @@
                 </button>
               </div>
 
-              <!-- Model Limits Tab -->
-              <div v-show="configTab === 'models'" class="space-y-4 px-6">
-                <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg p-4">
-                  <h3 class="font-semibold text-white mb-2">How Model Limits Work</h3>
-                  <p class="text-sm text-white mb-2">
-                    Set different limits for each AI model (e.g., <strong>gpt-4o</strong>, <strong>claude-3-5-sonnet</strong>, <strong>gemini-2.5</strong>).
-                    Usage is tracked separately per model, and you can configure limits at both the project and tier level.
-                  </p>
-                  <div class="mt-3 p-3 bg-gray-500/5 border border-gray-500/10 rounded-lg">
-                    <p class="text-xs text-gray-300 font-semibold mb-1">Configuration Options</p>
-                    <p class="text-xs text-gray-400">
-                      • <strong>Number</strong> - Specific limit (e.g., 50 requests)<br>
-                      • <strong>Unlimited</strong> - No limit at all (check the box)<br>
-                      • <strong>Empty/0</strong> - Inherits from general limits
-                    </p>
-                    <p class="text-xs text-gray-400 mt-2">
-                      <strong>Example:</strong> Give unlimited access to gemini-2.5, but limit sonnet to 50 requests.
-                    </p>
-                  </div>
-                </div>
-
-                <!-- Empty State -->
-                <div v-if="Object.keys(editForm.modelLimits || {}).length === 0" class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-8">
-                  <div class="text-center mb-6">
-                    <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-300/10 mb-4">
-                      <svg class="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                      </svg>
-                    </div>
-                    <h3 class="text-lg font-semibold text-white mb-2">No Model-Specific Limits Yet</h3>
-                    <p class="text-sm text-gray-400 max-w-md mx-auto">
-                      Set different limits for each AI model to control costs and usage patterns. Perfect for multi-model apps.
-                    </p>
-                  </div>
-                </div>
-
-                <div v-for="(modelLimit, modelName) in editForm.modelLimits" :key="modelName" class="border border-gray-500/10 rounded-lg p-4">
-                  <div class="flex justify-between items-center mb-3">
-                    <h4 class="font-semibold text-white">{{ modelName }}</h4>
-                    <button
-                      @click="deleteModelLimit(String(modelName))"
-                      class="text-gray-500 hover:text-red-500 text-xs"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
-                        <path fill-rule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clip-rule="evenodd" />
-                      </svg>
-                    </button>
-                  </div>
-                  
-                  <!-- Limits -->
-                  <div class="grid grid-cols-2 gap-4">
-                    <div>
-                      <label class="block text-xs font-medium text-white mb-1">Request Limit</label>
-                      <div class="flex items-center space-x-2">
-                        <input
-                          v-model.number="modelLimit.requestLimit"
-                          type="number"
-                          min="-1"
-                          :disabled="modelLimit.requestLimit === -1"
-                          class="flex-1 px-3 py-2 text-sm text-white bg-gray-500/10 border border-gray-500/10 rounded-lg disabled:opacity-50"
-                          placeholder="Leave empty to inherit"
-                        />
-                        <label class="flex items-center space-x-1 text-xs text-white whitespace-nowrap cursor-pointer">
-                          <input
-                            type="checkbox"
-                            :checked="modelLimit.requestLimit === -1"
-                            @change="modelLimit.requestLimit = ($event.target as HTMLInputElement).checked ? -1 : 0"
-                            class="rounded border-gray-500/20 bg-gray-500/10 text-blue-300 focus:ring-blue-300/50"
-                          />
-                          <span>Unlimited</span>
-                        </label>
-                      </div>
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-white mb-1">Token Limit</label>
-                      <div class="flex items-center space-x-2">
-                        <input
-                          v-model.number="modelLimit.tokenLimit"
-                          type="number"
-                          min="-1"
-                          :disabled="modelLimit.tokenLimit === -1"
-                          class="flex-1 px-3 py-2 text-sm text-white bg-gray-500/10 border border-gray-500/10 rounded-lg disabled:opacity-50"
-                          placeholder="Leave empty to inherit"
-                        />
-                        <label class="flex items-center space-x-1 text-xs text-white whitespace-nowrap cursor-pointer">
-                          <input
-                            type="checkbox"
-                            :checked="modelLimit.tokenLimit === -1"
-                            @change="modelLimit.tokenLimit = ($event.target as HTMLInputElement).checked ? -1 : 0"
-                            class="rounded border-gray-500/20 bg-gray-500/10 text-blue-300 focus:ring-blue-300/50"
-                          />
-                          <span>Unlimited</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="relative">
-                  <div class="flex items-center space-x-2">
-                    <div class="flex-1 relative">
-                      <input
-                        v-model="newModelName"
-                        @input="showModelSuggestions = true"
-                        @focus="showModelSuggestions = true"
-                        @blur="hideModelSuggestions"
-                        type="text"
-                        placeholder="Type model name or select from suggestions"
-                        class="w-full px-4 py-2 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg text-sm focus:ring-2 focus:ring-blue-300/50"
-                      />
-                      <!-- Suggestions Dropdown -->
-                      <div 
-                        v-if="showModelSuggestions && filteredModelSuggestions.length > 0" 
-                        class="absolute z-10 w-full mt-1 bg-black border border-gray-500/20 rounded-lg shadow-xl max-h-60 overflow-y-auto"
-                      >
-                        <div
-                          v-for="model in filteredModelSuggestions"
-                          :key="model.name"
-                          @click="selectModelSuggestion(model.name)"
-                          class="px-4 py-2 hover:bg-gray-500/10 cursor-pointer transition-colors border-b border-gray-500/10 last:border-b-0"
-                        >
-                          <div class="flex items-center justify-between">
-                            <div>
-                              <div class="text-sm text-white font-mono">{{ model.name }}</div>
-                              <div class="text-xs text-gray-400">{{ model.provider }} • {{ model.type }}</div>
-                            </div>
-                            <span v-if="model.recommended" class="text-xs px-2 py-0.5 bg-blue-300/10 text-blue-300 rounded">Popular</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      @click="addModelLimit"
-                      :disabled="!newModelName.trim()"
-                      class="px-4 py-2 bg-gray-500/10 border border-gray-500/10 text-white text-sm font-medium rounded-lg hover:bg-gray-500/15 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      + Add
-                    </button>
-                  </div>
-                  <!-- Warning for unknown models -->
-                  <div v-if="newModelName && !isKnownModel(newModelName)" class="mt-2 flex items-start text-xs text-amber-300">
-                    <svg class="w-4 h-4 mr-1 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <span>Model name not recognized. You can still add it, but make sure it's spelled correctly.</span>
-                  </div>
-                </div>
-
-                <button
-                  @click="handleUpdate"
-                  :disabled="updating"
-                  class="w-full px-6 py-2 bg-blue-300 text-black text-sm font-medium rounded-lg hover:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {{ updating ? 'Saving...' : 'Save Model Limits' }}
-                </button>
-              </div>
-
-              <!-- Rules Tab -->
-              <div v-show="configTab === 'rules'" class="px-6">
-                <RuleBuilder v-model="editForm.rules" />
-                <button
-                  v-if="editForm.rules && editForm.rules.length > 0"
-                  @click="handleUpdate"
-                  :disabled="updating"
-                  class="mt-4 w-full px-6 py-2 bg-blue-300 text-black text-sm font-medium rounded-lg hover:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {{ updating ? 'Saving...' : 'Save Rules' }}
-                </button>
-              </div>
-
-              <!-- Analytics Tab -->
-              <div v-show="configTab === 'analytics'" class="px-6 space-y-4">
-                <div v-if="!analytics && !analyticsLoading && !analyticsError" class="text-center py-16">
-                  <div class="flex justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="w-20 h-20 text-gray-500">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
-                    </svg>
-                  </div>
-                  <h3 class="text-lg font-semibold text-white mb-2">Rule Analytics</h3>
-                  <p class="text-sm text-gray-400 mb-6 max-w-md mx-auto">
-                    See which rules trigger most often, track user behavior, and optimize your upgrade messaging with detailed analytics.
-                  </p>
-                  <button
-                    @click="loadAnalytics()"
-                    class="px-6 py-2.5 bg-blue-300 text-black text-sm font-medium rounded-lg hover:bg-blue-400 inline-flex items-center gap-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
-                      <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a1 1 0 01-.784.785l-1.192.238a1 1 0 000 1.962l1.192.238a1 1 0 01.785.785l.238 1.192a1 1 0 001.962 0l.238-1.192a1 1 0 01.785-.785l1.192-.238a1 1 0 000-1.962l-1.192-.238a1 1 0 01-.785-.785l-.238-1.192zM6.949 5.684a1 1 0 00-1.898 0l-.683 2.051a1 1 0 01-.633.633l-2.051.683a1 1 0 000 1.898l2.051.684a1 1 0 01.633.632l.683 2.051a1 1 0 001.898 0l.683-2.051a1 1 0 01.633-.633l2.051-.683a1 1 0 000-1.898l-2.051-.683a1 1 0 01-.633-.633L6.95 5.684zM13.949 13.684a1 1 0 00-1.898 0l-.184.551a1 1 0 01-.632.633l-.551.183a1 1 0 000 1.898l.551.183a1 1 0 01.633.633l.183.551a1 1 0 001.898 0l.184-.551a1 1 0 01.632-.633l.551-.183a1 1 0 000-1.898l-.551-.184a1 1 0 01-.633-.632l-.183-.551z" />
-                    </svg>
-                    Load Analytics
-                  </button>
-                </div>
-
-                <div v-else-if="analyticsLoading" class="text-center py-16">
-                  <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-300"></div>
-                  <p class="text-gray-400 text-sm mt-3">Loading analytics...</p>
-                </div>
-
-                <div v-else-if="analyticsError" class="text-center py-16">
-                  <div class="flex justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 text-red-400">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                    </svg>
-                  </div>
-                  <p class="text-red-400 font-medium mb-2">Failed to Load Analytics</p>
-                  <p class="text-sm text-gray-400">{{ analyticsError }}</p>
-                  <button
-                    @click="loadAnalytics()"
-                    class="mt-4 px-4 py-2 bg-gray-500/10 border border-gray-500/20 text-white text-sm rounded-lg hover:bg-gray-500/20"
-                  >
-                    Try Again
-                  </button>
-                </div>
-
-                <div v-else-if="analytics" class="space-y-4">
-                  <!-- Summary Cards -->
-                  <div class="grid grid-cols-3 gap-4">
-                    <div class="bg-gray-500/10 border border-gray-500/20 rounded-lg p-4">
-                      <p class="text-xs text-gray-400 mb-1">Total Triggers</p>
-                      <p class="text-2xl font-bold text-white">{{ totalTriggers }}</p>
-                      <p class="text-xs text-gray-500 mt-1">Last 7 days</p>
-                    </div>
-                    <div class="bg-gray-500/10 border border-gray-500/20 rounded-lg p-4">
-                      <p class="text-xs text-gray-400 mb-1">Active Rules</p>
-                      <p class="text-2xl font-bold text-white">{{ analytics.stats.length }}</p>
-                      <p class="text-xs text-gray-500 mt-1">Triggered at least once</p>
-                    </div>
-                    <div class="bg-gray-500/10 border border-gray-500/20 rounded-lg p-4">
-                      <p class="text-xs text-gray-400 mb-1">Unique Users</p>
-                      <p class="text-2xl font-bold text-white">{{ uniqueUsers }}</p>
-                      <p class="text-xs text-gray-500 mt-1">Affected by rules</p>
-                    </div>
-                  </div>
-
-                  <!-- Rule Statistics -->
-                  <div class="bg-gray-500/10 border border-gray-500/20 rounded-lg p-4">
-                    <h3 class="text-sm font-semibold text-white mb-3">Most Triggered Rules</h3>
-                    <div v-if="analytics.stats.length === 0" class="text-center py-12">
-                      <div class="flex justify-center mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="w-16 h-16 text-gray-500">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5M9 11.25v1.5M12 9v3.75m3-6v6" />
-                        </svg>
-                      </div>
-                      <p class="text-white font-medium mb-1">No Triggers Yet</p>
-                      <p class="text-sm text-gray-400 max-w-sm mx-auto">
-                        Your rules haven't been triggered yet. Once users start hitting limits, you'll see analytics here.
-                      </p>
-                    </div>
-                    <div v-else class="space-y-2">
-                      <div
-                        v-for="stat in analytics.stats"
-                        :key="stat.ruleId"
-                        class="flex items-center justify-between p-3 bg-gray-500/10 border border-gray-500/20 rounded-lg"
-                      >
-                        <div class="flex-1">
-                          <p class="text-sm font-medium text-white">{{ stat.ruleName || 'Unnamed Rule' }}</p>
-                          <p class="text-xs text-gray-400 mt-0.5">
-                            {{ stat.uniqueIdentities }} unique {{ stat.uniqueIdentities === 1 ? 'user' : 'users' }} affected
-                          </p>
-                        </div>
-                        <div class="text-right">
-                          <p class="text-lg font-bold text-blue-300">{{ stat.triggerCount }}</p>
-                          <p class="text-xs text-gray-500">triggers</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Triggers by Day Chart -->
-                  <div class="bg-gray-500/10 border border-gray-500/20 rounded-lg p-4">
-                    <h3 class="text-sm font-semibold text-white mb-3">Triggers Over Time</h3>
-                    <div v-if="analytics.byDay.length === 0" class="text-center py-12">
-                      <div class="flex justify-center mb-4">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor" class="w-16 h-16 text-gray-500">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
-                        </svg>
-                      </div>
-                      <p class="text-white font-medium mb-1">No Activity Recorded</p>
-                      <p class="text-sm text-gray-400 max-w-sm mx-auto">
-                        Timeline data will appear here once your rules start triggering. Check back after some API usage.
-                      </p>
-                    </div>
-                    <div v-else class="space-y-2">
-                      <div
-                        v-for="day in analytics.byDay"
-                        :key="day.date"
-                        class="flex items-center gap-3"
-                      >
-                        <div class="text-xs text-gray-400 w-24">{{ formatDate(day.date) }}</div>
-                        <div class="flex-1 bg-gray-500/10 rounded-full h-6 overflow-hidden">
-                          <div
-                            class="bg-blue-300 h-full rounded-full"
-                            :style="{ width: `${(day.count / maxDayCount) * 100}%` }"
-                          ></div>
-                        </div>
-                        <div class="text-sm text-white w-12 text-right">{{ day.count }}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <!-- Security Tab -->
               <div v-show="configTab === 'security'" class="px-6 space-y-6">
                 <!-- Security Header -->
@@ -847,7 +435,7 @@
 
                 <!-- Enable Security -->
                 <div class="bg-gray-500/10 border border-gray-500/20 rounded-lg p-6">
-                  <div class="flex items-center justify-between mb-4">
+                  <div class="flex items-center justify-between">
                     <div>
                       <h4 class="text-sm font-semibold text-white mb-1">Security Protection</h4>
                       <p class="text-xs text-gray-400">Enable prompt injection detection for all requests</p>
@@ -962,15 +550,6 @@
                 <div class="bg-gray-500/10 border border-gray-500/20 rounded-lg p-6">
                   <div class="flex items-center justify-between mb-4">
                     <h4 class="text-sm font-semibold text-white">Recent Security Events</h4>
-                    <button
-                      @click="loadSecurityEvents()"
-                      class="text-xs text-blue-300 hover:text-blue-200 flex items-center gap-1"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                      </svg>
-                      Refresh
-                    </button>
                   </div>
 
                   <div v-if="securityEventsLoading" class="text-center py-12">
@@ -1057,106 +636,13 @@ const emit = defineEmits<{
 
 const configTab = ref('basic')
 const newTierName = ref('')
-const newModelName = ref('')
-const showModelSuggestions = ref(false)
 const showTierModelSuggestions = ref<Record<string, boolean>>({})
 const showTierModelLimitsSection = ref<Record<string, boolean>>({})
 const tierNewModelNames = ref<Record<string, string>>({})
-const analytics = ref<any>(null)
-const analyticsLoading = ref(false)
-const analyticsError = ref('')
 
 const securityEventsLoading = ref(false)
 const securityEventsError = ref('')
 const securityEvents = ref<any[]>([])
-
-// Multi-provider configuration
-const expandedProviders = ref<Record<string, boolean>>({})
-const showAdvancedProviderConfig = ref<Record<string, boolean>>({})
-
-const availableProviders = [
-  { 
-    id: 'openai', 
-    name: 'OpenAI', 
-    icon: 'O', 
-    bgClass: 'bg-green-500/20 text-green-300',
-    models: 'GPT-4o, GPT-3.5, o1, DALL-E',
-    defaultUrl: 'https://api.openai.com/v1/chat/completions'
-  },
-  { 
-    id: 'anthropic', 
-    name: 'Anthropic', 
-    icon: 'A', 
-    bgClass: 'bg-orange-500/20 text-orange-300',
-    models: 'Claude 3.5 Sonnet, Claude 3 Opus, Haiku',
-    defaultUrl: 'https://api.anthropic.com/v1/messages'
-  },
-  { 
-    id: 'google', 
-    name: 'Google', 
-    icon: 'G', 
-    bgClass: 'bg-blue-500/20 text-blue-300',
-    models: 'Gemini 2.5, Gemini 1.5 Pro/Flash',
-    defaultUrl: 'https://generativelanguage.googleapis.com/v1beta'
-  },
-  { 
-    id: 'xai', 
-    name: 'xAI', 
-    icon: 'X', 
-    bgClass: 'bg-gray-500/20 text-gray-300',
-    models: 'Grok 2, Grok Beta',
-    defaultUrl: 'https://api.x.ai/v1/chat/completions'
-  },
-  { 
-    id: 'other', 
-    name: 'Other (OpenAI-compatible)', 
-    icon: '?', 
-    bgClass: 'bg-purple-500/20 text-purple-300',
-    models: 'Any OpenAI-compatible API',
-    defaultUrl: ''
-  },
-]
-
-const isProviderConfigured = (providerId: string) => {
-  return props.editForm.providerKeys?.[providerId]?.apiKey?.length > 0
-}
-
-const toggleProviderExpand = (providerId: string) => {
-  expandedProviders.value[providerId] = !expandedProviders.value[providerId]
-  // Initialize providerKeys entry if it doesn't exist
-  if (!props.editForm.providerKeys) {
-    props.editForm.providerKeys = {}
-  }
-  if (!props.editForm.providerKeys[providerId]) {
-    props.editForm.providerKeys[providerId] = { apiKey: '', baseUrl: '' }
-  }
-}
-
-const getProviderKeyPlaceholder = (providerId: string) => {
-  const placeholders: Record<string, string> = {
-    openai: 'sk-...',
-    anthropic: 'sk-ant-...',
-    google: 'AIza...',
-    xai: 'xai-...',
-    other: 'Your API key'
-  }
-  return placeholders[providerId] || 'API key'
-}
-
-const removeProvider = (providerId: string) => {
-  if (props.editForm.providerKeys?.[providerId]) {
-    delete props.editForm.providerKeys[providerId]
-    expandedProviders.value[providerId] = false
-  }
-}
-
-// Get list of configured provider IDs
-const configuredProviderIds = computed(() => {
-  if (!props.editForm.providerKeys) return []
-  return Object.entries(props.editForm.providerKeys)
-    .filter(([_, config]) => (config as any)?.apiKey?.length > 0)
-    .map(([id]) => id)
-})
 
 const securityCategories = ref([
   {
@@ -1239,104 +725,17 @@ const knownModels = [
   { name: 'grok-2-1212', provider: 'xAI', type: 'Chat', recommended: false },
 ]
 
-const filteredModelSuggestions = computed(() => {
-  // Get configured providers (multi-provider mode)
-  const configuredProviders = configuredProviderIds.value.map(id => {
-    // Map provider IDs to display names used in knownModels
-    const mapping: Record<string, string> = {
-      openai: 'OpenAI',
-      anthropic: 'Anthropic', 
-      google: 'Google',
-      xai: 'xAI',
-      other: 'Other'
-    }
-    return mapping[id] || id
-  })
-  
-  // Also check legacy single provider
-  if (props.project.provider && !configuredProviders.length) {
-    const mapping: Record<string, string> = {
-      openai: 'OpenAI',
-      anthropic: 'Anthropic', 
-      google: 'Google',
-      xai: 'xAI',
-      other: 'Other'
-    }
-    configuredProviders.push(mapping[props.project.provider] || props.project.provider)
-  }
-
-  // Filter models by configured providers (if any configured)
-  let availableModels = knownModels
-  if (configuredProviders.length > 0) {
-    availableModels = knownModels.filter(m => 
-      configuredProviders.includes(m.provider)
-    )
-  }
-
-  if (!newModelName.value) {
-    // Show popular models first when empty
-    return availableModels.filter(m => m.recommended).slice(0, 8)
-  }
-  const search = newModelName.value.toLowerCase()
-  return availableModels.filter(m => 
-    m.name.toLowerCase().includes(search) ||
-    m.provider.toLowerCase().includes(search)
-  ).slice(0, 10)
-})
-
 const isKnownModel = (modelName: string) => {
   return knownModels.some(m => m.name.toLowerCase() === modelName.toLowerCase())
 }
 
-const selectModelSuggestion = (modelName: string) => {
-  newModelName.value = modelName
-  showModelSuggestions.value = false
-}
-
-const hideModelSuggestions = () => {
-  setTimeout(() => {
-    showModelSuggestions.value = false
-  }, 200)
-}
-
 const getTierFilteredModels = (tierName: string) => {
-  // Get configured providers
-  const configuredProviders = configuredProviderIds.value.map(id => {
-    const mapping: Record<string, string> = {
-      openai: 'OpenAI',
-      anthropic: 'Anthropic', 
-      google: 'Google',
-      xai: 'xAI',
-      other: 'Other'
-    }
-    return mapping[id] || id
-  })
-  
-  // Also check legacy single provider
-  if (props.project.provider && !configuredProviders.length) {
-    const mapping: Record<string, string> = {
-      openai: 'OpenAI',
-      anthropic: 'Anthropic', 
-      google: 'Google',
-      xai: 'xAI',
-      other: 'Other'
-    }
-    configuredProviders.push(mapping[props.project.provider] || props.project.provider)
-  }
-
-  // Filter models by configured providers (if any configured)
-  let availableModels = knownModels
-  if (configuredProviders.length > 0) {
-    availableModels = knownModels.filter(m => 
-      configuredProviders.includes(m.provider)
-    )
-  }
-
+  // Transparent proxy mode: show all models from all providers
   const search = tierNewModelNames.value[tierName]
   if (!search) {
-    return availableModels.filter(m => m.recommended).slice(0, 6)
+    return knownModels.filter(m => m.recommended).slice(0, 6)
   }
-  return availableModels.filter(m => 
+  return knownModels.filter(m => 
     m.name.toLowerCase().includes(search.toLowerCase()) ||
     m.provider.toLowerCase().includes(search.toLowerCase())
   ).slice(0, 8)
@@ -1351,14 +750,6 @@ const hideTierModelSuggestions = (tierName: string) => {
   setTimeout(() => {
     showTierModelSuggestions.value[tierName] = false
   }, 200)
-}
-
-const providerLabels: Record<string, string> = {
-  openai: 'OpenAI',
-  anthropic: 'Anthropic',
-  google: 'Google',
-  xai: 'xAI',
-  other: 'Other (OpenAI-compatible)',
 }
 
 const addTier = () => {
@@ -1407,38 +798,8 @@ const deleteTierModelLimit = (tierName: string, modelName: string) => {
   delete props.editForm.tiers[tierName].modelLimits[modelName]
 }
 
-const addModelLimit = () => {
-  if (newModelName.value && !props.editForm.modelLimits[newModelName.value]) {
-    props.editForm.modelLimits[newModelName.value] = {
-      requestLimit: 0,
-      tokenLimit: 0,
-    }
-    newModelName.value = ''
-  }
-}
-
-const deleteModelLimit = (modelName: string) => {
-  delete props.editForm.modelLimits[modelName]
-}
-
 const handleUpdate = () => {
   emit('update')
-}
-
-const loadAnalytics = async () => {
-  if (!props.project?.id) return
-
-  analyticsLoading.value = true
-  analyticsError.value = ''
-
-  try {
-    const data = await api(`/projects/${props.project.id}/analytics/rule-triggers?days=7`)
-    analytics.value = data
-  } catch (err: any) {
-    analyticsError.value = err.message || 'Failed to load analytics'
-  } finally {
-    analyticsLoading.value = false
-  }
 }
 
 const loadSecurityEvents = async () => {
@@ -1484,35 +845,9 @@ const formatCategoryName = (category: string) => {
   return category.replace(/([A-Z])/g, ' $1').trim()
 }
 
-const totalTriggers = computed(() => {
-  if (!analytics.value?.stats) return 0
-  return analytics.value.stats.reduce((sum: number, stat: any) => sum + stat.triggerCount, 0)
-})
-
-const uniqueUsers = computed(() => {
-  if (!analytics.value?.stats) return 0
-  const allUsers = new Set()
-  analytics.value.stats.forEach((stat: any) => {
-    // This is an approximation; actual unique count would need server-side
-    allUsers.add(stat.uniqueIdentities)
-  })
-  return analytics.value.stats.reduce((sum: number, stat: any) => sum + stat.uniqueIdentities, 0)
-})
-
-const maxDayCount = computed(() => {
-  if (!analytics.value?.byDay || analytics.value.byDay.length === 0) return 1
-  return Math.max(...analytics.value.byDay.map((d: any) => d.count))
-})
-
-const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-// Reset analytics when modal closes
+// Reset security events when modal closes
 watch(() => props.isOpen, (isOpen) => {
   if (!isOpen) {
-    analytics.value = null
     securityEvents.value = []
   }
 })

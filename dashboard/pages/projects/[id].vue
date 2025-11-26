@@ -39,22 +39,6 @@
                   <span :class="['w-1.5 h-1.5 rounded-full mr-1.5', statusBadge.dotClass]"></span>
                   {{ statusBadge.text }}
                 </span>
-                <!--                 <template v-if="configuredProviders.length > 0">
-                  <span class="text-xs text-gray-500">•</span>
-                  <span 
-                    v-for="provider in configuredProviders" 
-                    :key="provider"
-                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400 mr-1"
-                  >
-                    {{ provider }}
-                  </span>
-                </template>
-                <template v-else-if="project.provider">
-                  <span class="text-xs text-gray-500">•</span>
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400">
-                    {{ providerLabel }}
-                  </span>
-                </template> -->
               </div>
             </div>
             <div class="flex items-center space-x-2">
@@ -89,12 +73,9 @@
                 </div>
               </div>
               
-              <!-- Not configured message -->
-              <div v-else class="flex items-center bg-amber-300/10 border border-amber-300/20 rounded-lg px-4 py-2">
-                <svg class="w-4 h-4 text-amber-300 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span class="text-sm text-amber-200">API key will be generated after configuration -></span>
+              <!-- Fallback if no project key (legacy) -->
+              <div v-else class="flex items-center bg-gray-500/10 border border-gray-500/20 rounded-lg px-4 py-2">
+                <span class="text-sm text-gray-400">Project key unavailable</span>
               </div>
               <!-- Settings Dropdown -->
               <div class="relative" ref="settingsDropdownRef">
@@ -317,33 +298,6 @@ const maskedProjectKey = computed(() => {
   return 'pk_' + 'x'.repeat(project.value.projectKey.length - 3)
 })
 
-const providerLabel = computed(() => {
-  if (!project.value?.provider) return 'Not configured'
-  const labels = {
-    openai: 'OpenAI',
-    anthropic: 'Anthropic',
-    google: 'Google',
-    xai: 'xAI',
-    other: 'OpenAI-compatible'
-  }
-  return labels[project.value.provider as keyof typeof labels] || project.value.provider
-})
-
-// Get list of configured providers for multi-provider display
-const configuredProviders = computed(() => {
-  if (!project.value?.providerKeys) return []
-  const labels: Record<string, string> = {
-    openai: 'OpenAI',
-    anthropic: 'Anthropic',
-    google: 'Google',
-    xai: 'xAI',
-    other: 'Custom'
-  }
-  return Object.keys(project.value.providerKeys)
-    .filter(key => project.value.providerKeys[key]?.apiKey)
-    .map(key => labels[key] || key)
-})
-
 // Calculate status badge (same logic as ProjectCard)
 const statusBadge = computed(() => {
   if (!project.value) {
@@ -402,23 +356,17 @@ const toggleProjectKeyVisibility = () => {
 
 const editForm = ref({
   name: '',
-  provider: null as 'openai' | 'anthropic' | 'google' | 'xai' | 'other' | null,
-  baseUrl: '',
-  openaiApiKey: '',
-  providerKeys: {} as Record<string, { apiKey: string; baseUrl?: string }>,
   limitPeriod: 'daily' as 'daily' | 'weekly' | 'monthly',
   limitType: 'both' as 'requests' | 'tokens' | 'both',
   dailyRequestLimit: null as number | null,
   dailyTokenLimit: null as number | null,
   limitMessage: '',
-  modelLimits: {} as Record<string, { requestLimit?: number; tokenLimit?: number }>,
   tiers: {} as Record<string, { 
     requestLimit?: number; 
     tokenLimit?: number; 
     customMessage?: string;
     modelLimits?: Record<string, { requestLimit?: number; tokenLimit?: number }>;
   }>,
-  rules: [] as any[],
   securityEnabled: false,
   securityMode: 'block' as 'block' | 'log',
   securityCategories: ['systemPromptExtraction', 'roleManipulation', 'instructionOverride', 'boundaryBreaking', 'obfuscation', 'directLeakage'] as string[],
@@ -444,21 +392,6 @@ const loadProject = async () => {
 
     // Populate edit form
     editForm.value.name = project.value.name
-    editForm.value.provider = project.value.provider || null
-    editForm.value.baseUrl = project.value.baseUrl || ''
-    editForm.value.openaiApiKey = '' // Don't load existing key for security
-    
-    // Load multi-provider configuration (without API keys for security)
-    editForm.value.providerKeys = {}
-    if (project.value.providerKeys) {
-      for (const [providerId, config] of Object.entries(project.value.providerKeys)) {
-        // Initialize with empty apiKey (don't show existing keys) but keep baseUrl
-        editForm.value.providerKeys[providerId] = {
-          apiKey: '', // Don't expose existing keys
-          baseUrl: (config as any).baseUrl || ''
-        }
-      }
-    }
     editForm.value.limitPeriod = project.value.limitPeriod || 'daily'
     editForm.value.limitType = project.value.limitType || 'both'
     editForm.value.dailyRequestLimit = project.value.dailyRequestLimit
@@ -478,11 +411,6 @@ const loadProject = async () => {
         }
       }
     }
-    
-    // Load model limits
-    editForm.value.modelLimits = project.value.modelLimits || {}
-    
-    editForm.value.rules = project.value.rules || []
     
     // Load security settings
     editForm.value.securityEnabled = project.value.securityEnabled || false
@@ -541,34 +469,6 @@ const handleUpdate = async () => {
       limitType: editForm.value.limitType,
     }
 
-    // Provider settings (only if API key not already set) - legacy single provider
-    if (!project.value.openaiApiKey && !project.value.providerKeys) {
-      payload.provider = editForm.value.provider
-      if (editForm.value.baseUrl) {
-        payload.baseUrl = editForm.value.baseUrl
-      }
-    }
-
-    // API key (only if changed) - legacy single provider
-    if (editForm.value.openaiApiKey) {
-      payload.openaiApiKey = editForm.value.openaiApiKey
-    }
-    
-    // Multi-provider configuration
-    // Only send providerKeys entries that have an API key set
-    const providerKeysToSend: Record<string, { apiKey: string; baseUrl?: string }> = {}
-    for (const [providerId, config] of Object.entries(editForm.value.providerKeys || {})) {
-      if (config.apiKey) {
-        providerKeysToSend[providerId] = {
-          apiKey: config.apiKey,
-          ...(config.baseUrl && { baseUrl: config.baseUrl })
-        }
-      }
-    }
-    if (Object.keys(providerKeysToSend).length > 0) {
-      payload.providerKeys = providerKeysToSend
-    }
-
     // Basic limits
     if (editForm.value.dailyRequestLimit !== null) {
       payload.dailyRequestLimit = editForm.value.dailyRequestLimit
@@ -588,9 +488,6 @@ const handleUpdate = async () => {
         }
       }
     }
-
-    // Model limits
-    payload.modelLimits = editForm.value.modelLimits
 
     // Tiers - transform customMessage into customResponse
     payload.tiers = {}
@@ -615,9 +512,6 @@ const handleUpdate = async () => {
         }
       }
     }
-
-    // Rules
-    payload.rules = editForm.value.rules
 
     // Security settings
     payload.securityEnabled = editForm.value.securityEnabled

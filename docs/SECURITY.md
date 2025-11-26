@@ -42,19 +42,19 @@ The security system uses pattern matching and heuristics to detect:
 ### Security Modes
 
 **Block Mode** (Recommended)
-```typescript
-// Suspicious request is blocked
+```json
+// Suspicious request is blocked (HTTP 403)
 {
-  "error": "security_policy_violation",
-  "message": "Attempt to extract system prompt detected",
-  "pattern": "systemPromptExtraction",
-  "severity": "high"
+  "error": {
+    "message": "Attempt to extract system prompt detected",
+    "type": "security_policy_violation",
+    "code": "security_blocked"
+  }
 }
-// Status: 403 Forbidden
 ```
 
 **Log Only Mode**
-```typescript
+```
 // Request is allowed to proceed
 // Attempt is logged in Security Events
 // Useful for monitoring without disrupting users
@@ -80,21 +80,24 @@ Enable AI-powered pattern detection:
 - Suspicious token patterns
 - Excessive formatting manipulation
 
-## SDK Usage
+## Handling Security Errors
 
-Handle security violations in your code:
+Handle 403 errors in your code:
 
 ```typescript
-import { createClient, SecurityPolicyViolationError } from '@ai-ratelimit/sdk';
+import OpenAI from 'openai';
 
-const client = createClient({
-  baseUrl: 'https://your-app.railway.app/api',
-  projectKey: 'pk_your_key',
+const openai = new OpenAI({
+  apiKey: 'sk-your-key',
+  baseURL: 'https://your-proxy.com/v1',
+  defaultHeaders: {
+    'x-project-key': 'pk_xxx',
+    'x-identity': 'user-123',
+  },
 });
 
 try {
-  const result = await client.chat({
-    identity: 'user-123',
+  const response = await openai.chat.completions.create({
     model: 'gpt-4o',
     messages: [
       { role: 'system', content: 'You are a helpful assistant' },
@@ -102,16 +105,36 @@ try {
     ],
   });
 } catch (error) {
-  if (error instanceof SecurityPolicyViolationError) {
+  if (error.status === 403) {
     console.log('Security violation detected!');
-    console.log('Pattern:', error.pattern);
-    console.log('Severity:', error.severity);
-    console.log('Message:', error.message);
-    
     // Show friendly message to user
     alert('Your message was blocked for security reasons.');
   }
 }
+```
+
+### Python
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-your-key",
+    base_url="https://your-proxy.com/v1",
+    default_headers={
+        "x-project-key": "pk_xxx",
+        "x-identity": "user-123",
+    }
+)
+
+try:
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "Hello!"}]
+    )
+except Exception as e:
+    if hasattr(e, 'status_code') and e.status_code == 403:
+        print("Security violation detected!")
 ```
 
 ## Security Events
@@ -206,17 +229,6 @@ Each event shows:
 - Cannot detect novel attack vectors not in pattern database
 - Advanced heuristics may have slightly higher false positive rate
 
-## Future Enhancements
-
-- [ ] AI-powered anomaly detection
-- [ ] Custom pattern definitions
-- [ ] Rate limiting per security violation
-- [ ] Automated threat intelligence updates
-
-## Support
-
-Questions or found a bypass? Email security@yourapp.com
-
 ## Privacy
 
 Security events store:
@@ -227,4 +239,3 @@ Security events store:
 ## License
 
 Security features are included in the core AI Ratelimit package under the FSL-1.1-MIT license.
-

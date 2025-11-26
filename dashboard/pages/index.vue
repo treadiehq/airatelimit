@@ -66,32 +66,33 @@
             <!-- Code Content -->
             <div class="p-4 px-4 text-left">
               <!-- JavaScript Tab -->
-              <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500">$</span> <span class="text-blue-300">npm</span> <span class="text-green-300">install @ai-ratelimit/sdk</span>
-<span class="text-gray-500">$</span> <span class="text-purple-300">import</span> { createClient } <span class="text-purple-300">from</span> <span class="text-green-300">'@ai-ratelimit/sdk'</span>
-<span class="text-gray-500">$</span> 
-<span class="text-gray-500">$</span> <span class="text-purple-300">const</span> client = <span class="text-blue-300">createClient</span>({
-    baseUrl: <span class="text-green-300">'https://airatelimit.com/api'</span>,
-    projectKey: <span class="text-green-300">'pk_your_key_here'</span>
-  })
-<span class="text-gray-500">$</span>
-<span class="text-gray-500">$</span> <span class="text-purple-300">const</span> result = <span class="text-purple-300">await</span> <span class="text-red-400">client</span>.<span class="text-blue-300">chat</span>({
-    identity: <span class="text-green-300">'user-123'</span>,
-    tier: <span class="text-green-300">'free'</span>,
-    model: <span class="text-green-300">'gpt-4o'</span>,
-    messages: [{ role: <span class="text-green-300">'user'</span>, content: <span class="text-green-300">'Hello!'</span> }]
-  })</code></pre>
+              <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-purple-300">import</span> OpenAI <span class="text-purple-300">from</span> <span class="text-green-300">'openai'</span>
+
+<span class="text-purple-300">const</span> openai = <span class="text-purple-300">new</span> <span class="text-blue-300">OpenAI</span>({
+  apiKey: <span class="text-green-300">'sk-your-key'</span>,
+  baseURL: <span class="text-green-300">'https://your-proxy.com/v1'</span>,
+  defaultHeaders: {
+    <span class="text-green-300">'x-project-key'</span>: <span class="text-green-300">'pk_xxx'</span>,
+    <span class="text-green-300">'x-identity'</span>: <span class="text-green-300">'user-123'</span>,
+    <span class="text-green-300">'x-tier'</span>: <span class="text-green-300">'free'</span>,
+  },
+})
+
+<span class="text-purple-300">const</span> response = <span class="text-purple-300">await</span> openai.chat.completions.<span class="text-blue-300">create</span>({
+  model: <span class="text-green-300">'gpt-4o'</span>,
+  messages: [{ role: <span class="text-green-300">'user'</span>, content: <span class="text-green-300">'Hello!'</span> }]
+})</code></pre>
 
               <!-- API Tab -->
-              <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500">$</span> curl -X POST <span class="text-blue-300">https://airatelimit.com/api/v1/proxy/chat</span> \
-  -H <span class="text-green-300">"x-project-key: pk_your_key_here"</span> \
+              <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500">$</span> curl -X POST <span class="text-blue-300">https://your-proxy.com/v1/chat/completions</span> \
+  -H <span class="text-green-300">"Authorization: Bearer sk-your-key"</span> \
+  -H <span class="text-green-300">"x-project-key: pk_xxx"</span> \
+  -H <span class="text-green-300">"x-identity: user-123"</span> \
+  -H <span class="text-green-300">"x-tier: free"</span> \
   -H <span class="text-green-300">"Content-Type: application/json"</span> \
   -d <span class="text-green-300">'{
-    "identity": "user-123",
-    "tier": "free",
     "model": "gpt-4o",
-    "messages": [
-      {"role": "user", "content": "Hello!"}
-    ]
+    "messages": [{"role": "user", "content": "Hello!"}]
   }'</span></code></pre>
               
               <button 
@@ -174,39 +175,40 @@ useHead({
 
 type TabId = 'javascript' | 'api'
 
-const activeTab = ref<TabId>('api')
+const activeTab = ref<TabId>('javascript')
 const copied = ref(false)
 
 const tabs = [
-  { id: 'api' as TabId, label: 'REST API' },
-  { id: 'javascript' as TabId, label: 'JavaScript' },
+  { id: 'javascript' as TabId, label: 'Node' },
+  { id: 'api' as TabId, label: 'cURL' },
 ]
 
 const codeExamples: Record<TabId, string> = {
-  javascript: `npm install @ai-ratelimit/sdk
-import { createClient } from '@ai-ratelimit/sdk'
+  javascript: `import OpenAI from 'openai'
 
-const client = createClient({
-  baseUrl: 'https://airatelimit.com/api',
-  projectKey: 'pk_your_key_here'
+const openai = new OpenAI({
+  apiKey: 'sk-your-key',
+  baseURL: 'https://your-proxy.com/v1',
+  defaultHeaders: {
+    'x-project-key': 'pk_xxx',
+    'x-identity': 'user-123',
+    'x-tier': 'free',
+  },
 })
 
-const result = await client.chat({
-  identity: 'user-123',
-  tier: 'free',
+const response = await openai.chat.completions.create({
   model: 'gpt-4o',
   messages: [{ role: 'user', content: 'Hello!' }]
 })`,
-  api: `curl -X POST https://airatelimit.com/api/v1/proxy/chat \\
-  -H "x-project-key: pk_your_key_here" \\
+  api: `curl -X POST https://your-proxy.com/v1/chat/completions \\
+  -H "Authorization: Bearer sk-your-key" \\
+  -H "x-project-key: pk_xxx" \\
+  -H "x-identity: user-123" \\
+  -H "x-tier: free" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "identity": "user-123",
-    "tier": "free",
     "model": "gpt-4o",
-    "messages": [
-      {"role": "user", "content": "Hello!"}
-    ]
+    "messages": [{"role": "user", "content": "Hello!"}]
   }'`
 }
 

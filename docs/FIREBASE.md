@@ -7,19 +7,22 @@ Use AI Ratelimit with Firebase Auth to track usage per user.
 ### Use Firebase UID as Identity
 
 ```typescript
-import { createClient } from '@ai-ratelimit/sdk';
+import OpenAI from 'openai';
 import { getAuth } from 'firebase/auth';
-
-const client = createClient({
-  baseUrl: 'https://your-service.railway.app/api',
-  projectKey: 'pk_your_key_here',
-});
 
 const user = getAuth().currentUser;
 
-const result = await client.chat({
-  identity: user.uid,  // Use Firebase UID
-  tier: 'free',
+const openai = new OpenAI({
+  apiKey: 'sk-your-openai-key',
+  baseURL: 'https://your-proxy.com/v1',
+  defaultHeaders: {
+    'x-project-key': 'pk_xxx',
+    'x-identity': user.uid,  // Use Firebase UID
+    'x-tier': 'free',
+  },
+});
+
+const response = await openai.chat.completions.create({
   model: 'gpt-4o',
   messages: [{ role: 'user', content: 'Hello!' }],
 });
@@ -40,11 +43,14 @@ const user = getAuth().currentUser;
 const idTokenResult = await user.getIdTokenResult();
 const tier = idTokenResult.claims.tier || 'free';
 
-const result = await client.chat({
-  identity: user.uid,
-  tier: tier,  // From custom claims
-  model: 'gpt-4o',
-  messages: [{ role: 'user', content: 'Hello!' }],
+const openai = new OpenAI({
+  apiKey: 'sk-your-key',
+  baseURL: 'https://your-proxy.com/v1',
+  defaultHeaders: {
+    'x-project-key': 'pk_xxx',
+    'x-identity': user.uid,
+    'x-tier': tier,  // From custom claims
+  },
 });
 ```
 
@@ -55,11 +61,14 @@ import { signInAnonymously } from 'firebase/auth';
 
 const userCredential = await signInAnonymously(getAuth());
 
-const result = await client.chat({
-  identity: userCredential.user.uid,  // Anonymous UID
-  tier: 'free',
-  model: 'gpt-4o',
-  messages: [{ role: 'user', content: 'Hello!' }],
+const openai = new OpenAI({
+  apiKey: 'sk-your-key',
+  baseURL: 'https://your-proxy.com/v1',
+  defaultHeaders: {
+    'x-project-key': 'pk_xxx',
+    'x-identity': userCredential.user.uid,  // Anonymous UID
+    'x-tier': 'free',
+  },
 });
 ```
 
@@ -68,16 +77,12 @@ const result = await client.chat({
 ```tsx
 import { useEffect, useState } from 'react';
 import { getAuth } from 'firebase/auth';
-import { createClient, LimitExceededError } from '@ai-ratelimit/sdk';
-
-const client = createClient({
-  baseUrl: 'https://your-service.railway.app/api',
-  projectKey: 'pk_your_key_here',
-});
+import OpenAI from 'openai';
 
 function ChatComponent() {
   const [user, setUser] = useState(null);
   const [tier, setTier] = useState('free');
+  const [openai, setOpenai] = useState(null);
 
   useEffect(() => {
     const auth = getAuth();
@@ -86,27 +91,33 @@ function ChatComponent() {
         setUser(firebaseUser);
         const idTokenResult = await firebaseUser.getIdTokenResult();
         setTier(idTokenResult.claims.tier || 'free');
+        
+        setOpenai(new OpenAI({
+          apiKey: 'sk-your-key',
+          baseURL: 'https://your-proxy.com/v1',
+          defaultHeaders: {
+            'x-project-key': 'pk_xxx',
+            'x-identity': firebaseUser.uid,
+            'x-tier': idTokenResult.claims.tier || 'free',
+          },
+          dangerouslyAllowBrowser: true,
+        }));
       }
     });
   }, []);
 
   const sendMessage = async (content) => {
-    if (!user) return;
+    if (!openai) return;
 
     try {
-      const result = await client.chat({
-        identity: user.uid,
-        tier,
+      const response = await openai.chat.completions.create({
         model: 'gpt-4o',
         messages: [{ role: 'user', content }],
       });
-      return result.raw.choices[0].message.content;
+      return response.choices[0].message.content;
     } catch (error) {
-      if (error instanceof LimitExceededError) {
-        alert(error.response.message);
-        if (error.response.deepLink) {
-          window.location.href = error.response.deepLink;
-        }
+      if (error.status === 429) {
+        alert('Rate limit exceeded! Please upgrade.');
       }
     }
   };
@@ -119,26 +130,37 @@ function ChatComponent() {
 
 ```dart
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:ai_ratelimit_sdk/ai_ratelimit_sdk.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-final client = AIRateLimitClient(
-  baseUrl: 'https://your-service.railway.app/api',
-  projectKey: 'pk_your_key_here',
-);
+Future<String> chat(String message) async {
+  final user = FirebaseAuth.instance.currentUser;
+  final idTokenResult = await user!.getIdTokenResult();
+  final tier = idTokenResult.claims?['tier'] ?? 'free';
 
-final user = FirebaseAuth.instance.currentUser;
-final idTokenResult = await user!.getIdTokenResult();
-final tier = idTokenResult.claims?['tier'] ?? 'free';
+  final response = await http.post(
+    Uri.parse('https://your-proxy.com/v1/chat/completions'),
+    headers: {
+      'Authorization': 'Bearer sk-your-openai-key',
+      'Content-Type': 'application/json',
+      'x-project-key': 'pk_xxx',
+      'x-identity': user.uid,
+      'x-tier': tier,
+    },
+    body: jsonEncode({
+      'model': 'gpt-4o',
+      'messages': [{'role': 'user', 'content': message}],
+    }),
+  );
 
-final result = await client.chat(
-  identity: user.uid,
-  tier: tier,
-  model: 'gpt-4o',
-  messages: [ChatMessage.user('Hello!')],
-);
+  if (response.statusCode == 429) {
+    throw Exception('Rate limit exceeded');
+  }
+
+  final data = jsonDecode(response.body);
+  return data['choices'][0]['message']['content'];
+}
 ```
-
-See [Flutter SDK docs](../sdk/flutter/README.md) for more details.
 
 ## Firebase Cloud Functions
 
@@ -146,43 +168,38 @@ For secure server-side rate limiting:
 
 ```typescript
 import { onRequest } from 'firebase-functions/v2/https';
-import { createClient } from '@ai-ratelimit/sdk';
-
-const client = createClient({
-  baseUrl: process.env.RATELIMIT_BASE_URL,
-  projectKey: process.env.RATELIMIT_PROJECT_KEY,
-});
 
 export const chatWithAI = onRequest(async (req, res) => {
   const { userId, messages, tier } = req.body;
 
   try {
-    const result = await client.chat({
-      identity: userId,
-      tier: tier || 'free',
-      model: 'gpt-4o',
-      messages,
+    const response = await fetch('https://your-proxy.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+        'x-project-key': process.env.RATELIMIT_PROJECT_KEY,
+        'x-identity': userId,
+        'x-tier': tier || 'free',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages,
+      }),
     });
-    res.json({ response: result.raw });
-  } catch (error) {
-    if (error.name === 'LimitExceededError') {
-      res.status(429).json({
-        error: 'limit_exceeded',
-        message: error.response.message,
-      });
-    } else {
-      res.status(500).json({ error: 'Internal error' });
+
+    if (response.status === 429) {
+      const error = await response.json();
+      res.status(429).json(error);
+      return;
     }
+
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal error' });
   }
 });
-```
-
-Set environment variables:
-
-```bash
-firebase functions:config:set \
-  ratelimit.base_url="https://your-service.railway.app/api" \
-  ratelimit.project_key="pk_your_key"
 ```
 
 ## Architecture Options
@@ -196,7 +213,7 @@ firebase functions:config:set \
 ```
 
 **Pros**: Simple, no server needed  
-**Cons**: Project key visible in client
+**Cons**: API key visible in client (use environment variables)
 
 ### Server-Side (Secure)
 
@@ -219,20 +236,26 @@ In Cloud Functions, verify the user's identity:
 import { getAuth } from 'firebase-admin/auth';
 
 export const chatWithAI = onRequest(async (req, res) => {
-  const token = req.headers.authorization;
+  const token = req.headers.authorization?.split('Bearer ')[1];
   
   try {
     const decodedToken = await getAuth().verifyIdToken(token);
-    const userId = decodedToken.uid;
     
-    const result = await client.chat({
-      identity: userId,  // Verified!
-      tier: decodedToken.tier || 'free',
-      model: 'gpt-4o',
-      messages: req.body.messages,
+    const response = await fetch('https://your-proxy.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'x-project-key': 'pk_xxx',
+        'x-identity': decodedToken.uid,  // Verified!
+        'x-tier': decodedToken.tier || 'free',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: req.body.messages,
+      }),
     });
     
-    res.json(result.raw);
+    res.json(await response.json());
   } catch (error) {
     res.status(401).json({ error: 'Unauthorized' });
   }
@@ -252,20 +275,16 @@ Handle limit exceeded and show upgrade:
 
 ```typescript
 try {
-  await client.chat({ ... });
+  const response = await openai.chat.completions.create({ ... });
 } catch (error) {
-  if (error instanceof LimitExceededError) {
+  if (error.status === 429) {
     // Show upgrade dialog
-    showUpgradeDialog({
-      message: error.response.message,
-      usage: error.response.usage,
-      limit: error.response.limit,
-    });
+    showUpgradeDialog();
   }
 }
 
 async function onUpgradeComplete(userId, tier) {
-  // Update custom claims
+  // Update custom claims (server-side)
   await getAuth().setCustomUserClaims(userId, { tier });
   // Future requests use new tier
 }
@@ -280,11 +299,7 @@ Preserve usage when user signs up:
 const anonUser = await signInAnonymously(auth);
 
 // Use AI with anonymous UID
-await client.chat({
-  identity: anonUser.user.uid,
-  tier: 'free',
-  ...
-});
+// ...
 
 // User signs up - link accounts
 const credential = EmailAuthProvider.credential(email, password);
@@ -299,11 +314,11 @@ Firebase Auth syncs across devices automatically. Usage limits apply everywhere:
 
 ```typescript
 // Same user.uid on phone, tablet, web
-const result = await client.chat({
-  identity: user.uid,  // Works everywhere
-  tier: 'pro',
-  model: 'gpt-4o',
-  messages,
+const openai = new OpenAI({
+  // ...
+  defaultHeaders: {
+    'x-identity': user.uid,  // Works everywhere
+  },
 });
 ```
 
@@ -329,19 +344,6 @@ export const stripeWebhook = onRequest(async (req, res) => {
 });
 ```
 
-**Can I use Firebase Emulators?**
-
-Yes! Point to localhost:
-
-```typescript
-const client = createClient({
-  baseUrl: 'http://localhost:3000/api',
-  projectKey: 'pk_dev_key',
-});
-```
-
 ## Resources
 
 - [Main Documentation](../README.md)
-- [JavaScript SDK](../sdk/js/README.md)
-- [Flutter SDK](../sdk/flutter/README.md)
