@@ -1,6 +1,7 @@
 # AI Ratelimit
 
-Add usage limits to your AI app in 5 minutes.
+Add usage limits to your AI app in 5 minutes. Track usage per user, set limits per model, create pricing tiers—all without storing 
+prompts or API keys.
 
 ```
 Your App → AI Ratelimit → OpenAI / Anthropic / Google / Any AI
@@ -10,7 +11,7 @@ Your App → AI Ratelimit → OpenAI / Anthropic / Google / Any AI
           Forward request
 ```
 
-**How it works:** Point your AI requests at our proxy. We check limits, then forward to the real API. Your API key passes through—we never store it.
+**How it works:** Point your AI requests at our proxy. We check limits, then forward to the real API. Your API key passes through, we never store it.
 
 ```diff
 - baseURL: 'https://api.openai.com/v1'
