@@ -143,7 +143,7 @@
         <!-- Usage Summary -->
         <div class="space-y-4">
           <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider">Today's Usage</h3>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <StatCard
               v-if="project.limitType !== 'tokens'"
               label="Requests"
@@ -158,7 +158,7 @@
               :max="project.dailyTokenLimit"
             />
 
-            <div class="p-4 rounded-lg bg-gray-500/10 border border-gray-500/10">
+            <!-- <div class="p-4 rounded-lg bg-gray-500/10 border border-gray-500/10">
               <div class="text-sm text-white mb-2">Status</div>
               <div class="flex items-center space-x-2">
                 <span
@@ -171,7 +171,7 @@
                   {{ !hasLimits ? 'Unlimited' : usage.withinLimits ? 'Within Limits' : 'Limit Exceeded' }}
                 </span>
               </div>
-            </div>
+            </div> -->
           </div>
         </div>
 
