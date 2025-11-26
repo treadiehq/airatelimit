@@ -23,6 +23,18 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      title: 'AI Ratelimit',
+      meta: [
+        { name: 'description', content: 'Add usage limits to your AI app in 5 minutes. Track usage per user, set limits per model, create pricing tiers.' },
+        { property: 'og:title', content: 'AI Ratelimit' },
+        { property: 'og:description', content: 'Add usage limits to your AI app in 5 minutes. Track usage per user, set limits per model, create pricing tiers.' },
+        { property: 'og:image', content: '/airatelimit.png' },
+        { property: 'og:type', content: 'website' },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: 'AI Ratelimit' },
+        { name: 'twitter:description', content: 'Add usage limits to your AI app in 5 minutes. Track usage per user, set limits per model, create pricing tiers.' },
+        { name: 'twitter:image', content: '/airatelimit.png' },
+      ],
       script: [
         {
           src: 'https://cdn.seline.com/seline.js',
