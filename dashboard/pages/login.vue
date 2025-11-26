@@ -62,7 +62,7 @@
             </div>
             <h3 class="text-xl font-semibold text-white mb-2">Check your email!</h3>
             <p class="text-gray-400 mb-4">
-              We've sent a magic link to <strong>{{ email }}</strong>
+              We've sent a magic link to <strong class="text-white">{{ email }}</strong>
             </p>
           </div>
         </div>

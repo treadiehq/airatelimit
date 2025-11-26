@@ -1,7 +1,7 @@
 <template>
   <div class="px-6 space-y-6">
     <!-- Security Header -->
-    <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg p-6">
+    <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg p-4">
       <h3 class="font-semibold text-white mb-2">Prompt Injection Protection</h3>
       <p class="text-sm text-white">
         Protect your system prompts from being extracted or leaked through prompt injection attacks. 
@@ -31,26 +31,34 @@
 
       <!-- Security Mode -->
       <div v-if="editForm.securityEnabled" class="mt-4 pt-4 border-t border-gray-500/20">
-        <label class="block text-sm font-medium text-white mb-2">Action Mode</label>
-        <div class="grid grid-cols-2 gap-3">
-          <button
-            type="button"
-            @click="editForm.securityMode = 'block'"
-            :class="editForm.securityMode === 'block' ? 'bg-gray-500/25 border-gray-500/10 text-white' : 'bg-gray-500/10 border-gray-500/10 text-gray-400'"
-            class="px-4 py-3 border rounded-lg text-sm font-medium hover:opacity-80 transition-opacity"
-          >
-            <span class="block font-semibold mb-1">Block</span>
-            <span class="text-xs opacity-80">Reject suspicious requests</span>
-          </button>
-          <button
-            type="button"
-            @click="editForm.securityMode = 'log'"
-            :class="editForm.securityMode === 'log' ? 'bg-gray-500/25 border-gray-500/10 text-white' : 'bg-gray-500/10 border-gray-500/10 text-gray-400'"
-            class="px-4 py-3 border rounded-lg text-sm font-medium hover:opacity-80 transition-opacity"
-          >
-            <span class="block font-semibold mb-1">Log Only</span>
-            <span class="text-xs opacity-80">Allow but track attempts</span>
-          </button>
+        <label class="block text-sm font-medium text-white mb-3">When threats are detected</label>
+        <div class="space-y-2">
+          <label class="flex items-start gap-3 p-3 bg-gray-500/10 border border-gray-500/20 rounded-lg cursor-pointer hover:bg-gray-500/15 transition-colors">
+            <input
+              type="radio"
+              name="securityMode"
+              value="block"
+              v-model="editForm.securityMode"
+              class="mt-0.5 w-4 h-4 text-blue-300 border-gray-500 focus:ring-blue-300/50"
+            />
+            <div>
+              <span class="text-sm font-medium text-white">Block request</span>
+              <p class="text-xs text-gray-400">Reject suspicious requests with an error</p>
+            </div>
+          </label>
+          <label class="flex items-start gap-3 p-3 bg-gray-500/10 border border-gray-500/20 rounded-lg cursor-pointer hover:bg-gray-500/15 transition-colors">
+            <input
+              type="radio"
+              name="securityMode"
+              value="log"
+              v-model="editForm.securityMode"
+              class="mt-0.5 w-4 h-4 text-blue-300 border-gray-500 focus:ring-blue-300/50"
+            />
+            <div>
+              <span class="text-sm font-medium text-white">Log only</span>
+              <p class="text-xs text-gray-400">Allow request but record the attempt</p>
+            </div>
+          </label>
         </div>
       </div>
 

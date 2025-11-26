@@ -71,7 +71,7 @@
             </div>
             <h3 class="text-xl font-semibold text-white mb-2">Account created!</h3>
             <p class="text-gray-400 mb-4">
-              Check your email at <strong>{{ email }}</strong> for a magic link to sign in.
+              Check your email at <strong class="text-white">{{ email }}</strong> for a magic link to sign in.
             </p>
           </div>
         </div>

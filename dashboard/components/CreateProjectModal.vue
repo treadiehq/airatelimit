@@ -95,9 +95,9 @@
             </div>
 
             <!-- Create Form -->
-            <div v-else class="px-6 py-6">
+            <div v-else class="">
               <form @submit.prevent="handleSubmit">
-                <div class="space-y-4">
+                <div class="space-y-4 px-6 py-6">
                   <!-- Project Name -->
                   <div>
                     <label class="block text-sm font-medium text-white mb-2">
@@ -108,8 +108,8 @@
                       v-model="form.name"
                       type="text"
                       required
-                      class="w-full px-4 py-3 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-transparent transition-all"
-                      placeholder="My AI App"
+                      class="w-full px-4 py-2 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-transparent transition-all"
+                      placeholder="Cursor Agent"
                       autofocus
                     />
                   </div>
@@ -121,7 +121,7 @@
                 </div>
 
                 <!-- Footer -->
-                <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-500/20">
+                <div class="flex justify-end space-x-3 py-4 px-6 border-t border-gray-500/20">
                   <button
                     type="button"
                     @click="close"
