@@ -149,6 +149,7 @@
               label="Requests"
               :value="usage.requestsUsed || 0"
               :max="project.dailyRequestLimit"
+              :history="requestHistory"
             />
 
             <StatCard
@@ -156,23 +157,17 @@
               label="Tokens"
               :value="usage.tokensUsed || 0"
               :max="project.dailyTokenLimit"
+              :history="tokenHistory"
             />
-
-            <!-- <div class="p-4 rounded-lg bg-gray-500/10 border border-gray-500/10">
-              <div class="text-sm text-white mb-2">Status</div>
-              <div class="flex items-center space-x-2">
-                <span
-                  :class="[
-                    'w-2 h-2 rounded-full',
-                    !hasLimits ? 'bg-blue-300' : usage.withinLimits ? 'bg-green-300 animate-pulse' : 'bg-red-400 animate-pulse'
-                  ]"
-                ></span>
-                <span class="text-lg font-bold" :class="!hasLimits ? 'text-blue-300' : usage.withinLimits ? 'text-green-300' : 'text-red-400'">
-                  {{ !hasLimits ? 'Unlimited' : usage.withinLimits ? 'Within Limits' : 'Limit Exceeded' }}
-                </span>
-              </div>
-            </div> -->
           </div>
+        </div>
+        
+        <!-- Usage Chart -->
+        <div v-if="usageHistory.length > 1" class="space-y-4">
+          <UsageChart
+            title="Request History"
+            :data="usageHistory"
+          />
         </div>
 
         <!-- Usage by Identity -->
@@ -274,6 +269,16 @@
       @confirm="confirmDelete"
       @cancel="showDeleteConfirm = false"
     />
+    
+    <!-- Quick Actions FAB -->
+    <!-- <QuickActions
+      v-if="project"
+      :actions="quickActions"
+      @action="handleQuickAction"
+    /> -->
+    
+    <!-- Confetti celebration -->
+    <Confetti ref="confettiRef" />
   </NuxtLayout>
 </template>
 
@@ -289,6 +294,7 @@ const projectId = route.params.id as string
 
 const project = ref<any>(null)
 const usage = ref<any>({})
+const usageHistory = ref<Array<{ label: string; value: number }>>([])
 const identities = ref<any[]>([])
 const loading = ref(true)
 const error = ref('')
@@ -296,6 +302,8 @@ const showDeleteConfirm = ref(false)
 const showSettingsModal = ref(false)
 const showSettingsDropdown = ref(false)
 const settingsDropdownRef = ref(null)
+const confettiRef = ref<any>(null)
+const previousRequestCount = ref<number | null>(null)
 
 // Dynamic page title based on project name
 const pageTitle = computed(() => {
@@ -412,13 +420,23 @@ const loadProject = async () => {
     project.value = await api(`/projects/${projectId}`)
     
     // Load usage data
-    const [usageData, identitiesData] = await Promise.all([
+    const [usageData, identitiesData, historyData] = await Promise.all([
       api(`/projects/${projectId}/usage/summary`),
       api(`/projects/${projectId}/usage/by-identity`),
+      api(`/projects/${projectId}/usage/history`).catch(() => []),
     ])
+    
+    // Check for first request celebration
+    const oldCount = previousRequestCount.value
+    const newCount = usageData.requestsUsed || 0
+    if (oldCount === 0 && newCount > 0 && confettiRef.value) {
+      confettiRef.value.fire()
+    }
+    previousRequestCount.value = newCount
     
     usage.value = usageData
     identities.value = identitiesData
+    usageHistory.value = historyData
 
     // Populate edit form
     editForm.value.name = project.value.name
@@ -588,6 +606,59 @@ const breadcrumbs = computed(() => [
   { label: 'Projects', to: '/projects' },
   { label: project.value?.name || 'Loading...' }
 ])
+
+// Extract request and token history from usage history
+const requestHistory = computed(() => {
+  return usageHistory.value.map(h => (h as any).requests || h.value || 0)
+})
+
+const tokenHistory = computed(() => {
+  return usageHistory.value.map(h => (h as any).tokens || 0)
+})
+
+// Quick actions for FAB
+const quickActions = computed(() => [
+  {
+    id: 'settings',
+    label: 'Settings',
+    description: 'Configure limits and tiers',
+    icon: h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' }),
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' }),
+    ]),
+  },
+  {
+    id: 'copy-key',
+    label: 'Copy API Key',
+    description: 'Copy project key to clipboard',
+    icon: h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z' }),
+    ]),
+  },
+  {
+    id: 'refresh',
+    label: 'Refresh Data',
+    description: 'Reload usage statistics',
+    icon: h('svg', { class: 'w-4 h-4', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' }),
+    ]),
+  },
+])
+
+const handleQuickAction = (id: string) => {
+  switch (id) {
+    case 'settings':
+      showSettingsModal.value = true
+      break
+    case 'copy-key':
+      copyProjectKey()
+      break
+    case 'refresh':
+      loadProject()
+      showSuccess('Data refreshed!')
+      break
+  }
+}
 
 const handleDeleteRequest = () => {
   showDeleteConfirm.value = true

@@ -71,6 +71,11 @@
                 </nav>
               </div>
 
+              <!-- Changes Summary -->
+              <div class="px-6">
+                <ChangesSummary :changes="changes" />
+              </div>
+
               <!-- Tab Content -->
               <BasicLimitsTab
                 v-show="configTab === 'basic'"
@@ -133,6 +138,38 @@ const props = defineProps<{
   updateError: string
   updateSuccess: boolean
 }>()
+
+// Track changes for diff view
+const changes = computed(() => {
+  if (!props.project) return []
+  
+  const diffs: Array<{ field: string; from: any; to: any }> = []
+  
+  // Check basic fields
+  if (props.editForm.name !== props.project.name) {
+    diffs.push({ field: 'Name', from: props.project.name, to: props.editForm.name })
+  }
+  if (props.editForm.limitPeriod !== (props.project.limitPeriod || 'daily')) {
+    diffs.push({ field: 'Limit Period', from: props.project.limitPeriod || 'daily', to: props.editForm.limitPeriod })
+  }
+  if (props.editForm.limitType !== (props.project.limitType || 'both')) {
+    diffs.push({ field: 'Limit Type', from: props.project.limitType || 'both', to: props.editForm.limitType })
+  }
+  if (props.editForm.dailyRequestLimit !== props.project.dailyRequestLimit) {
+    diffs.push({ field: 'Request Limit', from: props.project.dailyRequestLimit, to: props.editForm.dailyRequestLimit })
+  }
+  if (props.editForm.dailyTokenLimit !== props.project.dailyTokenLimit) {
+    diffs.push({ field: 'Token Limit', from: props.project.dailyTokenLimit, to: props.editForm.dailyTokenLimit })
+  }
+  if (props.editForm.securityEnabled !== (props.project.securityEnabled || false)) {
+    diffs.push({ field: 'Security Enabled', from: props.project.securityEnabled || false, to: props.editForm.securityEnabled })
+  }
+  if (props.editForm.securityMode !== (props.project.securityMode || 'block')) {
+    diffs.push({ field: 'Security Mode', from: props.project.securityMode || 'block', to: props.editForm.securityMode })
+  }
+  
+  return diffs
+})
 
 const emit = defineEmits<{
   (e: 'close'): void

@@ -103,9 +103,29 @@
           v-model="editForm.limitMessage"
           rows="3"
           placeholder='{"error": "limit_exceeded", "message": "Upgrade to Pro!", "deepLink": "myapp://upgrade"}'
-          class="w-full px-4 py-2 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-transparent"
+          class="w-full px-4 py-2 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-transparent font-mono text-sm"
         />
         <p class="text-xs text-gray-500 mt-1">Custom JSON response sent when limits are exceeded</p>
+        
+        <!-- Live Preview -->
+        <div v-if="editForm.limitMessage" class="mt-3">
+          <div class="text-xs font-medium text-gray-400 mb-2 flex items-center gap-2">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Live Preview
+          </div>
+          <div class="bg-black/40 rounded-lg p-3 border border-gray-600/30">
+            <div class="flex items-start gap-2">
+              <div class="w-2 h-2 rounded-full bg-red-400 mt-1.5 shrink-0"></div>
+              <div class="flex-1 min-w-0">
+                <div class="text-xs text-red-400 font-medium mb-1">HTTP 429 Response</div>
+                <pre class="text-xs text-gray-300 whitespace-pre-wrap break-all font-mono overflow-x-auto">{{ formattedPreview }}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div v-if="updateError" class="p-3 bg-red-400/10 text-red-400 rounded-lg text-sm">
@@ -128,7 +148,7 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   project: any
   editForm: any
   updating: boolean
@@ -139,5 +159,16 @@ defineProps<{
 defineEmits<{
   (e: 'update'): void
 }>()
+
+const formattedPreview = computed(() => {
+  if (!props.editForm.limitMessage) return ''
+  try {
+    const parsed = JSON.parse(props.editForm.limitMessage)
+    return JSON.stringify(parsed, null, 2)
+  } catch {
+    // If not valid JSON, show as-is
+    return props.editForm.limitMessage
+  }
+})
 </script>
 

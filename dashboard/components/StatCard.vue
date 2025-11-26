@@ -21,16 +21,30 @@
       </div>
     </div>
 
-    <div class="flex items-baseline space-x-2">
-      <div class="text-2xl font-bold text-white">
-        <AnimatedCounter :value="value" />
+    <div class="flex items-center justify-between">
+      <div class="flex items-baseline space-x-2">
+        <div class="text-2xl font-bold text-white">
+          <AnimatedCounter :value="value" />
+        </div>
+        <div v-if="max !== null" class="text-sm text-gray-400">
+          / {{ formatNumber(max) }}
+        </div>
+        <div v-else class="text-sm text-gray-400">
+          / ∞
+        </div>
       </div>
-      <div v-if="max !== null" class="text-sm text-gray-400">
-        / {{ max }}
-      </div>
-      <div v-else class="text-sm text-gray-400">
-        / ∞
-      </div>
+      
+      <!-- Sparkline -->
+      <Sparkline
+        v-if="history && history.length > 1"
+        :data="history"
+        :width="80"
+        :height="28"
+        :color="sparklineColor"
+        :show-dot="true"
+        :dot-radius="2"
+        :stroke-width="1.5"
+      />
     </div>
 
     <div v-if="max !== null" class="mt-3">
@@ -56,6 +70,7 @@ const props = withDefaults(defineProps<{
   value: number
   max: number | null
   trend?: number
+  history?: number[]
   variant?: 'blue' | 'green' | 'yellow' | 'red'
 }>(), {
   variant: 'blue'
@@ -66,29 +81,24 @@ const percentage = computed(() => {
   return (props.value / props.max) * 100
 })
 
-// const bgClass = computed(() => {
-//   const variants = {
-//     blue: 'bg-blue-300/10',
-//     green: 'bg-green-300/10',
-//     yellow: 'bg-yellow-300/10',
-//     red: 'bg-red-400/10'
-//   }
-  
-//   // Auto-select based on percentage if not manual override
-//   if (props.max !== null) {
-//     if (percentage.value >= 90) return 'bg-red-400/10'
-//     if (percentage.value >= 70) return 'bg-yellow-300/10'
-//     return 'bg-green-300/10'
-//   }
-  
-//   return variants[props.variant]
-// })
+const formatNumber = (num: number) => {
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K'
+  return num.toLocaleString()
+}
 
 const progressColor = computed(() => {
   if (props.max === null) return 'bg-blue-300'
   if (percentage.value >= 90) return 'bg-red-400'
   if (percentage.value >= 70) return 'bg-yellow-300'
   return 'bg-green-300'
+})
+
+const sparklineColor = computed(() => {
+  if (props.max === null) return '#93c5fd' // blue-300
+  if (percentage.value >= 90) return '#f87171' // red-400
+  if (percentage.value >= 70) return '#fcd34d' // yellow-300
+  return '#86efac' // green-300
 })
 </script>
 

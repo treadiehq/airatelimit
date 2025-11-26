@@ -319,6 +319,37 @@ export class UsageService {
     return Object.values(byModel).sort((a, b) => b.requestsUsed - a.requestsUsed);
   }
 
+  async getUsageHistory(
+    projectId: string,
+    days: number = 7,
+  ): Promise<Array<{ label: string; value: number; requests: number; tokens: number }>> {
+    const history: Array<{ label: string; value: number; requests: number; tokens: number }> = [];
+    const now = new Date();
+
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(now);
+      date.setUTCDate(date.getUTCDate() - i);
+      const periodStart = new Date(
+        Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+      );
+
+      const summary = await this.getSummaryForProject(projectId, periodStart);
+      
+      // Format label as short day name (Mon, Tue, etc.)
+      const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const label = i === 0 ? 'Today' : dayNames[periodStart.getUTCDay()];
+
+      history.push({
+        label,
+        value: summary.totalRequests,
+        requests: summary.totalRequests,
+        tokens: summary.totalTokens,
+      });
+    }
+
+    return history;
+  }
+
   private getLimitResponse(project: Project): any {
     if (project.limitExceededResponse) {
       try {

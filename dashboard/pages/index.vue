@@ -2,9 +2,9 @@
   <div class="min-h-screen bg-black relative">
     <div class="radial-gradient absolute top-0 md:right-14 right-5"></div>
     <!-- Header -->
-    <nav class="border-b border-gray-500/20 bg-black/80 backdrop-blur-sm sticky top-0 z-50">
+    <nav class=" bg-black/80 backdrop-blur-sm sticky top-0 z-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-12">
+        <div class="flex justify-between items-center h-15">
           <!-- Logo -->
           <div class="flex items-center">
             <NuxtLink to="/" class="text-xl font-semibold text-white flex items-center gap-2">
