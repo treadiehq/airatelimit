@@ -7,7 +7,6 @@ import { OrganizationsModule } from './organizations/organizations.module';
 import { ProjectsModule } from './projects/projects.module';
 import { UsageModule } from './usage/usage.module';
 import { ProxyModule } from './proxy/proxy.module';
-import { ProvidersModule } from './providers/providers.module';
 
 @Module({
   imports: [
@@ -19,8 +18,6 @@ import { ProvidersModule } from './providers/providers.module';
     ProjectsModule,
     UsageModule,
     ProxyModule,
-    ProvidersModule,
   ],
 })
 export class AppModule {}
-

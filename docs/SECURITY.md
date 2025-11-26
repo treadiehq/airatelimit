@@ -89,7 +89,7 @@ import OpenAI from 'openai';
 
 const openai = new OpenAI({
   apiKey: 'sk-your-key',
-  baseURL: 'https://your-proxy.com/v1',
+  baseURL: 'https://api.airatelimit.com/v1',
   defaultHeaders: {
     'x-project-key': 'pk_xxx',
     'x-identity': 'user-123',
@@ -120,7 +120,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="sk-your-key",
-    base_url="https://your-proxy.com/v1",
+    base_url="https://api.airatelimit.com/v1",
     default_headers={
         "x-project-key": "pk_xxx",
         "x-identity": "user-123",

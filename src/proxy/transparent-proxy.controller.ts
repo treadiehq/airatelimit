@@ -1,22 +1,18 @@
 import {
   Controller,
   Post,
-  All,
   Body,
   Headers,
-  Req,
   Res,
   UnauthorizedException,
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProjectsService } from '../projects/projects.service';
 import { UsageService } from '../usage/usage.service';
-import { RuleEngineService } from '../usage/rule-engine.service';
-import { RuleAnalyticsService } from '../usage/rule-analytics.service';
 import { TransparentProxyService } from './transparent-proxy.service';
 import { SecurityService } from '../security/security.service';
 import { SecurityEvent } from '../security/security-event.entity';
@@ -30,7 +26,7 @@ import { SecurityEvent } from '../security/security-event.entity';
  * The customer's API key is passed per-request (not stored in our system).
  * 
  * Usage:
- * - Point your OpenAI SDK baseURL to: https://your-proxy.com/v1
+ * - Point your OpenAI SDK baseURL to: https://api.airatelimit.com/v1
  * - Add headers: x-project-key, x-identity, x-tier (optional)
  * - Your Authorization header with your API key is passed through
  */
@@ -39,8 +35,6 @@ export class TransparentProxyController {
   constructor(
     private readonly projectsService: ProjectsService,
     private readonly usageService: UsageService,
-    private readonly ruleEngineService: RuleEngineService,
-    private readonly ruleAnalyticsService: RuleAnalyticsService,
     private readonly transparentProxyService: TransparentProxyService,
     private readonly securityService: SecurityService,
     @InjectRepository(SecurityEvent)
@@ -145,49 +139,6 @@ export class TransparentProxyController {
         requestedTokens: estimatedTokens,
         requestedRequests: 1,
       });
-
-      // Evaluate rules if configured
-      if (usageCheck.allowed && usageCheck.usageCounter && usageCheck.usagePercent) {
-        const ruleResult = this.ruleEngineService.evaluateRules({
-          project,
-          identity,
-          tier,
-          usage: usageCheck.usageCounter,
-          usagePercent: usageCheck.usagePercent,
-          requestedTokens: estimatedTokens,
-          requestedRequests: 1,
-        });
-
-        if (ruleResult.matched && ruleResult.action) {
-          if (ruleResult.ruleId && ruleResult.ruleName) {
-            await this.ruleAnalyticsService.logTrigger({
-              project,
-              ruleId: ruleResult.ruleId,
-              ruleName: ruleResult.ruleName,
-              identity,
-              tier,
-              condition: ruleResult.condition,
-              action: ruleResult.action,
-              context: {
-                usagePercent: usageCheck.usagePercent,
-                requestsUsed: usageCheck.usageCounter.requestsUsed,
-                tokensUsed: usageCheck.usageCounter.tokensUsed,
-              },
-            });
-          }
-
-          if (ruleResult.action.type === 'block' || ruleResult.action.type === 'custom_response') {
-            res.status(HttpStatus.TOO_MANY_REQUESTS).json({
-              error: {
-                message: ruleResult.action.response?.message || 'Blocked by rate limit rule',
-                type: 'rate_limit_exceeded',
-                code: 'rule_blocked',
-              },
-            });
-            return;
-          }
-        }
-      }
 
       if (!usageCheck.allowed) {
         res.status(HttpStatus.TOO_MANY_REQUESTS).json({
@@ -365,4 +316,3 @@ export class TransparentProxyController {
     }
   }
 }
-

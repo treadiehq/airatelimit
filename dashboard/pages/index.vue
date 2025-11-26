@@ -70,7 +70,7 @@
 
 <span class="text-purple-300">const</span> openai = <span class="text-purple-300">new</span> <span class="text-blue-300">OpenAI</span>({
   apiKey: <span class="text-green-300">'sk-your-key'</span>,
-  baseURL: <span class="text-green-300">'https://your-proxy.com/v1'</span>,
+  baseURL: <span class="text-green-300">'https://api.airatelimit.com/v1'</span>,
   defaultHeaders: {
     <span class="text-green-300">'x-project-key'</span>: <span class="text-green-300">'pk_xxx'</span>,
     <span class="text-green-300">'x-identity'</span>: <span class="text-green-300">'user-123'</span>,
@@ -84,7 +84,7 @@
 })</code></pre>
 
               <!-- API Tab -->
-              <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500">$</span> curl -X POST <span class="text-blue-300">https://your-proxy.com/v1/chat/completions</span> \
+              <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500">$</span> curl -X POST <span class="text-blue-300">https://api.airatelimit.com/v1/chat/completions</span> \
   -H <span class="text-green-300">"Authorization: Bearer sk-your-key"</span> \
   -H <span class="text-green-300">"x-project-key: pk_xxx"</span> \
   -H <span class="text-green-300">"x-identity: user-123"</span> \
@@ -188,7 +188,7 @@ const codeExamples: Record<TabId, string> = {
 
 const openai = new OpenAI({
   apiKey: 'sk-your-key',
-  baseURL: 'https://your-proxy.com/v1',
+  baseURL: 'https://api.airatelimit.com/v1',
   defaultHeaders: {
     'x-project-key': 'pk_xxx',
     'x-identity': 'user-123',
@@ -200,7 +200,7 @@ const response = await openai.chat.completions.create({
   model: 'gpt-4o',
   messages: [{ role: 'user', content: 'Hello!' }]
 })`,
-  api: `curl -X POST https://your-proxy.com/v1/chat/completions \\
+  api: `curl -X POST https://api.airatelimit.com/v1/chat/completions \\
   -H "Authorization: Bearer sk-your-key" \\
   -H "x-project-key: pk_xxx" \\
   -H "x-identity: user-123" \\

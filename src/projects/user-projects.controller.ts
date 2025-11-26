@@ -6,7 +6,6 @@ import {
   Delete,
   Body,
   Param,
-  Query,
   UseGuards,
   Request,
   NotFoundException,
@@ -14,17 +13,13 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ProjectsService } from './projects.service';
-import { RuleAnalyticsService } from '../usage/rule-analytics.service';
 import { CreateUserProjectDto } from './dto/create-user-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
 export class UserProjectsController {
-  constructor(
-    private readonly projectsService: ProjectsService,
-    private readonly ruleAnalyticsService: RuleAnalyticsService,
-  ) {}
+  constructor(private readonly projectsService: ProjectsService) {}
 
   @Get()
   async listProjects(@Request() req) {
@@ -87,50 +82,6 @@ export class UserProjectsController {
     return { message: 'Project deleted' };
   }
 
-  @Get(':id/analytics/rule-triggers')
-  async getRuleAnalytics(
-    @Request() req,
-    @Param('id') id: string,
-    @Query('days') days?: string,
-  ) {
-    const project = await this.projectsService.findById(id);
-    if (!project) {
-      throw new NotFoundException('Project not found');
-    }
-    if (project.ownerId !== req.user.userId) {
-      throw new ForbiddenException('Access denied');
-    }
-
-    const daysNum = days ? parseInt(days, 10) : 7;
-    const stats = await this.ruleAnalyticsService.getRuleStats(id, daysNum);
-    const byDay = await this.ruleAnalyticsService.getTriggersByDay(id, daysNum);
-
-    return {
-      stats,
-      byDay,
-    };
-  }
-
-  @Get(':id/analytics/recent-triggers')
-  async getRecentTriggers(
-    @Request() req,
-    @Param('id') id: string,
-    @Query('limit') limit?: string,
-  ) {
-    const project = await this.projectsService.findById(id);
-    if (!project) {
-      throw new NotFoundException('Project not found');
-    }
-    if (project.ownerId !== req.user.userId) {
-      throw new ForbiddenException('Access denied');
-    }
-
-    const limitNum = limit ? parseInt(limit, 10) : 50;
-    const triggers = await this.ruleAnalyticsService.getRecentTriggers(id, limitNum);
-
-    return triggers;
-  }
-
   private maskApiKey(project: any) {
     if (project.openaiApiKey) {
       const key = project.openaiApiKey;
@@ -140,4 +91,3 @@ export class UserProjectsController {
     return project;
   }
 }
-

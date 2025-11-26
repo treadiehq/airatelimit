@@ -14,7 +14,7 @@ const user = getAuth().currentUser;
 
 const openai = new OpenAI({
   apiKey: 'sk-your-openai-key',
-  baseURL: 'https://your-proxy.com/v1',
+  baseURL: 'https://api.airatelimit.com/v1',
   defaultHeaders: {
     'x-project-key': 'pk_xxx',
     'x-identity': user.uid,  // Use Firebase UID
@@ -45,7 +45,7 @@ const tier = idTokenResult.claims.tier || 'free';
 
 const openai = new OpenAI({
   apiKey: 'sk-your-key',
-  baseURL: 'https://your-proxy.com/v1',
+  baseURL: 'https://api.airatelimit.com/v1',
   defaultHeaders: {
     'x-project-key': 'pk_xxx',
     'x-identity': user.uid,
@@ -63,7 +63,7 @@ const userCredential = await signInAnonymously(getAuth());
 
 const openai = new OpenAI({
   apiKey: 'sk-your-key',
-  baseURL: 'https://your-proxy.com/v1',
+  baseURL: 'https://api.airatelimit.com/v1',
   defaultHeaders: {
     'x-project-key': 'pk_xxx',
     'x-identity': userCredential.user.uid,  // Anonymous UID
@@ -94,7 +94,7 @@ function ChatComponent() {
         
         setOpenai(new OpenAI({
           apiKey: 'sk-your-key',
-          baseURL: 'https://your-proxy.com/v1',
+          baseURL: 'https://api.airatelimit.com/v1',
           defaultHeaders: {
             'x-project-key': 'pk_xxx',
             'x-identity': firebaseUser.uid,
@@ -139,7 +139,7 @@ Future<String> chat(String message) async {
   final tier = idTokenResult.claims?['tier'] ?? 'free';
 
   final response = await http.post(
-    Uri.parse('https://your-proxy.com/v1/chat/completions'),
+    Uri.parse('https://api.airatelimit.com/v1/chat/completions'),
     headers: {
       'Authorization': 'Bearer sk-your-openai-key',
       'Content-Type': 'application/json',
@@ -173,7 +173,7 @@ export const chatWithAI = onRequest(async (req, res) => {
   const { userId, messages, tier } = req.body;
 
   try {
-    const response = await fetch('https://your-proxy.com/v1/chat/completions', {
+    const response = await fetch('https://api.airatelimit.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -241,7 +241,7 @@ export const chatWithAI = onRequest(async (req, res) => {
   try {
     const decodedToken = await getAuth().verifyIdToken(token);
     
-    const response = await fetch('https://your-proxy.com/v1/chat/completions', {
+    const response = await fetch('https://api.airatelimit.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,

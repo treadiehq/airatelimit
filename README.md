@@ -8,7 +8,7 @@ import OpenAI from 'openai';
 // Use your existing OpenAI SDK - just change the base URL
 const openai = new OpenAI({
   apiKey: 'sk-your-key',  // Your key - we never store it
-  baseURL: 'https://your-proxy.com/v1',
+  baseURL: 'https://api.airatelimit.com/v1',
   defaultHeaders: {
     'x-project-key': 'pk_xxx',   // From dashboard
     'x-identity': 'user-123',     // For rate limiting
@@ -70,7 +70,7 @@ import OpenAI from 'openai';
 
 const openai = new OpenAI({
   apiKey: 'sk-your-openai-key',
-  baseURL: 'https://your-app.railway.app/v1',  // ← Add this
+  baseURL: 'https://api.airatelimit.com/v1',  // ← Add this
   defaultHeaders: {                             // ← Add this
     'x-project-key': 'pk_xxx',
     'x-identity': 'user-123',
@@ -263,7 +263,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="sk-your-key",
-    base_url="https://your-proxy.com/v1",
+    base_url="https://api.airatelimit.com/v1",
     default_headers={
         "x-project-key": "pk_xxx",
         "x-identity": "user-123",
@@ -279,7 +279,7 @@ response = client.chat.completions.create(
 ### curl
 
 ```bash
-curl https://your-proxy.com/v1/chat/completions \
+curl https://api.airatelimit.com/v1/chat/completions \
   -H "Authorization: Bearer sk-your-key" \
   -H "x-project-key: pk_xxx" \
   -H "x-identity: user-123" \
@@ -293,7 +293,7 @@ import OpenAI from 'openai';
 
 const openai = new OpenAI({
   apiKey: 'sk-your-key',
-  baseURL: 'https://your-proxy.com/v1',
+  baseURL: 'https://api.airatelimit.com/v1',
   defaultHeaders: {
     'x-project-key': 'pk_xxx',
     'x-identity': 'user-123',
@@ -308,7 +308,7 @@ import OpenAI from 'openai';
 
 const anthropic = new OpenAI({
   apiKey: 'sk-ant-your-key',
-  baseURL: 'https://your-proxy.com/v1',
+  baseURL: 'https://api.airatelimit.com/v1',
   defaultHeaders: {
     'x-project-key': 'pk_xxx',
     'x-identity': 'user-123',
