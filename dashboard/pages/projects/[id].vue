@@ -164,11 +164,11 @@
                 <span
                   :class="[
                     'w-2 h-2 rounded-full',
-                    usage.withinLimits ? 'bg-green-300 animate-pulse' : 'bg-red-400 animate-pulse'
+                    !hasLimits ? 'bg-blue-300' : usage.withinLimits ? 'bg-green-300 animate-pulse' : 'bg-red-400 animate-pulse'
                   ]"
                 ></span>
-                <span class="text-lg font-bold" :class="usage.withinLimits ? 'text-green-300' : 'text-red-400'">
-                  {{ usage.withinLimits ? 'Within Limits' : 'Limit Exceeded' }}
+                <span class="text-lg font-bold" :class="!hasLimits ? 'text-blue-300' : usage.withinLimits ? 'text-green-300' : 'text-red-400'">
+                  {{ !hasLimits ? 'Unlimited' : usage.withinLimits ? 'Within Limits' : 'Limit Exceeded' }}
                 </span>
               </div>
             </div>
@@ -298,6 +298,11 @@ const maskedProjectKey = computed(() => {
   return 'pk_' + 'x'.repeat(project.value.projectKey.length - 3)
 })
 
+// Check if project has any limits configured
+const hasLimits = computed(() => {
+  return project.value?.dailyRequestLimit || project.value?.dailyTokenLimit
+})
+
 // Calculate status badge (same logic as ProjectCard)
 const statusBadge = computed(() => {
   if (!project.value) {
@@ -308,8 +313,7 @@ const statusBadge = computed(() => {
     }
   }
 
-  const hasLimits = project.value.dailyRequestLimit || project.value.dailyTokenLimit
-  if (!hasLimits) {
+  if (!hasLimits.value) {
     return {
       text: 'No Limits',
       class: 'bg-blue-300/10 text-blue-300',
