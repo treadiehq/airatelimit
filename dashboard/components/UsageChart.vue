@@ -10,7 +10,7 @@
           :class="[
             'px-2 py-1 rounded transition-colors',
             selectedPeriod === period.value 
-              ? 'bg-blue-300/20 text-blue-300' 
+              ? 'bg-blue-300/10 text-blue-300' 
               : 'hover:bg-gray-500/20'
           ]"
         >
