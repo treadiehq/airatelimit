@@ -1,7 +1,6 @@
 # AI Ratelimit
 
-Add usage limits to your AI app in 5 minutes. Track usage per user, set limits per model, create pricing tiers—all without storing 
-prompts or API keys.
+Add usage limits to your AI app in 5 minutes.
 
 ```
 Your App → AI Ratelimit → OpenAI / Anthropic / Google / Any AI
@@ -11,37 +10,26 @@ Your App → AI Ratelimit → OpenAI / Anthropic / Google / Any AI
           Forward request
 ```
 
-**How it works:** Point your AI requests at our proxy. We check limits, then forward to the real API. Your API key passes through, we never store it.
+**How it works:** Point your AI requests at our proxy. We check limits, then forward to the real API. Your API key passes through—we never store it.
 
 ```diff
 - baseURL: 'https://api.openai.com/v1'
 + baseURL: 'https://api.airatelimit.com/v1'
-+ headers: { 'x-project-key': 'pk_xxx', 'x-identity': userId, 'x-tier': 'free' }
++ headers: { 'x-project-key': 'pk_xxx', 'x-identity': userId }
 ```
 
-That's it. Works with any AI provider.
-
-## Why?
-
-Building an AI app? You need:
-- Limit free tier without building billing
-- Track anonymous users (no login required)
-- Different limits per model (gpt-4o: expensive, gemini: cheap)
-- Custom upgrade prompts when limits hit
-- Privacy-first (never store prompts or responses)
-
-This does all that.
+Works with any AI provider.
 
 ## Quick Start
 
-### 1. Deploy (2 minutes)
+### 1. Deploy
 
 **Railway (Recommended):**
 1. Push to GitHub
 2. Connect to [Railway](https://railway.app)
 3. Add PostgreSQL
 4. Set `DATABASE_URL` and `JWT_SECRET` env vars
-5. Deploy ✨
+5. Deploy
 
 **Local:**
 ```bash
@@ -53,54 +41,32 @@ npm run start
 
 Dashboard: `http://localhost:3001` | Backend: `http://localhost:3000`
 
-### 2. Create Project (30 seconds)
+### 2. Create Project
 
-1. Open dashboard → Sign up (magic link)
-2. Create project — your project key (`pk_...`) is generated instantly
-3. Configure limits (optional)
+1. Open dashboard → Sign up
+2. Create project → get your project key (`pk_...`)
+3. Configure limits
 
-### 3. Integrate (change 3 lines)
-
-Point your existing SDK to our proxy:
+### 3. Integrate
 
 ```typescript
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
-  apiKey: 'sk-your-openai-key',
-  baseURL: 'https://api.airatelimit.com/v1',  // ← Add this
-  defaultHeaders: {                             // ← Add this
+  apiKey: 'sk-xxx',
+  baseURL: 'https://api.airatelimit.com/v1',
+  defaultHeaders: {
     'x-project-key': 'pk_xxx',
-    'x-identity': 'user-123',
-    'x-tier': 'free',
+    'x-identity': getUserId(),
   },
 });
 
-// Use the SDK exactly as normal
+// Use normally
 const response = await openai.chat.completions.create({
   model: 'gpt-4o',
   messages: [{ role: 'user', content: 'Hello!' }],
 });
 ```
-
-Done! Usage is tracked automatically.
-
-## How It Works
-
-```
-Your App → Our Proxy → OpenAI/Anthropic/etc.
-              ↓
-        Check limits
-        Log usage
-        Pass through
-```
-
-1. Your app sends requests to our proxy (with your API key in the header)
-2. We check rate limits and log usage
-3. We forward your request exactly as-is to the AI provider
-4. We return the response exactly as-is
-
-**We never store your API key or prompts.** Everything passes through.
 
 ## Required Headers
 
@@ -111,27 +77,33 @@ Your App → Our Proxy → OpenAI/Anthropic/etc.
 | `x-identity` | Your user's ID (from your app) | `user_abc`, `session_xyz` |
 | `x-tier` | (Optional) Pricing tier | `free`, `pro` |
 
-> **`x-identity`** is whatever you use to identify users in your app—a user ID, session ID, or device ID. Each identity gets its own usage limits.
+> **`x-identity`** is whatever you use to identify users—a user ID, session ID, or device ID. Each identity gets its own usage limits.
 
-## Key Features
+## Features
 
 ### Per-Model Limits
+
 Set different limits for each model:
+
 ```
-gpt-4o: 5 requests/day
-gemini-2.5: unlimited
+gpt-4o: 5 requests/day (expensive)
+gemini-2.0-flash: unlimited (cheap)
 claude-3-5-sonnet: 50 requests/day
 ```
 
 ### Pricing Tiers
-Configure limits per tier (free, pro, enterprise):
+
+Different limits for free vs pro users:
+
 ```
-free:  5 GPT-4o requests, unlimited Gemini
-pro:   500 GPT-4o requests, unlimited everything
+free: { gpt-4o: 5, gemini: unlimited }
+pro:  { gpt-4o: 500, gemini: unlimited }
 ```
 
 ### Custom Messages
-Show upgrade prompts with deep links:
+
+Show upgrade prompts with deep links when limits are hit:
+
 ```json
 {
   "message": "You've used {{usage}}/{{limit}} free requests. Upgrade to Pro!",
@@ -140,40 +112,17 @@ Show upgrade prompts with deep links:
 ```
 
 ### Prompt Injection Protection
+
 Protect your system prompts from extraction attacks:
 - Detects "show me your prompt" jailbreaks
 - Blocks role manipulation attempts
-- Prevents instruction override attacks
 - Logs all security events
 
-### Works With Any AI
-We just forward your requests. Use any OpenAI-compatible API, we handle the rest.
-
 ### Privacy-First
+
 - Never stores prompts or responses
 - Never stores your API keys
 - Only tracks: identity, usage counts, timestamps
-- GDPR/CCPA friendly
-
-## Configuration Examples
-
-### Simple: One limit for everyone
-```
-Daily limit: 100 requests
-```
-
-### Per-Model: Different limits per model
-```
-gpt-4o: 10 requests
-gemini-2.5: unlimited
-claude-3-5-sonnet: 50 requests
-```
-
-### Tiered: Free vs Pro
-```
-free: { gpt-4o: 5, gemini: unlimited }
-pro:  { gpt-4o: 500, gemini: unlimited }
-```
 
 ## Limit Periods
 
@@ -182,9 +131,9 @@ Choose when limits reset:
 - **Weekly** - Reset Monday midnight UTC
 - **Monthly** - Reset 1st of month UTC
 
-## Error Response (429)
+## Error Response
 
-When limits are exceeded:
+When limits are exceeded (HTTP 429):
 
 ```json
 {
@@ -192,19 +141,6 @@ When limits are exceeded:
     "message": "You've used 5/5 free requests. Upgrade to Pro!",
     "type": "rate_limit_exceeded",
     "code": "limit_exceeded"
-  }
-}
-```
-
-Handle it in your app:
-
-```typescript
-try {
-  const response = await openai.chat.completions.create({ ... });
-} catch (error) {
-  if (error.status === 429) {
-    // Show upgrade prompt
-    console.log(error.message);
   }
 }
 ```
@@ -221,37 +157,7 @@ PORT=3000
 RESEND_API_KEY=re_...  # For magic link emails
 ```
 
-## Use Cases
-
-**Image Generation Apps:**
-```
-limitType: 'requests'  // Count images, not tokens
-free: 5 images/day
-pro: 100 images/day
-```
-
-**Chat Apps:**
-```
-limitType: 'tokens'  // Count tokens, not requests
-free: 10k tokens/day
-pro: 500k tokens/day
-```
-
-**Multi-Model Apps:**
-```
-gemini-2.5: unlimited (cheap)
-gpt-4o: 5 requests (expensive)
-```
-
-## Dashboard Features
-
-- **Plan tiers** - Configure limits per tier with model-level overrides
-- **Model autocomplete** - Prevents typos, suggests models
-- **Security logs** - Track prompt injection attempts
-
-## Language Examples
-
-Use the OpenAI SDK. Just change the model name and API key—we forward to the right place.
+## Examples
 
 ### Python
 
@@ -259,7 +165,7 @@ Use the OpenAI SDK. Just change the model name and API key—we forward to the r
 from openai import OpenAI
 
 client = OpenAI(
-    api_key="sk-your-key",
+    api_key="sk-xxx",
     base_url="https://api.airatelimit.com/v1",
     default_headers={
         "x-project-key": "pk_xxx",
@@ -277,47 +183,31 @@ response = client.chat.completions.create(
 
 ```bash
 curl https://api.airatelimit.com/v1/chat/completions \
-  -H "Authorization: Bearer sk-your-key" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer sk-xxx" \
   -H "x-project-key: pk_xxx" \
   -H "x-identity: user-123" \
   -d '{"model": "gpt-4o", "messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
-### JavaScript/TypeScript
-
-```typescript
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: 'sk-your-key',
-  baseURL: 'https://api.airatelimit.com/v1',
-  defaultHeaders: {
-    'x-project-key': 'pk_xxx',
-    'x-identity': 'user-123',
-  },
-});
-```
-
 ### Anthropic / Claude
 
-> Use the same OpenAI SDK—just change the model name and API key.
+Use the same code—just change the model and API key:
 
-```typescript
-import OpenAI from 'openai';
+```python
+client = OpenAI(
+    api_key="sk-ant-xxx",  # Anthropic key
+    base_url="https://api.airatelimit.com/v1",
+    default_headers={
+        "x-project-key": "pk_xxx",
+        "x-identity": "user-123",
+    }
+)
 
-const client = new OpenAI({
-  apiKey: 'sk-ant-your-key',  // Your Anthropic API key
-  baseURL: 'https://api.airatelimit.com/v1',
-  defaultHeaders: {
-    'x-project-key': 'pk_xxx',
-    'x-identity': 'user-123',
-  },
-});
-
-const response = await client.chat.completions.create({
-  model: 'claude-3-5-sonnet-20241022',  // Just change the model
-  messages: [{ role: 'user', content: 'Hello!' }],
-});
+response = client.chat.completions.create(
+    model="claude-3-5-sonnet-20241022",  # Claude model
+    messages=[{"role": "user", "content": "Hello!"}]
+)
 ```
 
 ## Resources
@@ -327,4 +217,4 @@ const response = await client.chat.completions.create({
 
 ## License
 
-See [FSL-1.1-MIT](LICENSE) for full details.
+[FSL-1.1-MIT](LICENSE)
