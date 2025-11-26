@@ -423,7 +423,7 @@ const loadProject = async () => {
     const [usageData, identitiesData, historyData] = await Promise.all([
       api(`/projects/${projectId}/usage/summary`),
       api(`/projects/${projectId}/usage/by-identity`),
-      api(`/projects/${projectId}/usage/history`).catch(() => []),
+      api(`/projects/${projectId}/usage/history?days=30`).catch(() => []),
     ])
     
     // Check for first request celebration
