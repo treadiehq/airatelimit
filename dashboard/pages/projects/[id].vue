@@ -140,6 +140,9 @@
           </div> -->
         </div>
 
+        <!-- Savings Card -->
+        <SavingsCard :costs="costs" />
+
         <!-- Usage Summary -->
         <div class="space-y-4">
           <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider">Today's Usage</h3>
@@ -295,6 +298,7 @@ const projectId = route.params.id as string
 const project = ref<any>(null)
 const usage = ref<any>({})
 const usageHistory = ref<Array<{ label: string; value: number }>>([])
+const costs = ref<any>(null)
 const identities = ref<any[]>([])
 const loading = ref(true)
 const error = ref('')
@@ -420,10 +424,11 @@ const loadProject = async () => {
     project.value = await api(`/projects/${projectId}`)
     
     // Load usage data
-    const [usageData, identitiesData, historyData] = await Promise.all([
+    const [usageData, identitiesData, historyData, costsData] = await Promise.all([
       api(`/projects/${projectId}/usage/summary`),
       api(`/projects/${projectId}/usage/by-identity`),
       api(`/projects/${projectId}/usage/history?days=30`).catch(() => []),
+      api(`/projects/${projectId}/usage/costs`).catch(() => null),
     ])
     
     // Check for first request celebration
@@ -437,6 +442,7 @@ const loadProject = async () => {
     usage.value = usageData
     identities.value = identitiesData
     usageHistory.value = historyData
+    costs.value = costsData
 
     // Populate edit form
     editForm.value.name = project.value.name

@@ -33,6 +33,21 @@ export class UsageCounter {
   @Column({ default: 0 })
   tokensUsed: number;
 
+  @Column({ type: 'int', default: 0 })
+  inputTokens: number;
+
+  @Column({ type: 'int', default: 0 })
+  outputTokens: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 6, default: 0 })
+  costUsd: number;
+
+  @Column({ type: 'int', default: 0 })
+  blockedRequests: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 6, default: 0 })
+  savedUsd: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -241,7 +241,7 @@ response = client.chat.completions.create(
 
 ## Resources
 
-- [Security Features](docs/SECURITY.md) - Prompt injection protection
+- [Prompt Injection](docs/PROMPT.md) - Prompt injection protection
 - [Firebase Integration](docs/FIREBASE.md) - Use with Firebase Auth
 
 ## License

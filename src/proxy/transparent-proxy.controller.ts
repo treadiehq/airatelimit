@@ -16,6 +16,7 @@ import { UsageService } from '../usage/usage.service';
 import { TransparentProxyService } from './transparent-proxy.service';
 import { SecurityService } from '../security/security.service';
 import { SecurityEvent } from '../security/security-event.entity';
+import { PricingService } from '../pricing/pricing.service';
 
 /**
  * Transparent Proxy Controller
@@ -37,6 +38,7 @@ export class TransparentProxyController {
     private readonly usageService: UsageService,
     private readonly transparentProxyService: TransparentProxyService,
     private readonly securityService: SecurityService,
+    private readonly pricingService: PricingService,
     @InjectRepository(SecurityEvent)
     private readonly securityEventRepository: Repository<SecurityEvent>,
   ) {}
@@ -141,6 +143,16 @@ export class TransparentProxyController {
       });
 
       if (!usageCheck.allowed) {
+        // Track savings from blocked request
+        const estimatedSavings = this.pricingService.estimateBlockedCost(model);
+        await this.usageService.trackBlockedRequest({
+          project,
+          identity,
+          model,
+          periodStart,
+          estimatedSavings,
+        });
+
         res.status(HttpStatus.TOO_MANY_REQUESTS).json({
           error: {
             message: usageCheck.limitResponse?.message || 'Rate limit exceeded',
@@ -186,15 +198,21 @@ export class TransparentProxyController {
           body,
         );
 
-        // Finalize usage with actual tokens
+        // Finalize usage with actual tokens and cost
+        const inputTokens = providerResponse.usage?.prompt_tokens || 0;
+        const outputTokens = providerResponse.usage?.completion_tokens || 0;
         const actualTokens = providerResponse.usage?.total_tokens || 0;
+        const cost = this.pricingService.calculateCost(model, inputTokens, outputTokens);
+
         if (actualTokens > 0) {
-          await this.usageService.finalizeUsage({
+          await this.usageService.finalizeUsageWithCost({
             project,
             identity,
             model,
             periodStart,
-            actualTokensUsed: actualTokens,
+            inputTokens,
+            outputTokens,
+            cost,
           });
         }
 
@@ -202,6 +220,7 @@ export class TransparentProxyController {
           projectId: project.id,
           identity,
           tokensUsed: actualTokens,
+          costUsd: cost.toFixed(6),
           latency: Date.now() - startTime,
         });
 
@@ -255,7 +274,8 @@ export class TransparentProxyController {
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no');
 
-    let totalTokens = 0;
+    let inputTokens = 0;
+    let outputTokens = 0;
 
     try {
       for await (const chunk of this.transparentProxyService.forwardStreamingRequest(
@@ -264,8 +284,9 @@ export class TransparentProxyController {
         body,
       )) {
         // Track tokens from usage field if available
-        if (chunk.usage?.total_tokens) {
-          totalTokens = chunk.usage.total_tokens;
+        if (chunk.usage) {
+          inputTokens = chunk.usage.prompt_tokens || inputTokens;
+          outputTokens = chunk.usage.completion_tokens || outputTokens;
         }
 
         // Forward the chunk exactly as received
@@ -276,14 +297,18 @@ export class TransparentProxyController {
       res.write('data: [DONE]\n\n');
       res.end();
 
-      // Finalize usage tracking
+      // Finalize usage tracking with cost
+      const totalTokens = inputTokens + outputTokens;
       if (totalTokens > 0) {
-        await this.usageService.finalizeUsage({
+        const cost = this.pricingService.calculateCost(model, inputTokens, outputTokens);
+        await this.usageService.finalizeUsageWithCost({
           project,
           identity,
           model,
           periodStart,
-          actualTokensUsed: totalTokens,
+          inputTokens,
+          outputTokens,
+          cost,
         });
       }
     } catch (error) {

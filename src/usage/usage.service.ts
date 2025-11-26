@@ -233,6 +233,69 @@ export class UsageService {
     }
   }
 
+  async finalizeUsageWithCost(params: {
+    project: Project;
+    identity: string;
+    model?: string;
+    periodStart: Date;
+    inputTokens: number;
+    outputTokens: number;
+    cost: number;
+  }): Promise<void> {
+    const { project, identity, model = '', periodStart, inputTokens, outputTokens, cost } = params;
+
+    const usage = await this.usageRepository.findOne({
+      where: {
+        projectId: project.id,
+        identity,
+        model,
+        periodStart,
+      },
+    });
+
+    if (usage) {
+      usage.tokensUsed += inputTokens + outputTokens;
+      usage.inputTokens = (usage.inputTokens || 0) + inputTokens;
+      usage.outputTokens = (usage.outputTokens || 0) + outputTokens;
+      usage.costUsd = Number(usage.costUsd || 0) + cost;
+      await this.usageRepository.save(usage);
+    }
+  }
+
+  async trackBlockedRequest(params: {
+    project: Project;
+    identity: string;
+    model?: string;
+    periodStart: Date;
+    estimatedSavings: number;
+  }): Promise<void> {
+    const { project, identity, model = '', periodStart, estimatedSavings } = params;
+
+    let usage = await this.usageRepository.findOne({
+      where: {
+        projectId: project.id,
+        identity,
+        model,
+        periodStart,
+      },
+    });
+
+    if (!usage) {
+      usage = this.usageRepository.create({
+        projectId: project.id,
+        identity,
+        model,
+        periodStart,
+        requestsUsed: 0,
+        tokensUsed: 0,
+      });
+    }
+
+    usage.blockedRequests = (usage.blockedRequests || 0) + 1;
+    usage.savedUsd = Number(usage.savedUsd || 0) + estimatedSavings;
+    await this.usageRepository.save(usage);
+  }
+
   async getUsage(params: {
     projectId: string;
     identity: string;
@@ -252,7 +315,13 @@ export class UsageService {
   async getSummaryForProject(
     projectId: string,
     periodStart: Date,
-  ): Promise<{ totalRequests: number; totalTokens: number }> {
+  ): Promise<{ 
+    totalRequests: number; 
+    totalTokens: number;
+    totalCost: number;
+    totalSaved: number;
+    blockedRequests: number;
+  }> {
     const counters = await this.usageRepository.find({
       where: {
         projectId,
@@ -265,8 +334,58 @@ export class UsageService {
       0,
     );
     const totalTokens = counters.reduce((sum, c) => sum + c.tokensUsed, 0);
+    const totalCost = counters.reduce((sum, c) => sum + Number(c.costUsd || 0), 0);
+    const totalSaved = counters.reduce((sum, c) => sum + Number(c.savedUsd || 0), 0);
+    const blockedRequests = counters.reduce((sum, c) => sum + (c.blockedRequests || 0), 0);
 
-    return { totalRequests, totalTokens };
+    return { totalRequests, totalTokens, totalCost, totalSaved, blockedRequests };
+  }
+
+  async getCostSummaryForProject(
+    projectId: string,
+  ): Promise<{
+    today: { spent: number; saved: number; requests: number; blocked: number };
+    thisWeek: { spent: number; saved: number; requests: number; blocked: number };
+    thisMonth: { spent: number; saved: number; requests: number; blocked: number };
+    allTime: { spent: number; saved: number; requests: number; blocked: number };
+  }> {
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    
+    // Week start (Monday)
+    const dayOfWeek = now.getUTCDay();
+    const daysToMonday = (dayOfWeek + 6) % 7;
+    const weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysToMonday));
+    
+    // Month start
+    const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+
+    // Get all usage for this project
+    const allUsage = await this.usageRepository.find({
+      where: { projectId },
+    });
+
+    const calculatePeriod = (usage: UsageCounter[], startDate: Date) => {
+      const filtered = usage.filter(u => new Date(u.periodStart) >= startDate);
+      return {
+        spent: filtered.reduce((sum, c) => sum + Number(c.costUsd || 0), 0),
+        saved: filtered.reduce((sum, c) => sum + Number(c.savedUsd || 0), 0),
+        requests: filtered.reduce((sum, c) => sum + c.requestsUsed, 0),
+        blocked: filtered.reduce((sum, c) => sum + (c.blockedRequests || 0), 0),
+      };
+    };
+
+    return {
+      today: calculatePeriod(allUsage, todayStart),
+      thisWeek: calculatePeriod(allUsage, weekStart),
+      thisMonth: calculatePeriod(allUsage, monthStart),
+      allTime: {
+        spent: allUsage.reduce((sum, c) => sum + Number(c.costUsd || 0), 0),
+        saved: allUsage.reduce((sum, c) => sum + Number(c.savedUsd || 0), 0),
+        requests: allUsage.reduce((sum, c) => sum + c.requestsUsed, 0),
+        blocked: allUsage.reduce((sum, c) => sum + (c.blockedRequests || 0), 0),
+      },
+    };
   }
 
   async getByIdentity(

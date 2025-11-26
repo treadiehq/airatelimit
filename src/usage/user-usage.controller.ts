@@ -94,6 +94,20 @@ export class UserUsageController {
     return this.usageService.getUsageHistory(projectId, Math.min(numDays, 30));
   }
 
+  @Get('costs')
+  async getCosts(@Request() req, @Param('projectId') projectId: string) {
+    // Verify ownership
+    const project = await this.projectsService.findById(projectId);
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+    if (project.ownerId !== req.user.userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    return this.usageService.getCostSummaryForProject(projectId);
+  }
+
   private getTodayUTC(): Date {
     const now = new Date();
     return new Date(

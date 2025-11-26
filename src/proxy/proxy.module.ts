@@ -6,6 +6,7 @@ import { TransparentProxyService } from './transparent-proxy.service';
 import { ProjectsModule } from '../projects/projects.module';
 import { UsageModule } from '../usage/usage.module';
 import { SecurityModule } from '../security/security.module';
+import { PricingModule } from '../pricing/pricing.module';
 import { SecurityEvent } from '../security/security-event.entity';
 
 @Module({
@@ -13,6 +14,7 @@ import { SecurityEvent } from '../security/security-event.entity';
     ProjectsModule,
     UsageModule,
     SecurityModule,
+    PricingModule,
     TypeOrmModule.forFeature([SecurityEvent]),
     HttpModule,
   ],

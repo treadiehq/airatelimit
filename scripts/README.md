@@ -1,6 +1,6 @@
 # Server Management Scripts
 
-Simple commands to manage backend + dashboard + database.
+Simple commands to manage backend, dashboard, and database.
 
 ## Commands
 
