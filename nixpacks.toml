@@ -5,8 +5,14 @@ nixPkgs = ["nodejs_20"]
 cmds = ["npm install"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = [
+  "echo '=== Starting build ==='",
+  "npm run build",
+  "echo '=== Build complete, checking dist/ ==='",
+  "ls -la",
+  "ls -la dist/ || echo 'dist/ does not exist!'",
+  "cat dist/main.js | head -5 || echo 'main.js does not exist!'"
+]
 
 [start]
 cmd = "node dist/main.js"
-
