@@ -1,2 +1,2 @@
-web: node .output/server/index.mjs
+web: PORT=${PORT:-3000} node .output/server/index.mjs
 

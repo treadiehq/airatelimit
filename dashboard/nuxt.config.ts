@@ -47,5 +47,17 @@ export default defineNuxtConfig({
 
   // Use static generation for deployment
   ssr: false,
+
+  // Server config for Railway deployment
+  nitro: {
+    preset: 'node-server',
+  },
+
+  // Make sure to use PORT env var in production
+  $production: {
+    nitro: {
+      preset: 'node-server',
+    },
+  },
 })
 
