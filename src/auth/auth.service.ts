@@ -3,12 +3,15 @@ import {
   ConflictException,
   UnauthorizedException,
   BadRequestException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
 import { OrganizationsService } from '../organizations/organizations.service';
+import { RateLimitService } from '../common/rate-limit.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
@@ -17,12 +20,21 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
+  // Rate limit: 5 magic link requests per email per hour
+  private readonly MAGIC_LINK_LIMIT = 5;
+  private readonly MAGIC_LINK_WINDOW = 60 * 60 * 1000; // 1 hour
+
+  // Rate limit: 10 verification attempts per IP per 15 minutes
+  private readonly VERIFY_LIMIT = 10;
+  private readonly VERIFY_WINDOW = 15 * 60 * 1000; // 15 minutes
+
   constructor(
     private usersService: UsersService,
     private organizationsService: OrganizationsService,
     private jwtService: JwtService,
     private emailService: EmailService,
     private configService: ConfigService,
+    private rateLimitService: RateLimitService,
   ) {}
 
   async signup(signupDto: SignupDto) {
@@ -87,6 +99,24 @@ export class AuthService {
   }
 
   async requestMagicLink(dto: RequestMagicLinkDto, isNewUser: boolean = false) {
+    // Rate limit magic link requests per email
+    const rateLimitKey = `magic-link:${dto.email.toLowerCase()}`;
+    const rateLimit = this.rateLimitService.check(
+      rateLimitKey,
+      this.MAGIC_LINK_LIMIT,
+      this.MAGIC_LINK_WINDOW,
+    );
+
+    if (!rateLimit.allowed) {
+      throw new HttpException(
+        {
+          message: 'Too many magic link requests. Please try again later.',
+          retryAfter: rateLimit.retryAfter,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     const user = await this.usersService.findByEmail(dto.email);
 
     // Don't auto-create users from login - they must sign up first
@@ -118,7 +148,25 @@ export class AuthService {
     };
   }
 
-  async verifyMagicLink(dto: VerifyMagicLinkDto) {
+  async verifyMagicLink(dto: VerifyMagicLinkDto, clientIp?: string) {
+    // Rate limit verification attempts per IP to prevent brute force
+    const rateLimitKey = `verify:${clientIp || 'unknown'}`;
+    const rateLimit = this.rateLimitService.check(
+      rateLimitKey,
+      this.VERIFY_LIMIT,
+      this.VERIFY_WINDOW,
+    );
+
+    if (!rateLimit.allowed) {
+      throw new HttpException(
+        {
+          message: 'Too many verification attempts. Please try again later.',
+          retryAfter: rateLimit.retryAfter,
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     const user = await this.usersService.findByMagicLinkToken(dto.token);
 
     if (!user) {
@@ -133,6 +181,9 @@ export class AuthService {
 
     // Clear the magic link token
     await this.usersService.clearMagicLinkToken(user);
+
+    // Reset rate limit on successful verification
+    this.rateLimitService.reset(rateLimitKey);
 
     // Generate JWT with organizationId
     const payload = {

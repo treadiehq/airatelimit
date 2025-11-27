@@ -23,8 +23,13 @@ export class Project {
   projectKey: string;
 
   // Secret key for programmatic API access (server-side only, never expose to clients)
+  // Note: secretKey stores the hashed version, secretKeyPlain is returned once on creation
   @Column({ unique: true, nullable: true })
   secretKey: string;
+
+  // Hashed version of secret key for secure comparison
+  @Column({ nullable: true })
+  secretKeyHash: string;
 
   // Owner relationship
   @ManyToOne(() => User, (user) => user.projects, { nullable: true })

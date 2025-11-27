@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from './config/config.module';
 import { DatabaseModule } from './database/database.module';
+import { CommonModule } from './common/common.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { OrganizationsModule } from './organizations/organizations.module';
@@ -13,6 +14,7 @@ import { IdentityLimitsModule } from './identity-limits/identity-limits.module';
   imports: [
     ConfigModule,
     DatabaseModule,
+    CommonModule,
     UsersModule,
     AuthModule,
     OrganizationsModule,

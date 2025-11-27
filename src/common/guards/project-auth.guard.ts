@@ -50,6 +50,12 @@ export class ProjectAuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid secret key');
     }
 
+    // Verify with constant-time comparison or bcrypt
+    const isValid = await this.projectsService.verifySecretKey(secretKey, project);
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid secret key');
+    }
+
     // Attach project to request for downstream use
     request.project = project;
     request.authType = 'secret_key';

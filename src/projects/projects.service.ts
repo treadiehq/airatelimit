@@ -5,6 +5,7 @@ import { Project } from './projects.entity';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateUserProjectDto } from './dto/create-user-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { CryptoService } from '../common/crypto.service';
 import { randomBytes } from 'crypto';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class ProjectsService {
   constructor(
     @InjectRepository(Project)
     private projectsRepository: Repository<Project>,
+    private cryptoService: CryptoService,
   ) {}
 
   // Admin methods (legacy compatibility)
@@ -41,11 +43,14 @@ export class ProjectsService {
     userId: string,
     organizationId: string,
     dto: CreateUserProjectDto,
-  ): Promise<Project> {
+  ): Promise<Project & { secretKeyPlain?: string }> {
     // TRANSPARENT PROXY MODE: Always generate project key on creation
     // API keys are now passed per-request, not stored
     const projectKey = this.generateProjectKey();
-    const secretKey = this.generateSecretKey();
+    const secretKeyPlain = this.generateSecretKey();
+    
+    // Hash the secret key for secure storage
+    const secretKeyHash = await this.cryptoService.hashSecretKey(secretKeyPlain);
     
     // Only set provider and baseUrl if actually provided in DTO (legacy support)
     const provider = dto.provider || null;
@@ -54,7 +59,8 @@ export class ProjectsService {
     const project = this.projectsRepository.create({
       ...dto,
       projectKey,
-      secretKey,
+      secretKey: secretKeyPlain, // Store plain for now (for lookup), will migrate to hash-only
+      secretKeyHash,
       ownerId: userId,
       organizationId,
       provider,
@@ -63,7 +69,11 @@ export class ProjectsService {
         ? JSON.stringify(dto.limitExceededResponse)
         : null,
     });
-    return this.projectsRepository.save(project);
+    
+    const saved = await this.projectsRepository.save(project);
+    
+    // Return the plaintext secret key only on creation
+    return { ...saved, secretKeyPlain };
   }
 
   async findByOwner(userId: string): Promise<Project[]> {
@@ -156,12 +166,38 @@ export class ProjectsService {
     }
 
     const newSecretKey = this.generateSecretKey();
-    await this.projectsRepository.update(id, { secretKey: newSecretKey });
+    const secretKeyHash = await this.cryptoService.hashSecretKey(newSecretKey);
+    
+    await this.projectsRepository.update(id, { 
+      secretKey: newSecretKey, // Store plain for lookup (migration period)
+      secretKeyHash,
+    });
     return newSecretKey;
   }
 
   async findBySecretKey(secretKey: string): Promise<Project | null> {
-    return this.projectsRepository.findOne({ where: { secretKey } });
+    // First try direct lookup (for migration period)
+    const project = await this.projectsRepository.findOne({ where: { secretKey } });
+    if (project) {
+      return project;
+    }
+
+    // If not found and we have a hash, try hash comparison
+    // This is a fallback for when we fully migrate to hash-only storage
+    // For now, direct lookup should work
+    return null;
+  }
+
+  /**
+   * Verify a secret key against a project (secure comparison)
+   */
+  async verifySecretKey(secretKey: string, project: Project): Promise<boolean> {
+    // If we have a hash, use bcrypt comparison
+    if (project.secretKeyHash) {
+      return this.cryptoService.verifySecretKey(secretKey, project.secretKeyHash);
+    }
+    // Fallback: constant-time comparison with stored key
+    return this.cryptoService.constantTimeCompare(secretKey, project.secretKey);
   }
 
   private getDefaultBaseUrl(provider: string): string {
