@@ -1,24 +1,22 @@
-# Dashboard Dockerfile - at repo root for Railway compatibility
-# This builds the dashboard from the dashboard/ subdirectory
+# Backend Dockerfile - NestJS API
 FROM node:20-slim
 
 WORKDIR /app
 
-# Copy dashboard package files
-COPY dashboard/package*.json ./
+# Copy package files
+COPY package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy dashboard source code
-COPY dashboard/ .
+# Copy source code
+COPY . .
 
-# Build the static site
-RUN npm run generate
+# Build the NestJS app
+RUN npm run build
 
 # Railway provides PORT env var
 ENV PORT=3000
 
-# Serve the static files
-CMD npx serve .output/public -l $PORT
-
+# Start the server
+CMD ["node", "dist/src/main.js"]
