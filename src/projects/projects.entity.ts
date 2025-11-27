@@ -211,6 +211,25 @@ export class Project {
 
   // Session limits can also be tier-specific (stored in tiers.{tierName}.sessionLimits)
 
+  // Visual Flow Designer configuration
+  // Stores the nodes and edges from the drag-and-drop flow builder
+  @Column({ type: 'jsonb', nullable: true })
+  flowConfig: {
+    nodes: Array<{
+      id: string;
+      type: string;
+      position: { x: number; y: number };
+      data: any;
+    }>;
+    edges: Array<{
+      id: string;
+      source: string;
+      target: string;
+      sourceHandle?: string;
+      targetHandle?: string;
+    }>;
+  };
+
   @CreateDateColumn()
   createdAt: Date;
 

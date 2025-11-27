@@ -142,4 +142,23 @@ export class UpdateProjectDto {
   @IsOptional()
   @IsInt()
   sessionTokenLimit?: number;
+
+  // Visual Flow Designer configuration
+  @IsOptional()
+  @IsObject()
+  flowConfig?: {
+    nodes: Array<{
+      id: string;
+      type: string;
+      position: { x: number; y: number };
+      data: any;
+    }>;
+    edges: Array<{
+      id: string;
+      source: string;
+      target: string;
+      sourceHandle?: string;
+      targetHandle?: string;
+    }>;
+  };
 }
