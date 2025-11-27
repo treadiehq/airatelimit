@@ -14,7 +14,7 @@
       <div class="flex items-center justify-between">
         <div>
           <h4 class="text-sm font-semibold text-white mb-1">Security Protection</h4>
-          <p class="text-xs text-gray-400">Enable prompt injection detection for all requests</p>
+          <p class="text-xs text-gray-400">Enable prompt injection detection for all requests.</p>
         </div>
         <button
           type="button"
