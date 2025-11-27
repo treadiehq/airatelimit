@@ -1,13 +1,2 @@
-# Dashboard nixpacks config - Static SPA
-[phases.setup]
-nixPkgs = ["nodejs_20", "npm-9_x"]
-
-[phases.install]
-cmds = ["npm install"]
-
-[phases.build]
-cmds = ["npm run generate"]
-
-[start]
-cmd = "npx serve .output/public -l $PORT"
+# Using Dockerfile instead - see dashboard/Dockerfile
 
