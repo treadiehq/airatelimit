@@ -25,6 +25,7 @@ import { ConfigService } from '@nestjs/config';
           entities: [__dirname + '/../**/*.entity{.ts,.js}'],
           // Auto-create tables on startup (safe for new deployments)
           synchronize: true,
+          // migrationsRun: true,
           // Only log errors and schema changes, not every query
           logging: nodeEnv === 'development' ? ['error', 'warn', 'schema'] : ['error'],
         };
