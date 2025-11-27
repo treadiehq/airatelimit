@@ -15,9 +15,9 @@ COPY . .
 # Build the static site
 RUN npm run generate
 
-# Expose port
-EXPOSE 3000
+# Railway provides PORT env var
+ENV PORT=3000
 
-# Serve the static files
-CMD ["npx", "serve", ".output/public", "-l", "3000"]
+# Serve the static files (using shell form to expand $PORT)
+CMD npx serve .output/public -l $PORT
 
