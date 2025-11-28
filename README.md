@@ -32,6 +32,16 @@ Building an AI app? You need:
 
 This does all that.
 
+## Live
+
+Try the product live at **https://airatelimit.com**
+
+## Community & Support
+
+Join our Discord community for discussions, support, and updates:
+
+[![Discord](https://img.shields.io/badge/Discord-Join%20our%20community-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/KqdBcqRk5E)
+
 ## Quick Start
 
 ### 1. Deploy
