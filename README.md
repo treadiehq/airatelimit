@@ -46,8 +46,9 @@ This does all that.
 **Local:**
 ```bash
 npm install && cd dashboard && npm install && cd ..
-docker run --name ai-proxy-db -e POSTGRES_PASSWORD=password -e POSTGRES_DB=ai_proxy -p 5433:5432 -d postgres:15
-cp env.example .env  # Edit with your settings
+export DB_PASSWORD=$(openssl rand -base64 24)
+docker run --name ai-proxy-db -e POSTGRES_PASSWORD=$DB_PASSWORD -e POSTGRES_DB=ai_proxy -p 5433:5432 -d postgres:15
+cp env.example .env  # Edit DATABASE_URL with your DB_PASSWORD
 npm run start
 ```
 
