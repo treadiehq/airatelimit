@@ -137,8 +137,8 @@ COMMENT ON VIEW table_statistics IS 'Quick overview of table sizes. Usage: SELEC
 CREATE OR REPLACE VIEW index_usage AS
 SELECT
   schemaname,
-  tablename,
-  indexname,
+  relname AS tablename,
+  indexrelname AS indexname,
   idx_scan AS times_used,
   pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
   CASE 
