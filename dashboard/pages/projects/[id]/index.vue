@@ -156,6 +156,73 @@
         <!-- Savings Card -->
         <SavingsCard :costs="costs" />
 
+        <!-- Tab Navigation -->
+        <div class="flex items-center gap-1 border-b border-gray-500/10">
+          <button
+            @click="activeTab = 'usage'"
+            :class="[
+              'px-4 py-2 text-sm font-medium transition-colors relative',
+              activeTab === 'usage' 
+                ? 'text-white' 
+                : 'text-gray-500 hover:text-gray-300'
+            ]"
+          >
+            Usage
+            <span 
+              v-if="activeTab === 'usage'"
+              class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"
+            ></span>
+          </button>
+          <button
+            @click="activeTab = 'costs'"
+            :class="[
+              'px-4 py-2 text-sm font-medium transition-colors relative',
+              activeTab === 'costs' 
+                ? 'text-white' 
+                : 'text-gray-500 hover:text-gray-300'
+            ]"
+          >
+            Cost Analytics
+            <span 
+              v-if="activeTab === 'costs'"
+              class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"
+            ></span>
+          </button>
+          <button
+            @click="activeTab = 'routing'"
+            :class="[
+              'px-4 py-2 text-sm font-medium transition-colors relative',
+              activeTab === 'routing' 
+                ? 'text-white' 
+                : 'text-gray-500 hover:text-gray-300'
+            ]"
+          >
+            Smart Routing
+            <span v-if="project?.routingEnabled" class="ml-1.5 w-1.5 h-1.5 bg-green-400 rounded-full inline-block"></span>
+            <span 
+              v-if="activeTab === 'routing'"
+              class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-400"
+            ></span>
+          </button>
+        </div>
+
+        <!-- Cost Analytics Tab -->
+        <div v-if="activeTab === 'costs'" class="pt-2">
+          <CostDashboard :project-id="projectId" />
+        </div>
+
+        <!-- Smart Routing Tab -->
+        <div v-if="activeTab === 'routing'" class="pt-2">
+          <RoutingConfig
+            :project-id="projectId"
+            :routing-enabled="project?.routingEnabled"
+            :routing-config="project?.routingConfig"
+            @saved="fetchProject"
+          />
+        </div>
+
+        <!-- Usage Tab Content -->
+        <div v-if="activeTab === 'usage'" class="space-y-6">
         <!-- Usage Summary -->
         <div class="space-y-4">
           <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider">Today's Usage</h3>
@@ -257,6 +324,7 @@
             </div>
           </div>
         </div>
+        </div><!-- End Usage Tab Content -->
       </div>
     </div>
 
@@ -318,6 +386,7 @@ const error = ref('')
 const showDeleteConfirm = ref(false)
 const showSettingsModal = ref(false)
 const showSettingsDropdown = ref(false)
+const activeTab = ref<'usage' | 'costs' | 'routing'>('usage')
 const settingsDropdownRef = ref(null)
 const confettiRef = ref<any>(null)
 const previousRequestCount = ref<number | null>(null)
