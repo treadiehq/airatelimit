@@ -153,9 +153,6 @@
           </div> -->
         </div>
 
-        <!-- Savings Card -->
-        <SavingsCard :costs="costs" />
-
         <!-- Tab Navigation -->
         <div class="flex items-center gap-1 border-b border-gray-500/10">
           <button
@@ -217,7 +214,7 @@
             :project-id="projectId"
             :routing-enabled="project?.routingEnabled"
             :routing-config="project?.routingConfig"
-            @saved="fetchProject"
+            @saved="loadProject"
           />
         </div>
 
@@ -379,7 +376,6 @@ const projectId = route.params.id as string
 const project = ref<any>(null)
 const usage = ref<any>({})
 const usageHistory = ref<Array<{ label: string; value: number }>>([])
-const costs = ref<any>(null)
 const identities = ref<any[]>([])
 const loading = ref(true)
 const error = ref('')
@@ -521,11 +517,10 @@ const loadProject = async () => {
     project.value = await api(`/projects/${projectId}`)
     
     // Load usage data
-    const [usageData, identitiesData, historyData, costsData] = await Promise.all([
+    const [usageData, identitiesData, historyData] = await Promise.all([
       api(`/projects/${projectId}/usage/summary`),
       api(`/projects/${projectId}/usage/by-identity`),
       api(`/projects/${projectId}/usage/history?days=30`).catch(() => []),
-      api(`/projects/${projectId}/usage/costs`).catch(() => null),
     ])
     
     // Check for first request celebration
@@ -539,7 +534,6 @@ const loadProject = async () => {
     usage.value = usageData
     identities.value = identitiesData
     usageHistory.value = historyData
-    costs.value = costsData
 
     // Populate edit form
     editForm.value.name = project.value.name
