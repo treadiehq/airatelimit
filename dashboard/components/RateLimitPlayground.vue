@@ -53,7 +53,7 @@
               </button>
               <div 
                 :ref="(el) => { if (el) sliderRefs[model.id] = el as HTMLElement }"
-                class="flex-1 relative h-4 bg-gray-500/10 border border-gray-500/10 rounded-full cursor-pointer select-none"
+                class="flex-1 relative h-2 bg-gray-500/10 border border-gray-500/10 rounded-full cursor-pointer select-none"
                 @mousedown="(e) => startDrag(e, model.id)"
                 @touchstart.prevent="(e) => startDrag(e, model.id)"
               >
