@@ -47,32 +47,75 @@
           </p>
         </div>
         
-        <!-- Code Snippet -->
+        <!-- Main Tabs -->
         <div class="mb-12 relative z-10">
-          <div class="bg-gray-500/10 inner-container mb-[-1px] ml-[-1px] relative border border-gray-500/10 font-mono">
-            <div class="divide-y divide-gray-500/15">
-              <div class="border-b-0 border-t-0 border-l-0 border-r-0 border-gray-500/10">
-            <!-- Terminal Header -->
-            <div class="border-b border-gray-500/10 flex items-center space-x-3 text-xs">
+          <!-- Tab Switcher -->
+          <div class="flex justify-center mb-6">
+            <div class="inline-flex bg-gray-500/10 rounded-xl p-1 border border-gray-500/10">
               <button 
-                v-for="tab in tabs" 
-                :key="tab.id"
-                @click="activeTab = tab.id"
+                @click="mainTab = 'playground'"
                 :class="[
-                  'px-3 py-3 transition-colors',
-                  activeTab === tab.id 
-                    ? 'border-b-2 border-blue-300 text-white' 
-                    : 'text-gray-500 hover:text-gray-300'
+                  'px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2',
+                  mainTab === 'playground' 
+                    ? 'bg-gray-500/5 border border-gray-500/10 text-white' 
+                    : 'text-gray-500 hover:text-gray-300 border border-transparent'
                 ]"
               >
-                {{ tab.label }}
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Playground
+              </button>
+              <button 
+                @click="mainTab = 'snippet'"
+                :class="[
+                  'px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2',
+                  mainTab === 'snippet' 
+                    ? 'bg-gray-500/5 border border-gray-500/10 text-white' 
+                    : 'text-gray-500 hover:text-gray-300 border border-transparent'
+                ]"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                </svg>
+                Snippet
               </button>
             </div>
-            
-            <!-- Code Content -->
-            <div class="p-4 px-4 text-left">
-              <!-- JavaScript Tab -->
-              <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-purple-300">import</span> OpenAI <span class="text-purple-300">from</span> <span class="text-green-300">'openai'</span>
+          </div>
+
+          <!-- Playground Tab Content -->
+          <div v-show="mainTab === 'playground'">
+            <RateLimitPlayground />
+          </div>
+
+          <!-- Snippet Tab Content -->
+          <div v-show="mainTab === 'snippet'">
+            <!-- <p class="text-sm text-gray-500 mb-4 text-center">Integration is just 3 lines of code</p> -->
+            <div class="bg-gray-500/10 inner-container mb-[-1px] ml-[-1px] relative border border-gray-500/10 font-mono">
+              <div class="divide-y divide-gray-500/15">
+                <div class="border-b-0 border-t-0 border-l-0 border-r-0 border-gray-500/10">
+                  <!-- Terminal Header -->
+                  <div class="border-b border-gray-500/10 flex items-center space-x-3 text-xs">
+                    <button 
+                      v-for="tab in tabs" 
+                      :key="tab.id"
+                      @click="activeTab = tab.id"
+                      :class="[
+                        'px-3 py-3 transition-colors',
+                        activeTab === tab.id 
+                          ? 'border-b-2 border-blue-300 text-white' 
+                          : 'text-gray-500 hover:text-gray-300'
+                      ]"
+                    >
+                      {{ tab.label }}
+                    </button>
+                  </div>
+                  
+                  <!-- Code Content -->
+                  <div class="p-4 px-4 text-left">
+                    <!-- JavaScript Tab -->
+                    <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-purple-300">import</span> OpenAI <span class="text-purple-300">from</span> <span class="text-green-300">'openai'</span>
 
 <span class="text-purple-300">const</span> openai = <span class="text-purple-300">new</span> <span class="text-blue-300">OpenAI</span>({
   apiKey: <span class="text-green-300">'sk-your-key'</span>,
@@ -89,8 +132,8 @@
   messages: [{ role: <span class="text-green-300">'user'</span>, content: <span class="text-green-300">'Hello!'</span> }]
 })</code></pre>
 
-              <!-- API Tab -->
-              <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500">$</span> curl -X POST <span class="text-blue-300">https://api.airatelimit.com/v1/chat/completions</span> \
+                    <!-- API Tab -->
+                    <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500">$</span> curl -X POST <span class="text-blue-300">https://api.airatelimit.com/v1/chat/completions</span> \
   -H <span class="text-green-300">"Authorization: Bearer sk-your-key"</span> \
   -H <span class="text-blue-300">"x-project-key: pk_xxx"</span> \
   -H <span class="text-blue-300">"x-identity: user-123"</span> \
@@ -100,34 +143,27 @@
     "model": "gpt-4o",
     "messages": [{"role": "user", "content": "Hello!"}]
   }'</span></code></pre>
-              
-              <button 
-                @click="copyCode"
-                class="absolute top-20 right-6 p-2 text-gray-500 hover:text-white transition cursor-pointer"
-                :class="{ 'text-green-300': copied }"
-              >
-                <svg v-if="!copied" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                </svg>
-              </button>
+                    
+                    <button 
+                      @click="copyCode"
+                      class="absolute top-14 right-6 p-2 text-gray-500 hover:text-white transition cursor-pointer"
+                      :class="{ 'text-green-300': copied }"
+                    >
+                      <svg v-if="!copied" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <span class="main-section bottom-l absolute w-[1px] h-[1px] bottom-[-1px] left-[-1px]"></span>
+              <span class="main-section bottom-l absolute w-[1px] h-[1px] bottom-[-1px] right-[-1px]"></span>
+              <span class="main-section bottom-l absolute w-[1px] h-[1px] top-[-1px] right-[-1px]"></span>
+              <span class="main-section bottom-l absolute w-[1px] h-[1px] top-[-1px] left-[-1px]"></span>
             </div>
-          </div>
-          </div>
-          <span
-						class="main-section bottom-l absolute w-[1px] h-[1px] bottom-[-1px] left-[-1px]"
-					></span
-					><span
-						class="main-section bottom-l absolute w-[1px] h-[1px] bottom-[-1px] right-[-1px]"
-					></span
-					><span
-						class="main-section bottom-l absolute w-[1px] h-[1px] top-[-1px] right-[-1px]"
-					></span
-					><span
-						class="main-section bottom-l absolute w-[1px] h-[1px] top-[-1px] left-[-1px]"
-					></span>
           </div>
         </div>
       </div>
@@ -194,7 +230,9 @@ useHead({
 })
 
 type TabId = 'javascript' | 'api'
+type MainTabId = 'playground' | 'snippet'
 
+const mainTab = ref<MainTabId>('playground')
 const activeTab = ref<TabId>('javascript')
 const copied = ref(false)
 
