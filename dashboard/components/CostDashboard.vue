@@ -26,7 +26,7 @@
         </div>
       </div>
       
-      <div class="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-4">
+      <div class="bg-blue-300/10 border border-blue-300/10 rounded-lg p-4">
         <div class="text-xs text-blue-300 uppercase tracking-wide mb-1">Projected (Month)</div>
         <div class="text-2xl font-semibold text-white">${{ formatCost(costs?.projected?.projectedMonthSpend || 0) }}</div>
         <div class="text-xs text-gray-400 mt-1">

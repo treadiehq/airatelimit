@@ -10,7 +10,7 @@
         @click="toggleRouting"
         :class="[
           'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-          localConfig.enabled ? 'bg-blue-500' : 'bg-gray-700'
+          localConfig.enabled ? 'bg-blue-300' : 'bg-gray-500/30'
         ]"
       >
         <span
@@ -34,22 +34,6 @@
         <p class="text-gray-500 text-sm mb-6">
           Smart routing can automatically redirect requests to cheaper or faster models based on your rules. Save money by routing simple queries to smaller models.
         </p>
-        
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left mb-6">
-          <div class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-3">
-            <div class="text-blue-400 text-xs font-medium mb-1">💰 Cost Optimization</div>
-            <p class="text-gray-500 text-xs">Route simple queries to gpt-4o-mini instead of gpt-4o</p>
-          </div>
-          <div class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-3">
-            <div class="text-green-400 text-xs font-medium mb-1">🎯 Tier Overrides</div>
-            <p class="text-gray-500 text-xs">Free users get cheaper models automatically</p>
-          </div>
-          <div class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-3">
-            <div class="text-purple-400 text-xs font-medium mb-1">🔄 Model Mapping</div>
-            <p class="text-gray-500 text-xs">Redirect any model request to another</p>
-          </div>
-        </div>
-
         <button
           @click="toggleRouting"
           class="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
@@ -62,17 +46,24 @@
     <div v-if="localConfig.enabled" class="space-y-6 pt-4 border-t border-gray-500/10">
       <!-- Routing Strategy -->
       <div>
-        <label class="block text-sm font-medium text-gray-300 mb-2">Routing Strategy</label>
-        <select
-          v-model="localConfig.strategy"
-          class="w-full bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-        >
-          <option value="cost">Cost Optimization</option>
-          <option value="quality">Quality First</option>
-          <option value="fallback">Fallback Chain</option>
-          <option value="latency">Latency Optimization</option>
-        </select>
-        <p class="text-xs text-gray-500 mt-1">
+        <label class="block text-sm font-medium text-white mb-2">Routing Strategy</label>
+        <div class="relative">
+          <select
+            v-model="localConfig.strategy"
+            class="w-full px-4 py-2.5 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg focus:ring-2 focus:ring-blue-300/50 focus:border-transparent appearance-none cursor-pointer pr-10 transition-all hover:bg-gray-500/20"
+          >
+            <option value="cost">Cost Optimization</option>
+            <option value="quality">Quality First</option>
+            <option value="fallback">Fallback Chain</option>
+            <option value="latency">Latency Optimization</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+        <p class="text-xs text-gray-500 mt-1.5">
           <span v-if="localConfig.strategy === 'cost'">Route to cheaper models when appropriate</span>
           <span v-else-if="localConfig.strategy === 'quality'">Always use the best available model</span>
           <span v-else-if="localConfig.strategy === 'fallback'">Try models in order until one succeeds</span>
