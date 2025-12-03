@@ -100,13 +100,37 @@ export class TransparentProxyController {
     this.validateChatCompletionsBody(body);
 
     const startTime = Date.now();
-    const model = body.model || 'unknown';
+    let model = body.model || 'unknown';
+    const originalModel = model; // Keep track of original for logging
     const isStreaming = body.stream === true;
     const sessionId = session || '';
 
     try {
       // Get project configuration
       const project = await this.projectsService.findByProjectKey(projectKey);
+
+      // ====================================
+      // SMART MODEL ROUTING
+      // ====================================
+      if (project.routingEnabled && project.routingConfig) {
+        const routedModel = this.applySmartRouting(
+          model,
+          tier,
+          project.routingConfig,
+          body,
+        );
+        if (routedModel !== model) {
+          console.log('Smart routing applied:', {
+            projectId: project.id,
+            originalModel: model,
+            routedModel,
+            tier,
+            strategy: project.routingConfig.strategy,
+          });
+          model = routedModel;
+          body.model = routedModel;
+        }
+      }
 
       // PRIVACY: Anonymize PII if enabled ("Tofu Box")
       let processedBody = body;
@@ -1331,5 +1355,139 @@ export class TransparentProxyController {
     } else {
       throw new BadRequestException('input must be a string or array of strings');
     }
+  }
+
+  // ====================================
+  // SMART MODEL ROUTING
+  // ====================================
+
+  /**
+   * Apply smart routing rules to determine the actual model to use
+   */
+  private applySmartRouting(
+    requestedModel: string,
+    tier: string | undefined,
+    routingConfig: {
+      defaultModel?: string;
+      strategy?: 'cost' | 'latency' | 'quality' | 'fallback';
+      fallbackChain?: string[];
+      costOptimization?: {
+        enabled: boolean;
+        tokenThreshold?: number;
+        cheapModel?: string;
+        premiumModel?: string;
+      };
+      modelMappings?: Record<string, string>;
+      tierModelOverrides?: Record<string, Record<string, string>>;
+    },
+    body: any,
+  ): string {
+    // 1. Check tier-specific model overrides first (highest priority)
+    if (tier && routingConfig.tierModelOverrides?.[tier]) {
+      const tierOverride = routingConfig.tierModelOverrides[tier][requestedModel];
+      if (tierOverride) {
+        return tierOverride;
+      }
+    }
+
+    // 2. Check direct model mappings
+    if (routingConfig.modelMappings?.[requestedModel]) {
+      return routingConfig.modelMappings[requestedModel];
+    }
+
+    // 3. Apply cost optimization if enabled
+    if (routingConfig.costOptimization?.enabled) {
+      const { tokenThreshold, cheapModel, premiumModel } = routingConfig.costOptimization;
+      
+      // Estimate input tokens from messages
+      const estimatedTokens = this.estimateMessageTokens(body);
+      
+      if (tokenThreshold && cheapModel && estimatedTokens < tokenThreshold) {
+        // Simple query - use cheap model
+        return cheapModel;
+      }
+      
+      if (premiumModel && estimatedTokens >= (tokenThreshold || 1000)) {
+        // Complex query - use premium model (or keep requested)
+        return premiumModel;
+      }
+    }
+
+    // 4. Apply strategy-based routing
+    switch (routingConfig.strategy) {
+      case 'cost':
+        // Route to cheapest equivalent model
+        return this.getCheaperEquivalent(requestedModel) || requestedModel;
+      
+      case 'fallback':
+        // Use fallback chain's first model if available
+        if (routingConfig.fallbackChain?.length) {
+          return routingConfig.fallbackChain[0];
+        }
+        break;
+      
+      case 'latency':
+      case 'quality':
+        // For now, just use requested model
+        // Future: implement latency/quality tracking
+        break;
+    }
+
+    // 5. Use default model if specified and no other rules applied
+    if (routingConfig.defaultModel) {
+      return routingConfig.defaultModel;
+    }
+
+    return requestedModel;
+  }
+
+  /**
+   * Estimate token count from chat messages in request body
+   */
+  private estimateMessageTokens(body: any): number {
+    if (!body.messages || !Array.isArray(body.messages)) {
+      return 0;
+    }
+    
+    let totalChars = 0;
+    for (const msg of body.messages) {
+      if (typeof msg.content === 'string') {
+        totalChars += msg.content.length;
+      } else if (Array.isArray(msg.content)) {
+        // Handle multi-modal content
+        for (const part of msg.content) {
+          if (part.type === 'text' && part.text) {
+            totalChars += part.text.length;
+          }
+        }
+      }
+    }
+    
+    // Rough estimate: 1 token ≈ 4 characters for English
+    return Math.ceil(totalChars / 4);
+  }
+
+  /**
+   * Get a cheaper equivalent model
+   */
+  private getCheaperEquivalent(model: string): string | null {
+    const cheaperModels: Record<string, string> = {
+      // OpenAI
+      'gpt-4o': 'gpt-4o-mini',
+      'gpt-4-turbo': 'gpt-4o-mini',
+      'gpt-4': 'gpt-4o-mini',
+      'o1': 'o1-mini',
+      'o1-preview': 'o1-mini',
+      
+      // Anthropic
+      'claude-3-5-sonnet-20241022': 'claude-3-5-haiku-20241022',
+      'claude-3-opus-20240229': 'claude-3-5-sonnet-20241022',
+      
+      // Google
+      'gemini-1.5-pro': 'gemini-1.5-flash',
+      'gemini-2.0-pro': 'gemini-2.0-flash',
+    };
+    
+    return cheaperModels[model] || null;
   }
 }

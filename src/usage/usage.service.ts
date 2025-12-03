@@ -885,6 +885,242 @@ export class UsageService {
   }
 
   // ====================================
+  // COST INTELLIGENCE ANALYTICS
+  // ====================================
+
+  /**
+   * Get detailed cost breakdown by model
+   */
+  async getCostByModel(
+    projectId: string,
+    days: number = 30,
+  ): Promise<
+    Array<{
+      model: string;
+      requests: number;
+      inputTokens: number;
+      outputTokens: number;
+      totalTokens: number;
+      cost: number;
+      percentOfTotal: number;
+    }>
+  > {
+    const startDate = new Date();
+    startDate.setUTCDate(startDate.getUTCDate() - days);
+    startDate.setUTCHours(0, 0, 0, 0);
+
+    const usage = await this.usageRepository.find({
+      where: { projectId },
+    });
+
+    const filtered = usage.filter(
+      (u) => new Date(u.periodStart) >= startDate,
+    );
+
+    // Aggregate by model
+    const byModel: Record<
+      string,
+      {
+        model: string;
+        requests: number;
+        inputTokens: number;
+        outputTokens: number;
+        totalTokens: number;
+        cost: number;
+      }
+    > = {};
+
+    let totalCost = 0;
+
+    for (const u of filtered) {
+      const model = u.model || 'unknown';
+      if (!byModel[model]) {
+        byModel[model] = {
+          model,
+          requests: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          cost: 0,
+        };
+      }
+      byModel[model].requests += u.requestsUsed;
+      byModel[model].inputTokens += u.inputTokens || 0;
+      byModel[model].outputTokens += u.outputTokens || 0;
+      byModel[model].totalTokens += u.tokensUsed;
+      byModel[model].cost += Number(u.costUsd || 0);
+      totalCost += Number(u.costUsd || 0);
+    }
+
+    return Object.values(byModel)
+      .map((m) => ({
+        ...m,
+        percentOfTotal: totalCost > 0 ? (m.cost / totalCost) * 100 : 0,
+      }))
+      .sort((a, b) => b.cost - a.cost);
+  }
+
+  /**
+   * Get top users/identities by cost
+   */
+  async getTopUsersByCost(
+    projectId: string,
+    days: number = 30,
+    limit: number = 20,
+  ): Promise<
+    Array<{
+      identity: string;
+      requests: number;
+      tokens: number;
+      cost: number;
+      avgCostPerRequest: number;
+    }>
+  > {
+    const startDate = new Date();
+    startDate.setUTCDate(startDate.getUTCDate() - days);
+    startDate.setUTCHours(0, 0, 0, 0);
+
+    const usage = await this.usageRepository.find({
+      where: { projectId },
+    });
+
+    const filtered = usage.filter(
+      (u) => new Date(u.periodStart) >= startDate,
+    );
+
+    // Aggregate by identity
+    const byIdentity: Record<
+      string,
+      { identity: string; requests: number; tokens: number; cost: number }
+    > = {};
+
+    for (const u of filtered) {
+      if (!byIdentity[u.identity]) {
+        byIdentity[u.identity] = {
+          identity: u.identity,
+          requests: 0,
+          tokens: 0,
+          cost: 0,
+        };
+      }
+      byIdentity[u.identity].requests += u.requestsUsed;
+      byIdentity[u.identity].tokens += u.tokensUsed;
+      byIdentity[u.identity].cost += Number(u.costUsd || 0);
+    }
+
+    return Object.values(byIdentity)
+      .map((u) => ({
+        ...u,
+        avgCostPerRequest: u.requests > 0 ? u.cost / u.requests : 0,
+      }))
+      .sort((a, b) => b.cost - a.cost)
+      .slice(0, limit);
+  }
+
+  /**
+   * Get cost history over time (daily breakdown)
+   */
+  async getCostHistory(
+    projectId: string,
+    days: number = 30,
+  ): Promise<
+    Array<{
+      date: string;
+      cost: number;
+      requests: number;
+      tokens: number;
+      saved: number;
+    }>
+  > {
+    const history: Array<{
+      date: string;
+      cost: number;
+      requests: number;
+      tokens: number;
+      saved: number;
+    }> = [];
+
+    const now = new Date();
+
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(now);
+      date.setUTCDate(date.getUTCDate() - i);
+      const periodStart = new Date(
+        Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+      );
+
+      const dayUsage = await this.usageRepository.find({
+        where: {
+          projectId,
+          periodStart,
+        },
+      });
+
+      const cost = dayUsage.reduce((sum, u) => sum + Number(u.costUsd || 0), 0);
+      const requests = dayUsage.reduce((sum, u) => sum + u.requestsUsed, 0);
+      const tokens = dayUsage.reduce((sum, u) => sum + u.tokensUsed, 0);
+      const saved = dayUsage.reduce((sum, u) => sum + Number(u.savedUsd || 0), 0);
+
+      history.push({
+        date: periodStart.toISOString().split('T')[0],
+        cost,
+        requests,
+        tokens,
+        saved,
+      });
+    }
+
+    return history;
+  }
+
+  /**
+   * Get projected monthly cost based on current usage
+   */
+  async getProjectedCost(projectId: string): Promise<{
+    currentMonthSpend: number;
+    projectedMonthSpend: number;
+    daysElapsed: number;
+    daysRemaining: number;
+    avgDailyCost: number;
+  }> {
+    const now = new Date();
+    const monthStart = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    );
+    const monthEnd = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0),
+    );
+
+    const daysInMonth = monthEnd.getUTCDate();
+    const daysElapsed = now.getUTCDate();
+    const daysRemaining = daysInMonth - daysElapsed;
+
+    const usage = await this.usageRepository.find({
+      where: { projectId },
+    });
+
+    const monthUsage = usage.filter(
+      (u) => new Date(u.periodStart) >= monthStart,
+    );
+
+    const currentMonthSpend = monthUsage.reduce(
+      (sum, u) => sum + Number(u.costUsd || 0),
+      0,
+    );
+
+    const avgDailyCost = daysElapsed > 0 ? currentMonthSpend / daysElapsed : 0;
+    const projectedMonthSpend = avgDailyCost * daysInMonth;
+
+    return {
+      currentMonthSpend,
+      projectedMonthSpend,
+      daysElapsed,
+      daysRemaining,
+      avgDailyCost,
+    };
+  }
+
+  // ====================================
   // SECURITY: Cardinality limit checking
   // ====================================
 

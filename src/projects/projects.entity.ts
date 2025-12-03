@@ -230,6 +230,62 @@ export class Project {
     }>;
   };
 
+  // ====================================
+  // SMART MODEL ROUTING CONFIGURATION
+  // ====================================
+
+  // Enable smart model routing
+  @Column({ default: false })
+  routingEnabled: boolean;
+
+  // Routing configuration
+  // Determines how requests are routed to different models
+  @Column({ type: 'jsonb', nullable: true })
+  routingConfig: {
+    // Default model to use if no routing rules match
+    defaultModel?: string;
+    
+    // Routing strategy: 'cost' | 'latency' | 'quality' | 'fallback'
+    strategy?: 'cost' | 'latency' | 'quality' | 'fallback';
+    
+    // Fallback chain: try models in order until one succeeds
+    fallbackChain?: string[];
+    
+    // Cost optimization: route to cheaper models for simple queries
+    costOptimization?: {
+      enabled: boolean;
+      // Max tokens threshold - route to cheaper model if under
+      tokenThreshold?: number;
+      // Cheap model to use for simple queries
+      cheapModel?: string;
+      // Premium model for complex queries
+      premiumModel?: string;
+    };
+    
+    // Model mappings: map requested model to actual model
+    // e.g., { "gpt-4": "gpt-4o-mini" } to force cheaper model
+    modelMappings?: Record<string, string>;
+    
+    // Per-tier model overrides
+    // e.g., { "free": { "gpt-4o": "gpt-4o-mini" } }
+    tierModelOverrides?: Record<string, Record<string, string>>;
+  };
+
+  // Budget alerts configuration
+  @Column({ type: 'jsonb', nullable: true })
+  budgetConfig: {
+    // Monthly budget limit in USD
+    monthlyBudget?: number;
+    // Daily budget limit in USD  
+    dailyBudget?: number;
+    // Alert thresholds (percentage of budget)
+    alertThresholds?: number[];
+    // Email to send alerts to
+    alertEmail?: string;
+    // Action when budget exceeded: 'alert' | 'block'
+    budgetAction?: 'alert' | 'block';
+  };
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -161,4 +161,36 @@ export class UpdateProjectDto {
       targetHandle?: string;
     }>;
   };
+
+  // Smart Model Routing configuration
+  @IsOptional()
+  @IsBoolean()
+  routingEnabled?: boolean;
+
+  @IsOptional()
+  @IsObject()
+  routingConfig?: {
+    defaultModel?: string;
+    strategy?: 'cost' | 'latency' | 'quality' | 'fallback';
+    fallbackChain?: string[];
+    costOptimization?: {
+      enabled: boolean;
+      tokenThreshold?: number;
+      cheapModel?: string;
+      premiumModel?: string;
+    };
+    modelMappings?: Record<string, string>;
+    tierModelOverrides?: Record<string, Record<string, string>>;
+  };
+
+  // Budget alerts configuration
+  @IsOptional()
+  @IsObject()
+  budgetConfig?: {
+    monthlyBudget?: number;
+    dailyBudget?: number;
+    alertThresholds?: number[];
+    alertEmail?: string;
+    budgetAction?: 'alert' | 'block';
+  };
 }
