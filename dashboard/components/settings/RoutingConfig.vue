@@ -22,6 +22,43 @@
       </button>
     </div>
 
+    <!-- Empty State when disabled -->
+    <div v-if="!localConfig.enabled" class="py-12">
+      <div class="text-center max-w-md mx-auto">
+        <div class="w-16 h-16 bg-gray-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+        </div>
+        <h4 class="text-white font-medium mb-2">Route requests intelligently</h4>
+        <p class="text-gray-500 text-sm mb-6">
+          Smart routing can automatically redirect requests to cheaper or faster models based on your rules. Save money by routing simple queries to smaller models.
+        </p>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left mb-6">
+          <div class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-3">
+            <div class="text-blue-400 text-xs font-medium mb-1">💰 Cost Optimization</div>
+            <p class="text-gray-500 text-xs">Route simple queries to gpt-4o-mini instead of gpt-4o</p>
+          </div>
+          <div class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-3">
+            <div class="text-green-400 text-xs font-medium mb-1">🎯 Tier Overrides</div>
+            <p class="text-gray-500 text-xs">Free users get cheaper models automatically</p>
+          </div>
+          <div class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-3">
+            <div class="text-purple-400 text-xs font-medium mb-1">🔄 Model Mapping</div>
+            <p class="text-gray-500 text-xs">Redirect any model request to another</p>
+          </div>
+        </div>
+
+        <button
+          @click="toggleRouting"
+          class="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+        >
+          Enable Smart Routing
+        </button>
+      </div>
+    </div>
+
     <div v-if="localConfig.enabled" class="space-y-6 pt-4 border-t border-gray-500/10">
       <!-- Routing Strategy -->
       <div>
@@ -138,7 +175,7 @@
     </div>
 
     <!-- Save Button -->
-    <div class="flex justify-end pt-4">
+    <div v-if="localConfig.enabled" class="flex justify-end pt-4">
       <button
         @click="save"
         :disabled="saving"
