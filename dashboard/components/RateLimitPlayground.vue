@@ -108,7 +108,7 @@
               </div>
             </div>
             <div v-else class="text-gray-500 italic">
-              Select a model above and click "Send Request" <span class="text-gray-400">→</span>
+              Select a model above and click "Send" below
             </div>
           </div>
         </div>
