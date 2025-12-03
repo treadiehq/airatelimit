@@ -118,7 +118,7 @@
           <button 
             @click="sendRequest"
             :disabled="isLoading || isCurrentModelLimited"
-            class="flex-1 group relative overflow-hidden rounded-lg font-medium py-3 px-6 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex-1 group relative overflow-hidden rounded-lg font-medium py-2 px-4 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             :class="buttonClass"
           >
             <span class="relative z-10 flex items-center justify-center gap-2">
@@ -135,7 +135,7 @@
           
           <button 
             @click="reset"
-            class="px-4 py-3 text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-gray-500/5 border border-gray-500/10"
+            class="px-4 py-2 text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-gray-500/5 border border-gray-500/10"
             title="Reset demo"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
