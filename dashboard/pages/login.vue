@@ -23,7 +23,7 @@
                 type="email"
                 required
                 class="w-full px-4 py-2 text-white bg-gray-500/10 border border-gray-500/10 rounded-lg focus:ring-2 focus:ring-gray-500/10 focus:border-transparent"
-                placeholder="your@companyemail.com"
+                placeholder="your@company.com"
               />
             </div>
 
