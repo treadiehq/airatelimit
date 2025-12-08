@@ -115,8 +115,7 @@
                   <!-- Code Content -->
                   <div class="p-4 px-4 text-left">
                     <!-- JavaScript Tab -->
-                    <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code>
-<span class="text-purple-300">import</span> OpenAI <span class="text-purple-300">from</span> <span class="text-green-300">'openai'</span>
+                    <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-purple-300">import</span> OpenAI <span class="text-purple-300">from</span> <span class="text-green-300">'openai'</span>
 
 <span class="text-purple-300">const</span> openai = <span class="text-purple-300">new</span> <span class="text-blue-300">OpenAI</span>({
   apiKey: <span class="text-green-300">'sk-your-key'</span>, <span class="text-gray-500">// Optional</span>
@@ -133,9 +132,8 @@
 })</code></pre>
 
                     <!-- API Tab -->
-                    <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code>
-<span class="text-gray-500">$</span> curl -X POST <span class="text-blue-300">https://api.airatelimit.com/v1/chat/completions</span> \
-  -H <span class="text-green-300">"Authorization: Bearer sk-your-key"</span> <span class="text-gray-500"># Optional</span>\
+                    <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500">$</span> curl -X POST <span class="text-blue-300">https://api.airatelimit.com/v1/chat/completions</span> \
+  -H <span class="text-green-300">"Authorization: Bearer sk-your-key"</span> \ <span class="text-gray-500">// Optional</span>
   -H <span class="text-blue-300">"x-project-key: pk_xxx"</span> \
   -H <span class="text-blue-300">"x-identity: user-123"</span> \
   -H <span class="text-green-300">"Content-Type: application/json"</span> \
