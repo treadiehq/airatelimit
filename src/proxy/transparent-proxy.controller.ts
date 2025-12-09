@@ -7,6 +7,7 @@ import {
   UnauthorizedException,
   HttpException,
   HttpStatus,
+  HttpCode,
   BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
@@ -66,6 +67,7 @@ export class TransparentProxyController {
    * Mirrors: POST https://api.openai.com/v1/chat/completions
    */
   @Post('chat/completions')
+  @HttpCode(200)
   async chatCompletions(
     @Headers('authorization') authorization: string,
     @Headers('x-project-key') projectKey: string,
@@ -441,6 +443,7 @@ export class TransparentProxyController {
    * Mirrors: POST https://api.openai.com/v1/images/generations
    */
   @Post('images/generations')
+  @HttpCode(200)
   async imagesGenerations(
     @Headers('authorization') authorization: string,
     @Headers('x-project-key') projectKey: string,
@@ -678,6 +681,7 @@ export class TransparentProxyController {
    * Mirrors: POST https://api.openai.com/v1/embeddings
    */
   @Post('embeddings')
+  @HttpCode(200)
   async embeddings(
     @Headers('authorization') authorization: string,
     @Headers('x-project-key') projectKey: string,
@@ -926,6 +930,7 @@ export class TransparentProxyController {
    * Mirrors: POST https://api.openai.com/v1/audio/transcriptions
    */
   @Post('audio/transcriptions')
+  @HttpCode(200)
   async audioTranscriptions(
     @Headers('authorization') authorization: string,
     @Headers('x-project-key') projectKey: string,

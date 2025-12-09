@@ -253,7 +253,7 @@
         <!-- Usage by Identity -->
         <div class="space-y-4">
           <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider">Usage by Identity (Today)</h3>
-          <div class="bg-gray-500/10 border border-gray-500/10 p-6 rounded-lg">
+          <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg">
             <!-- Guided Empty State -->
             <div v-if="identities.length === 0" class="space-y-6">
               <div class="text-center">
@@ -337,7 +337,7 @@ curl https://api.airatelimit.com/v1/chat/completions \
             </div>
             <div v-else class="overflow-x-auto">
               <table class="min-w-full">
-                <thead class="bg-gray-500/10 border border-gray-500/10">
+                <thead class="border-b border-gray-500/10">
                   <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                       Identity
@@ -350,7 +350,7 @@ curl https://api.airatelimit.com/v1/chat/completions \
                     </th>
                   </tr>
                 </thead> 
-                <tbody class="bg-gray-500/10 border border-gray-500/10">
+                <tbody class="divide-y divide-gray-500/10">
                   <tr v-for="identity in identities" :key="identity.identity">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-white">
                       {{ identity.identity }}
