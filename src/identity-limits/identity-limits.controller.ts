@@ -32,7 +32,7 @@ import { ProjectsService } from '../projects/projects.service';
  *     -H "Authorization: Bearer sk_xxx" \
  *     -d '{"identity": "user-123", "requestLimit": 1000}'
  */
-@Controller('api/projects/:projectKey/identities')
+@Controller('projects/:projectKey/identities')
 @UseGuards(ProjectAuthGuard)
 export class IdentityLimitsController {
   constructor(

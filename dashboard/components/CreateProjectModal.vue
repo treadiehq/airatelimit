@@ -59,11 +59,11 @@
                   :class="[
                     'flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors',
                     integrationMode === 'stored' 
-                      ? 'bg-blue-500/20 text-blue-300' 
+                      ? 'bg-blue-300/10 text-blue-300' 
                       : 'text-gray-400 hover:text-white'
                   ]"
                 >
-                  🔐 Stored Keys
+                  Stored Keys
                   <span class="text-xs opacity-60 ml-1">(recommended)</span>
                 </button>
                 <button
@@ -71,28 +71,16 @@
                   :class="[
                     'flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors',
                     integrationMode === 'passthrough' 
-                      ? 'bg-blue-500/20 text-blue-300' 
+                      ? 'bg-blue-300/10 text-blue-300' 
                       : 'text-gray-400 hover:text-white'
                   ]"
                 >
-                  ⚡ Pass-through
+                  Pass-through
                 </button>
               </div>
 
               <!-- Stored Keys Mode -->
               <div v-if="integrationMode === 'stored'" class="space-y-4">
-                <div class="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-                  <div class="flex items-start gap-3">
-                    <span class="text-lg">📱</span>
-                    <div>
-                      <p class="text-sm text-green-200 font-medium">Perfect for mobile apps</p>
-                      <p class="text-xs text-gray-400 mt-1">
-                        Store your API keys in the dashboard. Your app only needs the project key — no AI provider keys exposed.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 <div>
                   <label class="block text-sm font-medium text-gray-400 mb-2">Step 1: Add your provider keys in Settings → Provider Keys</label>
                   <label class="block text-sm font-medium text-gray-400 mb-2 mt-4">Step 2: Add to your app</label>
@@ -122,18 +110,6 @@
 
               <!-- Pass-through Mode -->
               <div v-else class="space-y-4">
-                <div class="bg-blue-300/5 border border-blue-300/20 rounded-lg p-4">
-                  <div class="flex items-start gap-3">
-                    <span class="text-lg">🖥️</span>
-                    <div>
-                      <p class="text-sm text-blue-200 font-medium">Best for server-side apps</p>
-                      <p class="text-xs text-gray-400 mt-1">
-                        Pass your API key with each request. Supports multiple providers — just change the model name.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 <div>
                   <label class="block text-sm font-medium text-gray-400 mb-2">Add to your app</label>
                   <div class="relative">
@@ -157,7 +133,7 @@
                 </div>
 
                 <p class="text-xs text-gray-500">
-                  💡 Works with OpenAI, Anthropic, Google Gemini, xAI — auto-detected from model name
+                  Works with OpenAI, Anthropic, Google Gemini, xAI, auto-detected from model name
                 </p>
               </div>
 
