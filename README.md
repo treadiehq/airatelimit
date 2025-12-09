@@ -10,7 +10,7 @@ Your App → AI Ratelimit → OpenAI / Anthropic / Google / Any AI
           Forward request
 ```
 
-**How it works:** Point your AI requests at our proxy. We check limits, then forward to the real API. Your API key passes through, we never store it.
+**How it works:** Point your AI requests at our proxy. We check limits, then forward to the real API. Pass your API key per-request, or store it encrypted in the dashboard.
 
 ```diff
 - baseURL: 'https://api.openai.com/v1'
@@ -94,9 +94,9 @@ const response = await openai.chat.completions.create({
 
 | Header | Description | Required | Example |
 |--------|-------------|----------|---------|
-| `x-project-key` | Your project key from dashboard | ✅ Always | `pk_abc123` |
-| `x-identity` | Your user's ID (from your app) | ✅ Always | `user_abc`, `session_xyz` |
-| `Authorization` | Your AI provider API key | ⚡ Pass-through only | `Bearer sk-xxx` |
+| `x-project-key` | Your project key from dashboard | Always | `pk_abc123` |
+| `x-identity` | Your user's ID (from your app) | Always | `user_abc`, `session_xyz` |
+| `Authorization` | Your AI provider API key | Pass-through only | `Bearer sk-xxx` |
 | `x-tier` | Pricing tier | Optional | `free`, `pro` |
 
 > **`x-identity`** is whatever you use to identify users—a user ID, session ID, or device ID. Each identity gets its own usage limits.
@@ -171,7 +171,7 @@ Protect your system prompts from extraction attacks:
 ### Privacy-First
 
 - Never stores prompts or responses
-- Never stores your API keys
+- API keys only stored if you choose Stored Keys Mode (encrypted at rest)
 - Only tracks: identity, usage counts, timestamps
 
 ## Limit Periods

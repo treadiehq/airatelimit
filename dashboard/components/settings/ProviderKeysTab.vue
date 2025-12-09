@@ -4,7 +4,7 @@
     <div class="bg-gray-500/10 border border-gray-500/20 rounded-lg p-4">
       <div class="flex items-start gap-3">
         <div>
-          <h3 class="font-semibold text-white mb-1">Stored Keys Mode</h3>
+          <h3 class="font-semibold text-white mb-1">Stored Keys</h3>
           <p class="text-sm text-gray-400">
             Store your AI provider API keys here and we'll use them automatically. 
             Your client code only needs the project key, 
@@ -197,7 +197,7 @@ const providers: Provider[] = [
   {
     id: 'openai',
     name: 'OpenAI',
-    icon: '◯',
+    icon: 'O',
     models: 'GPT-4o, GPT-4, GPT-3.5, o1, etc.',
     keyPlaceholder: 'sk-...',
     keyUrl: 'https://platform.openai.com/api-keys',
