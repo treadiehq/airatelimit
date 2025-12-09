@@ -193,7 +193,7 @@ const formatCost = (cost: number) => {
 const fetchCosts = async () => {
   costsLoading.value = true
   try {
-    costs.value = await api(`/api/projects/${props.projectId}/analytics/costs`)
+    costs.value = await api(`/projects/${props.projectId}/analytics/costs`)
   } catch (error) {
     console.error('Failed to fetch costs:', error)
   } finally {
@@ -205,7 +205,7 @@ const fetchCosts = async () => {
 const fetchHistory = async () => {
   historyLoading.value = true
   try {
-    history.value = await api(`/api/projects/${props.projectId}/analytics/costs/history?days=${historyDays.value}`)
+    history.value = await api(`/projects/${props.projectId}/analytics/costs/history?days=${historyDays.value}`)
   } catch (error) {
     console.error('Failed to fetch history:', error)
   } finally {
@@ -217,7 +217,7 @@ const fetchHistory = async () => {
 const fetchByModel = async () => {
   modelsLoading.value = true
   try {
-    byModel.value = await api(`/api/projects/${props.projectId}/analytics/costs/by-model?days=30`)
+    byModel.value = await api(`/projects/${props.projectId}/analytics/costs/by-model?days=30`)
   } catch (error) {
     console.error('Failed to fetch by model:', error)
   } finally {
@@ -229,7 +229,7 @@ const fetchByModel = async () => {
 const fetchTopUsers = async () => {
   usersLoading.value = true
   try {
-    topUsers.value = await api(`/api/projects/${props.projectId}/analytics/costs/top-users?days=30&limit=10`)
+    topUsers.value = await api(`/projects/${props.projectId}/analytics/top-users?days=30&limit=10`)
   } catch (error) {
     console.error('Failed to fetch top users:', error)
   } finally {
