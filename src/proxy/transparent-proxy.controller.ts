@@ -108,8 +108,8 @@ export class TransparentProxyController {
       // ====================================
       // RESOLVE API KEY: Stored keys or pass-through
       // ====================================
-      // Detect provider from model to look up stored key
-      const provider = this.transparentProxyService.detectProvider(model);
+      // Detect provider from model to look up stored key (may be re-detected after smart routing)
+      let provider = this.transparentProxyService.detectProvider(model);
       let resolvedAuthorization = authorization;
 
       if (!authorization) {
@@ -139,15 +139,38 @@ export class TransparentProxyController {
           body,
         );
         if (routedModel !== model) {
+          // Re-detect provider for the routed model
+          const newProvider = this.transparentProxyService.detectProvider(routedModel);
+          
           console.log('Smart routing applied:', {
             projectId: project.id,
             originalModel: model,
             routedModel,
+            originalProvider: provider,
+            newProvider,
             tier,
             strategy: project.routingConfig.strategy,
           });
+          
+          // If provider changed, we need to re-resolve authorization
+          if (newProvider !== provider && !authorization) {
+            const storedConfig = project.providerKeys?.[newProvider];
+            if (storedConfig?.apiKey) {
+              resolvedAuthorization = `Bearer ${storedConfig.apiKey}`;
+              console.log('Switched to stored API key for new provider:', {
+                projectId: project.id,
+                provider: newProvider,
+              });
+            } else {
+              throw new UnauthorizedException(
+                `Smart routing changed model to ${routedModel} (${newProvider}), but no API key is configured for ${newProvider}. Configure it in the dashboard under Provider Keys.`,
+              );
+            }
+          }
+          
           model = routedModel;
           body.model = routedModel;
+          provider = newProvider;
         }
       }
 
