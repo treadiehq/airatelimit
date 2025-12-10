@@ -122,10 +122,12 @@ export class PricingService {
     // Gemini 2.5
     'gemini-2.5-pro': { input: 1.5, output: 6.0 },
     'gemini-2.5-flash': { input: 0.1, output: 0.4 },
+    'gemini-2.5-flash-lite': { input: 0.05, output: 0.2 },
 
     // Gemini 2.0
     'gemini-2.0-flash-exp': { input: 0.1, output: 0.4 },
     'gemini-2.0-flash': { input: 0.1, output: 0.4 },
+    'gemini-2.0-flash-lite': { input: 0.05, output: 0.2 },
     'gemini-2.0-pro': { input: 1.25, output: 5.0 },
 
     // Gemini 1.5 Pro

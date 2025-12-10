@@ -165,14 +165,14 @@
       </div>
     </div>
 
-    <!-- Save Button -->
-    <div v-if="localConfig.enabled" class="flex justify-end pt-4">
+    <!-- Save Button - Visible when enabled OR when there are unsaved changes -->
+    <div v-if="localConfig.enabled || hasUnsavedChanges" class="flex justify-end pt-4">
       <button
         @click="save"
         :disabled="saving"
         class="px-4 py-2 bg-blue-300 text-black text-sm font-medium rounded-lg hover:bg-blue-400 disabled:opacity-50 transition-colors"
       >
-        {{ saving ? 'Saving...' : 'Save' }}
+        {{ saving ? 'Saving...' : 'Save Changes' }}
       </button>
     </div>
   </div>
@@ -191,6 +191,12 @@ const api = useApi()
 const { addToast } = useToast()
 
 const saving = ref(false)
+const initialEnabled = ref(props.routingEnabled || false)
+
+// Track if there are unsaved changes
+const hasUnsavedChanges = computed(() => {
+  return localConfig.value.enabled !== initialEnabled.value
+})
 
 const localConfig = ref({
   enabled: props.routingEnabled || false,
@@ -263,6 +269,7 @@ const save = async () => {
     })
 
     addToast({ type: 'success', message: 'Routing configuration saved' })
+    initialEnabled.value = localConfig.value.enabled
     emit('saved')
   } catch (error: any) {
     addToast({ type: 'error', message: error.message || 'Failed to save' })
@@ -274,6 +281,7 @@ const save = async () => {
 // Watch for prop changes
 watch(() => props.routingEnabled, (val) => {
   localConfig.value.enabled = val || false
+  initialEnabled.value = val || false
 })
 
 watch(() => props.routingConfig, (val) => {
