@@ -84,8 +84,8 @@
           <p class="text-sm">No usage data yet</p>
         </div>
         
-        <div v-else class="space-y-3">
-          <div v-for="model in byModel.slice(0, 5)" :key="model.model" class="group">
+        <div v-else class="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin">
+          <div v-for="model in byModel" :key="model.model" class="group">
             <div class="flex items-center justify-between text-sm mb-1">
               <span class="text-gray-300 font-mono text-xs">{{ model.model || 'unknown' }}</span>
               <span class="text-white font-medium">${{ formatCost(model.cost) }}</span>
@@ -115,15 +115,15 @@
         </div>
         
         <div v-else-if="topUsers.length === 0" class="text-center py-8 text-gray-500">
-          <svg class="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 mx-auto mb-2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
           </svg>
           <p class="text-sm">No users yet</p>
         </div>
         
-        <div v-else class="space-y-2">
+        <div v-else class="space-y-2 max-h-80 overflow-y-auto pr-2 scrollbar-thin">
           <div 
-            v-for="(user, index) in topUsers.slice(0, 8)" 
+            v-for="(user, index) in topUsers" 
             :key="user.identity"
             class="flex items-center justify-between py-2 border-b border-gray-500/10 last:border-0"
           >
@@ -229,7 +229,7 @@ const fetchByModel = async () => {
 const fetchTopUsers = async () => {
   usersLoading.value = true
   try {
-    topUsers.value = await api(`/projects/${props.projectId}/analytics/top-users?days=30&limit=10`)
+    topUsers.value = await api(`/projects/${props.projectId}/analytics/costs/top-users?days=30&limit=10`)
   } catch (error) {
     console.error('Failed to fetch top users:', error)
   } finally {

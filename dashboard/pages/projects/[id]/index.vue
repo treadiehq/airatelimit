@@ -325,7 +325,7 @@ curl https://api.airatelimit.com/v1/chat/completions \
                   </tr>
                 </thead> 
                 <tbody class="divide-y divide-gray-500/10">
-                  <tr v-for="identity in identities" :key="identity.identity">
+                  <tr v-for="identity in paginatedIdentities" :key="identity.identity">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-white">
                       {{ identity.identity }}
                     </td>
@@ -338,6 +338,31 @@ curl https://api.airatelimit.com/v1/chat/completions \
                   </tr>
                 </tbody>
               </table>
+              
+              <!-- Pagination Controls -->
+              <div v-if="identities.length > identitiesPerPage" class="flex items-center justify-between px-6 py-3 border-t border-gray-500/10">
+                <p class="text-sm text-gray-400">
+                  Showing {{ (identitiesPage - 1) * identitiesPerPage + 1 }}-{{ Math.min(identitiesPage * identitiesPerPage, identities.length) }} of {{ identities.length }}
+                </p>
+                <div class="flex gap-2">
+                  <button
+                    @click="identitiesPage--"
+                    :disabled="identitiesPage === 1"
+                    class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    :class="identitiesPage === 1 ? 'text-gray-500' : 'text-white bg-gray-500/10 hover:bg-gray-500/20'"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    @click="identitiesPage++"
+                    :disabled="identitiesPage >= totalIdentitiesPages"
+                    class="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    :class="identitiesPage >= totalIdentitiesPages ? 'text-gray-500' : 'text-white bg-gray-500/10 hover:bg-gray-500/20'"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -399,6 +424,8 @@ const project = ref<any>(null)
 const usage = ref<any>({})
 const usageHistory = ref<Array<{ label: string; value: number }>>([])
 const identities = ref<any[]>([])
+const identitiesPage = ref(1)
+const identitiesPerPage = 20
 const loading = ref(true)
 const error = ref('')
 const showDeleteConfirm = ref(false)
@@ -415,6 +442,17 @@ const pageTitle = computed(() => {
     return `${project.value.name} - AI Ratelimit`
   }
   return 'Project Details - AI Ratelimit'
+})
+
+// Pagination for identities table
+const paginatedIdentities = computed(() => {
+  const start = (identitiesPage.value - 1) * identitiesPerPage
+  const end = start + identitiesPerPage
+  return identities.value.slice(start, end)
+})
+
+const totalIdentitiesPages = computed(() => {
+  return Math.ceil(identities.value.length / identitiesPerPage)
 })
 
 useHead({
