@@ -21,6 +21,9 @@
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 JWT_SECRET=<run: openssl rand -base64 32>
 ENCRYPTION_KEY=<run: openssl rand -hex 16>
+CORS_ORIGIN=https://<your-dashboard-domain>.up.railway.app
+RESEND_API_KEY=<from resend.com>
+EMAIL_FROM=noreply@yourdomain.com
 NODE_ENV=production
 ```
 
@@ -36,6 +39,7 @@ NODE_ENV=production
 3. **Variables** → Add:
 ```
 NUXT_PUBLIC_API_URL=https://<your-backend-domain>.up.railway.app
+NODE_ENV=production
 ```
 
 4. **Settings** → **Networking** → **Generate Domain**
@@ -56,6 +60,8 @@ Done. Railway auto-deploys on every `git push`.
 |----------|-----------------|
 | `JWT_SECRET` | `openssl rand -base64 32` |
 | `ENCRYPTION_KEY` | `openssl rand -hex 16` |
+| `RESEND_API_KEY` | Get from [resend.com](https://resend.com) |
+| `EMAIL_FROM` | Your verified sender domain |
 
 ## Custom Domain
 
