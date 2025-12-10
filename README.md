@@ -46,6 +46,10 @@ Join our Discord community for discussions, support, and updates:
 ### 1. Deploy
 
 **Railway (Recommended):**
+
+📖 **[Railway Deployment](./docs/DEPLOYMENT.md)**
+
+Quick steps:
 1. Push to GitHub
 2. Connect to [Railway](https://railway.app)
 3. Add PostgreSQL
