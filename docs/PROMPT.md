@@ -1,4 +1,4 @@
-# Security Features: Prompt Injection Protection
+# Prompt Injection Protection
 
 AI Ratelimit includes built-in protection against prompt injection attacks that attempt to extract or leak your system prompts and instructions.
 
