@@ -1,6 +1,6 @@
 # AI Ratelimit
 
-Add usage limits to your AI app in 5 minutes. Track usage per user, set limits per model, create pricing tiers—all without storing prompts or API keys.
+Add usage limits to your AI mobile app in 5 minutes. Track usage per user, set limits per model, create pricing tiers—all without storing prompts or API keys.
 
 ```
 Your App → AI Ratelimit → OpenAI / Anthropic / Google / Any AI
@@ -150,9 +150,26 @@ curl -X POST https://api.airatelimit.com/api/projects/pk_xxx/identities \
 
 # Disable a user
 curl -X POST .../identities -d '{"identity": "user-123", "enabled": false}'
+
+# Gift tokens to a user
+curl -X POST .../identities/user-123/gift -d '{"tokens": 10000}'
+
+# Give unlimited access until date
+curl -X POST .../identities/user-123/promo -d '{"unlimitedUntil": "2025-12-31"}'
 ```
 
-Find your secret key in Dashboard → Project Settings → API Access. Identity limits override all other limits.
+Find your secret key in Dashboard → Project Settings → API Access.
+
+### System Prompts (Optional)
+
+Store system prompts server-side so they're hidden from mobile app code:
+
+```bash
+# Create a prompt
+curl -X POST .../prompts -d '{"name": "assistant-v1", "content": "You are a helpful assistant."}'
+```
+
+Then reference by name in requests: `{"systemPrompt": "assistant-v1", "messages": [...]}`
 
 ### Custom Messages
 

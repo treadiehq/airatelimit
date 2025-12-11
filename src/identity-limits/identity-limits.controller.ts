@@ -186,11 +186,90 @@ export class IdentityLimitsController {
     };
   }
 
+  /**
+   * Gift tokens or requests to an identity
+   * POST /api/projects/:projectKey/identities/:identity/gift
+   */
+  @Post(':identity/gift')
+  async giftCredits(
+    @Param('projectKey') projectKey: string,
+    @Param('identity') identity: string,
+    @Body() body: { tokens?: number; requests?: number; reason?: string },
+    @Req() request?: any,
+  ) {
+    const project = await this.getProject(projectKey, request);
+    if (!body.tokens && !body.requests) {
+      return { error: 'Must provide either tokens or requests to gift' };
+    }
+    const result = await this.identityLimitsService.giftCredits(
+      project.id, identity, body.tokens || 0, body.requests || 0, body.reason,
+    );
+    return {
+      identity,
+      giftedTokens: result.giftedTokens,
+      giftedRequests: result.giftedRequests,
+      message: `Gifted ${body.tokens || 0} tokens and ${body.requests || 0} requests`,
+    };
+  }
+
+  /**
+   * Set promotional override (unlimited access until date)
+   * POST /api/projects/:projectKey/identities/:identity/promo
+   */
+  @Post(':identity/promo')
+  async setPromoOverride(
+    @Param('projectKey') projectKey: string,
+    @Param('identity') identity: string,
+    @Body() body: { unlimitedUntil: string | null; reason?: string },
+    @Req() request?: any,
+  ) {
+    const project = await this.getProject(projectKey, request);
+    const result = await this.identityLimitsService.setPromoOverride(
+      project.id, identity,
+      body.unlimitedUntil ? new Date(body.unlimitedUntil) : null, body.reason,
+    );
+    return {
+      identity,
+      unlimitedUntil: result.unlimitedUntil,
+      message: body.unlimitedUntil
+        ? `Unlimited access granted until ${body.unlimitedUntil}`
+        : 'Promotional override removed',
+    };
+  }
+
+  /**
+   * Get gift and promo status for an identity
+   * GET /api/projects/:projectKey/identities/:identity/credits
+   */
+  @Get(':identity/credits')
+  async getCredits(
+    @Param('projectKey') projectKey: string,
+    @Param('identity') identity: string,
+    @Req() request?: any,
+  ) {
+    const project = await this.getProject(projectKey, request);
+    const identityLimit = await this.identityLimitsService.getForIdentity(
+      project.id, identity,
+    );
+    const now = new Date();
+    const isUnlimited = identityLimit?.unlimitedUntil && identityLimit.unlimitedUntil > now;
+    return {
+      identity,
+      giftedTokens: identityLimit?.giftedTokens || 0,
+      giftedRequests: identityLimit?.giftedRequests || 0,
+      unlimitedUntil: identityLimit?.unlimitedUntil || null,
+      isCurrentlyUnlimited: isUnlimited,
+    };
+  }
+
   private formatIdentityLimit(limit: any) {
     return {
       identity: limit.identity,
       requestLimit: limit.requestLimit,
       tokenLimit: limit.tokenLimit,
+      giftedTokens: limit.giftedTokens || 0,
+      giftedRequests: limit.giftedRequests || 0,
+      unlimitedUntil: limit.unlimitedUntil || null,
       customResponse: limit.customResponse,
       metadata: limit.metadata,
       enabled: limit.enabled,

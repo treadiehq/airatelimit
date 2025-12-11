@@ -40,6 +40,17 @@ export class IdentityLimit {
   @Column({ type: 'int', nullable: true })
   tokenLimit: number | null;
 
+  // Gifted tokens/requests - bonus credits that don't count toward limits
+  @Column({ type: 'int', default: 0 })
+  giftedTokens: number;
+
+  @Column({ type: 'int', default: 0 })
+  giftedRequests: number;
+
+  // Promotional override - unlimited access until this date
+  @Column({ type: 'timestamp', nullable: true })
+  unlimitedUntil: Date | null;
+
   // Optional custom response when this identity hits limits
   @Column({ type: 'jsonb', nullable: true })
   customResponse: any;

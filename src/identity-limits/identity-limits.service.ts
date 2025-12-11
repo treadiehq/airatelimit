@@ -149,4 +149,114 @@ export class IdentityLimitsService {
     const limit = await this.getForIdentity(projectId, identity);
     return limit?.enabled ?? true;
   }
+
+  /**
+   * Gift tokens or requests to an identity (additive)
+   */
+  async giftCredits(
+    projectId: string,
+    identity: string,
+    tokens: number,
+    requests: number,
+    reason?: string,
+  ): Promise<IdentityLimit> {
+    let existing = await this.getForIdentity(projectId, identity);
+
+    if (!existing) {
+      // Create a new record for this identity
+      existing = this.identityLimitRepository.create({
+        projectId,
+        identity,
+        giftedTokens: 0,
+        giftedRequests: 0,
+        enabled: true,
+      });
+    }
+
+    // Add to existing gifted amounts
+    existing.giftedTokens = (existing.giftedTokens || 0) + tokens;
+    existing.giftedRequests = (existing.giftedRequests || 0) + requests;
+
+    // Store reason in metadata
+    if (reason) {
+      existing.metadata = {
+        ...existing.metadata,
+        lastGiftReason: reason,
+        lastGiftDate: new Date().toISOString(),
+      };
+    }
+
+    return this.identityLimitRepository.save(existing);
+  }
+
+  /**
+   * Set promotional override (unlimited access until date)
+   */
+  async setPromoOverride(
+    projectId: string,
+    identity: string,
+    unlimitedUntil: Date | null,
+    reason?: string,
+  ): Promise<IdentityLimit> {
+    let existing = await this.getForIdentity(projectId, identity);
+
+    if (!existing) {
+      existing = this.identityLimitRepository.create({
+        projectId,
+        identity,
+        giftedTokens: 0,
+        giftedRequests: 0,
+        enabled: true,
+      });
+    }
+
+    existing.unlimitedUntil = unlimitedUntil;
+
+    if (reason) {
+      existing.metadata = {
+        ...existing.metadata,
+        promoReason: reason,
+        promoSetDate: new Date().toISOString(),
+      };
+    }
+
+    return this.identityLimitRepository.save(existing);
+  }
+
+  /**
+   * Consume gifted credits (called when limits would be exceeded)
+   * Returns true if gifted credits were consumed, false if none available
+   */
+  async consumeGiftedCredits(
+    projectId: string,
+    identity: string,
+    tokensNeeded: number,
+    requestsNeeded: number,
+  ): Promise<{ consumed: boolean; tokensConsumed: number; requestsConsumed: number }> {
+    const existing = await this.getForIdentity(projectId, identity);
+    if (!existing) {
+      return { consumed: false, tokensConsumed: 0, requestsConsumed: 0 };
+    }
+
+    const tokensToConsume = Math.min(tokensNeeded, existing.giftedTokens || 0);
+    const requestsToConsume = Math.min(requestsNeeded, existing.giftedRequests || 0);
+
+    if (tokensToConsume > 0 || requestsToConsume > 0) {
+      existing.giftedTokens = (existing.giftedTokens || 0) - tokensToConsume;
+      existing.giftedRequests = (existing.giftedRequests || 0) - requestsToConsume;
+      await this.identityLimitRepository.save(existing);
+      return { consumed: true, tokensConsumed: tokensToConsume, requestsConsumed: requestsToConsume };
+    }
+
+    return { consumed: false, tokensConsumed: 0, requestsConsumed: 0 };
+  }
+
+  /**
+   * Check if identity has active promotional override
+   */
+  async hasActivePromo(projectId: string, identity: string): Promise<boolean> {
+    const existing = await this.getForIdentity(projectId, identity);
+    if (!existing?.unlimitedUntil) return false;
+    return existing.unlimitedUntil > new Date();
+  }
 }

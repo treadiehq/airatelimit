@@ -23,6 +23,7 @@ import { SecurityEvent } from '../security/security-event.entity';
 import { AnonymizationLog } from '../anonymization/anonymization-log.entity';
 import { PricingService } from '../pricing/pricing.service';
 import { validateProxyHeaders } from './dto/proxy-headers.dto';
+import { PromptsService } from '../prompts/prompts.service';
 
 // ====================================
 // SECURITY CONSTANTS
@@ -56,6 +57,7 @@ export class TransparentProxyController {
     private readonly anonymizationService: AnonymizationService,
     private readonly pricingService: PricingService,
     private readonly flowExecutorService: FlowExecutorService,
+    private readonly promptsService: PromptsService,
     @InjectRepository(SecurityEvent)
     private readonly securityEventRepository: Repository<SecurityEvent>,
     @InjectRepository(AnonymizationLog)
@@ -133,6 +135,28 @@ export class TransparentProxyController {
     try {
       // Get project configuration
       const project = await this.projectsService.findByProjectKey(projectKey);
+
+      // ====================================
+      // SYSTEM PROMPT INJECTION
+      // If request includes 'systemPrompt' field (name reference), inject the content
+      // ====================================
+      if (workingBody.systemPrompt && typeof workingBody.systemPrompt === 'string') {
+        const promptContent = await this.promptsService.getContent(project.id, workingBody.systemPrompt);
+        if (promptContent) {
+          // Inject system message at the beginning
+          workingBody.messages = [
+            { role: 'system', content: promptContent },
+            ...(workingBody.messages || []).filter((m: any) => m.role !== 'system'),
+          ];
+          console.log('Injected system prompt:', {
+            projectId: project.id,
+            promptName: workingBody.systemPrompt,
+            identity,
+          });
+        }
+        // Remove the custom field before forwarding to provider
+        delete workingBody.systemPrompt;
+      }
 
       // ====================================
       // RESOLVE API KEY: Stored keys or pass-through

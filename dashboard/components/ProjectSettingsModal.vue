@@ -84,6 +84,13 @@
                     Routing
                   </button>
                   <button
+                    @click="configTab = 'prompts'"
+                    :class="configTab === 'prompts' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
+                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
+                  >
+                    Prompts
+                  </button>
+                  <button
                     @click="configTab = 'api'"
                     :class="configTab === 'api' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
                     class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
@@ -139,6 +146,11 @@
                 @update="handleUpdate"
               />
 
+              <PromptsTab
+                v-show="configTab === 'prompts'"
+                :project-key="project?.projectKey"
+              />
+
               <ApiAccessTab
                 v-show="configTab === 'api'"
                 :project="project"
@@ -175,6 +187,7 @@ import TiersTab from './settings/TiersTab.vue'
 import IdentitiesTab from './settings/IdentitiesTab.vue'
 import SecurityTab from './settings/SecurityTab.vue'
 import PrivacyTab from './settings/PrivacyTab.vue'
+import PromptsTab from './settings/PromptsTab.vue'
 import ApiAccessTab from './settings/ApiAccessTab.vue'
 import ProviderKeysTab from './settings/ProviderKeysTab.vue'
 import RoutingConfig from './settings/RoutingConfig.vue'

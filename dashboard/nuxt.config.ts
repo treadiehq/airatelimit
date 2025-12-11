@@ -25,14 +25,14 @@ export default defineNuxtConfig({
     head: {
       title: 'AI Ratelimit',
       meta: [
-        { name: 'description', content: 'Add usage limits to your AI app in 5 minutes. Track usage per user, set limits per model, create pricing tiers.' },
+        { name: 'description', content: 'Secure your API keys, rate limit users, track costs, and upsell upgrades, all without building a server.' },
         { property: 'og:title', content: 'AI Ratelimit' },
-        { property: 'og:description', content: 'Add usage limits to your AI app in 5 minutes. Track usage per user, set limits per model, create pricing tiers.' },
+        { property: 'og:description', content: 'Secure your API keys, rate limit users, track costs, and upsell upgrades, all without building a server.' },
         { property: 'og:image', content: '/airatelimit.png' },
         { property: 'og:type', content: 'website' },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: 'AI Ratelimit' },
-        { name: 'twitter:description', content: 'Add usage limits to your AI app in 5 minutes. Track usage per user, set limits per model, create pricing tiers.' },
+        { name: 'twitter:description', content: 'Secure your API keys, rate limit users, track costs, and upsell upgrades, all without building a server.' },
         { name: 'twitter:image', content: '/airatelimit.png' },
       ],
       script: [

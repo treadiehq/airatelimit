@@ -10,6 +10,7 @@ import { UsageModule } from './usage/usage.module';
 import { ProxyModule } from './proxy/proxy.module';
 import { IdentityLimitsModule } from './identity-limits/identity-limits.module';
 import { HealthModule } from './health/health.module';
+import { PromptsModule } from './prompts/prompts.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { HealthModule } from './health/health.module';
     ProxyModule,
     IdentityLimitsModule,
     HealthModule,
+    PromptsModule,
   ],
 })
 export class AppModule {}

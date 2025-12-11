@@ -83,7 +83,15 @@
               <span v-if="identity.tokenLimit !== null">
                 <span class="text-white">{{ identity.tokenLimit?.toLocaleString() }}</span> tokens
               </span>
-              <span v-if="identity.requestLimit === null && identity.tokenLimit === null" class="text-gray-500">
+              <span v-if="identity.giftedTokens" class="text-emerald-400 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg>
+                {{ identity.giftedTokens.toLocaleString() }} gifted
+              </span>
+              <span v-if="identity.unlimitedUntil && new Date(identity.unlimitedUntil) > new Date()" class="text-amber-400 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                Unlimited until {{ new Date(identity.unlimitedUntil).toLocaleDateString() }}
+              </span>
+              <span v-if="identity.requestLimit === null && identity.tokenLimit === null && !identity.giftedTokens && !identity.unlimitedUntil" class="text-gray-500">
                 No limit overrides
               </span>
             </div>
@@ -92,7 +100,21 @@
               <span class="text-xs text-gray-400 font-mono">{{ JSON.stringify(identity.metadata) }}</span>
             </div>
           </div>
-          <div class="flex items-center gap-2 ml-4">
+          <div class="flex items-center gap-1 ml-4">
+            <button
+              @click="openGiftModal(identity)"
+              class="p-2 text-gray-400 hover:text-white hover:bg-gray-500/10 rounded-lg transition-colors"
+              title="Gift tokens"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg>
+            </button>
+            <button
+              @click="openPromoModal(identity)"
+              class="p-2 text-gray-400 hover:text-white hover:bg-gray-500/10 rounded-lg transition-colors"
+              title="Set promo"
+            >
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            </button>
             <button
               @click="editIdentity(identity)"
               class="p-2 text-gray-400 hover:text-white hover:bg-gray-500/10 rounded-lg transition-colors"
@@ -139,6 +161,67 @@
         Load more
       </button>
     </div>
+
+    <!-- Gift Modal -->
+    <Teleport to="body">
+      <div v-if="giftingIdentity" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" @click="giftingIdentity = null"></div>
+        <div class="relative w-full max-w-sm bg-black border border-gray-500/20 rounded-xl shadow-xl">
+          <div class="flex items-center justify-between p-4 border-b border-gray-500/20">
+            <h3 class="text-lg font-semibold text-white">Gift Credits</h3>
+            <button @click="giftingIdentity = null" class="text-gray-400 hover:text-white">✕</button>
+          </div>
+          <form @submit.prevent="giftCredits" class="p-4 space-y-4">
+            <p class="text-sm text-gray-400">Gift tokens to <span class="text-white font-mono">{{ giftingIdentity?.identity }}</span></p>
+            <div>
+              <label class="block text-sm font-medium text-white mb-1">Tokens to Gift</label>
+              <input v-model.number="giftForm.tokens" type="number" min="0" placeholder="e.g., 10000" class="w-full px-3 py-2 text-white bg-gray-500/10 border border-gray-500/20 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-white mb-1">Reason (optional)</label>
+              <input v-model="giftForm.reason" type="text" placeholder="e.g., support ticket #123" class="w-full px-3 py-2 text-white bg-gray-500/10 border border-gray-500/20 rounded-lg text-sm" />
+            </div>
+            <div class="flex gap-2 pt-2">
+              <button type="button" @click="giftingIdentity = null" class="flex-1 px-4 py-2 bg-gray-500/10 text-white text-sm rounded-lg hover:bg-gray-500/20">Cancel</button>
+              <button type="submit" :disabled="!giftForm.tokens || giftingSaving" class="flex-1 px-4 py-2 bg-blue-300 text-black text-sm rounded-lg hover:bg-emerald-400 disabled:opacity-50">
+                {{ giftingSaving ? 'Gifting...' : 'Gift' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Promo Modal -->
+    <Teleport to="body">
+      <div v-if="promoIdentity" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" @click="promoIdentity = null"></div>
+        <div class="relative w-full max-w-sm bg-black border border-gray-500/20 rounded-xl shadow-xl">
+          <div class="flex items-center justify-between p-4 border-b border-gray-500/20">
+            <h3 class="text-lg font-semibold text-white">Promotional Override</h3>
+            <button @click="promoIdentity = null" class="text-gray-400 hover:text-white">✕</button>
+          </div>
+          <form @submit.prevent="setPromo" class="p-4 space-y-4">
+            <p class="text-sm text-gray-400">Set unlimited access for <span class="text-white font-mono">{{ promoIdentity?.identity }}</span></p>
+            <div>
+              <label class="block text-sm font-medium text-white mb-1">Unlimited Until</label>
+              <input v-model="promoForm.unlimitedUntil" type="date" :min="minDate" class="w-full px-3 py-2 text-white bg-gray-500/10 border border-gray-500/20 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-white mb-1">Reason (optional)</label>
+              <input v-model="promoForm.reason" type="text" placeholder="e.g., National Writers Month" class="w-full px-3 py-2 text-white bg-gray-500/10 border border-gray-500/20 rounded-lg text-sm" />
+            </div>
+            <div class="flex gap-2 pt-2">
+              <button type="button" @click="removePromo" class="px-4 py-2 bg-red-400/10 text-red-400 text-sm rounded-lg hover:bg-red-500/10">Remove</button>
+              <button type="button" @click="promoIdentity = null" class="flex-1 px-4 py-2 bg-gray-500/10 text-white text-sm rounded-lg hover:bg-gray-500/20">Cancel</button>
+              <button type="submit" :disabled="!promoForm.unlimitedUntil || promoSaving" class="flex-1 px-4 py-2 bg-blue-300 text-black text-sm rounded-lg hover:bg-blue-400 disabled:opacity-50">
+                {{ promoSaving ? 'Saving...' : 'Set' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Add/Edit Modal -->
     <Teleport to="body">
@@ -272,6 +355,9 @@ interface IdentityLimit {
   identity: string
   requestLimit: number | null
   tokenLimit: number | null
+  giftedTokens?: number
+  giftedRequests?: number
+  unlimitedUntil?: string | null
   customResponse: any
   metadata: Record<string, any>
   enabled: boolean
@@ -295,6 +381,17 @@ const form = ref({
   metadataJson: '',
   enabled: true,
 })
+
+// Gift modal state
+const giftingIdentity = ref<IdentityLimit | null>(null)
+const giftingSaving = ref(false)
+const giftForm = ref({ tokens: 0, reason: '' })
+
+// Promo modal state
+const promoIdentity = ref<IdentityLimit | null>(null)
+const promoSaving = ref(false)
+const promoForm = ref({ unlimitedUntil: '', reason: '' })
+const minDate = computed(() => new Date().toISOString().split('T')[0])
 
 const filteredIdentities = computed(() => {
   if (!searchQuery.value) return identities.value
@@ -418,6 +515,72 @@ const deleteIdentity = async (identity: IdentityLimit) => {
     total.value--
   } catch (e) {
     console.error('Failed to delete identity:', e)
+  }
+}
+
+// Gift functions
+const openGiftModal = (identity: IdentityLimit) => {
+  giftingIdentity.value = identity
+  giftForm.value = { tokens: 0, reason: '' }
+}
+
+const giftCredits = async () => {
+  if (!giftingIdentity.value || !giftForm.value.tokens) return
+  giftingSaving.value = true
+  try {
+    await api(`/projects/${props.projectKey}/identities/${encodeURIComponent(giftingIdentity.value.identity)}/gift`, {
+      method: 'POST',
+      body: { tokens: giftForm.value.tokens, reason: giftForm.value.reason },
+    })
+    await loadIdentities()
+    giftingIdentity.value = null
+  } catch (e) {
+    console.error('Failed to gift credits:', e)
+  } finally {
+    giftingSaving.value = false
+  }
+}
+
+// Promo functions
+const openPromoModal = (identity: IdentityLimit) => {
+  promoIdentity.value = identity
+  promoForm.value = {
+    unlimitedUntil: identity.unlimitedUntil ? identity.unlimitedUntil.split('T')[0] : '',
+    reason: '',
+  }
+}
+
+const setPromo = async () => {
+  if (!promoIdentity.value || !promoForm.value.unlimitedUntil) return
+  promoSaving.value = true
+  try {
+    await api(`/projects/${props.projectKey}/identities/${encodeURIComponent(promoIdentity.value.identity)}/promo`, {
+      method: 'POST',
+      body: { unlimitedUntil: promoForm.value.unlimitedUntil, reason: promoForm.value.reason },
+    })
+    await loadIdentities()
+    promoIdentity.value = null
+  } catch (e) {
+    console.error('Failed to set promo:', e)
+  } finally {
+    promoSaving.value = false
+  }
+}
+
+const removePromo = async () => {
+  if (!promoIdentity.value) return
+  promoSaving.value = true
+  try {
+    await api(`/projects/${props.projectKey}/identities/${encodeURIComponent(promoIdentity.value.identity)}/promo`, {
+      method: 'POST',
+      body: { unlimitedUntil: null },
+    })
+    await loadIdentities()
+    promoIdentity.value = null
+  } catch (e) {
+    console.error('Failed to remove promo:', e)
+  } finally {
+    promoSaving.value = false
   }
 }
 

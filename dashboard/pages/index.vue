@@ -38,12 +38,13 @@
         <!-- Main Heading -->
          <div class="mb-12">
           <h1 class="mx-auto w-full text-balance text-center font-semibold tracking-tight text-white max-w-3xl text-2xl !leading-[1.2] sm:text-4xl md:text-5xl">
-            <span class="text-blue-300">Usage limits</span> for AI apps
+            <span class="text-blue-300">Instant backend</span> for AI mobile apps
           </h1>
           
           <!-- Subheading -->
-          <p class="font-normal text-center text-gray-400 max-w-xl mx-auto mb-1 sm:mt-4 text-pretty text-base sm:text-lg sm:leading-6">
-            Track usage, enforce limits, and monetize your AI app without storing conversations.
+          <p class="font-normal text-center text-gray-400 max-w-md mx-auto mb-1 sm:mt-4 text-pretty text-base sm:text-lg sm:leading-6">
+            <!-- Track usage, enforce limits, and monetize your AI app without storing conversations. -->
+            Secure your API keys, rate limit users, track costs, and upsell upgrades, all without building a server.
           </p>
         </div>
         
@@ -224,7 +225,7 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'AI Ratelimit - Usage limits for AI apps'
+  title: 'AI Ratelimit - Instant backend for AI mobile apps'
 })
 
 type TabId = 'javascript' | 'api'

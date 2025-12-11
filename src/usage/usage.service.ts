@@ -33,6 +33,8 @@ interface CheckAndUpdateResult {
   limitResponse?: any;
   usageCounter?: UsageCounter;
   usagePercent?: { requests?: number; tokens?: number }; // For rule engine
+  promoActive?: boolean; // User has active promotional override
+  giftedCreditsUsed?: boolean; // Gifted credits were consumed
 }
 
 interface FinalizeParams {
@@ -81,6 +83,20 @@ export class UsageService {
           message: 'This identity has been disabled.',
         },
       };
+    }
+
+    // Check for active promotional override (unlimited access)
+    if (identityLimit?.unlimitedUntil && identityLimit.unlimitedUntil > new Date()) {
+      // Promo is active - allow request but still track usage
+      const periodStartStr = periodStart.toISOString().split('T')[0];
+      await this.usageRepository.query(
+        `INSERT INTO usage_counters (id, "projectId", identity, model, "session", "periodStart", "requestsUsed", "tokensUsed", "inputTokens", "outputTokens", "costUsd", "blockedRequests", "savedUsd", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, 0, 0, 0, 0, 0, NOW(), NOW())
+         ON CONFLICT ("projectId", identity, "periodStart", model, "session") 
+         DO UPDATE SET "requestsUsed" = usage_counters."requestsUsed" + $6, "tokensUsed" = usage_counters."tokensUsed" + $7, "updatedAt" = NOW()`,
+        [project.id, identity, model, session, periodStartStr, requestedRequests, requestedTokens],
+      );
+      return { allowed: true, promoActive: true };
     }
 
     // Get limits with identity-aware hierarchy (identity > tier > model > project)
@@ -176,6 +192,24 @@ export class UsageService {
     }
 
     // Step 3: UPDATE failed - limit was exceeded
+    // Check if gifted credits can cover this request
+    const giftResult = await this.identityLimitsService.consumeGiftedCredits(
+      project.id,
+      identity,
+      requestedTokens,
+      requestedRequests,
+    );
+
+    if (giftResult.consumed) {
+      // Gifted credits covered the request - track usage but allow
+      await this.usageRepository.query(
+        `UPDATE usage_counters SET "requestsUsed" = "requestsUsed" + $1, "tokensUsed" = "tokensUsed" + $2, "updatedAt" = NOW()
+         WHERE "projectId" = $3 AND identity = $4 AND model = $5 AND "session" = $6 AND "periodStart" = $7`,
+        [requestedRequests, requestedTokens, project.id, identity, model, session, periodStartStr],
+      );
+      return { allowed: true, giftedCreditsUsed: true };
+    }
+
     // Fetch current usage to include in the error message
     const currentUsage = await this.usageRepository.findOne({
       where: {
