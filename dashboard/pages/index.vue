@@ -225,7 +225,7 @@
 
 <script setup lang="ts">
 useHead({
-  title: 'AI Ratelimit - Instant backend for AI mobile apps'
+  title: 'AI Ratelimit'
 })
 
 type TabId = 'javascript' | 'api'
