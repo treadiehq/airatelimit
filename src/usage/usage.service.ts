@@ -193,6 +193,16 @@ export class UsageService {
       ],
     );
 
+    // DEBUG: Log UPDATE result
+    console.log('Limit UPDATE result:', {
+      rowsReturned: updateResult.length,
+      allowed: updateResult.length > 0,
+      currentUsage: updateResult.length > 0 ? {
+        requestsUsed: updateResult[0].requestsUsed,
+        tokensUsed: updateResult[0].tokensUsed,
+      } : 'no rows returned - limit exceeded',
+    });
+
     // If UPDATE returned a row, the request was allowed
     if (updateResult.length > 0) {
       const usage = updateResult[0] as UsageCounter;
