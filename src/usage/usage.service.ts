@@ -197,10 +197,14 @@ export class UsageService {
     console.log('Limit UPDATE result:', {
       rowsReturned: updateResult.length,
       allowed: updateResult.length > 0,
-      currentUsage: updateResult.length > 0 ? {
-        requestsUsed: updateResult[0].requestsUsed,
-        tokensUsed: updateResult[0].tokensUsed,
-      } : 'no rows returned - limit exceeded',
+      allRows: updateResult.map((r: any) => ({
+        id: r.id,
+        identity: r.identity,
+        model: r.model,
+        session: r.session,
+        requestsUsed: r.requestsUsed,
+        tokensUsed: r.tokensUsed,
+      })),
     });
 
     // If UPDATE returned a row, the request was allowed
