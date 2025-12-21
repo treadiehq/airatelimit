@@ -193,16 +193,21 @@ export class UsageService {
       ],
     );
 
-    // DEBUG: Log UPDATE result - log raw to see actual field names
+    // TypeORM raw query returns [rows, affectedCount] for PostgreSQL
+    // Extract the actual rows array
+    const rows = Array.isArray(updateResult[0]) ? updateResult[0] : updateResult;
+    
+    // DEBUG: Log UPDATE result
     console.log('Limit UPDATE result:', {
-      rowsReturned: updateResult.length,
-      allowed: updateResult.length > 0,
-      rawRows: JSON.stringify(updateResult),
+      rawLength: updateResult.length,
+      actualRowsReturned: rows.length,
+      allowed: rows.length > 0,
+      firstRow: rows[0] ? JSON.stringify(rows[0]) : 'none',
     });
 
     // If UPDATE returned a row, the request was allowed
-    if (updateResult.length > 0) {
-      const usage = updateResult[0] as UsageCounter;
+    if (rows.length > 0) {
+      const usage = rows[0] as UsageCounter;
       
       // Calculate usage percentages for rule engine
       const usagePercent = {
