@@ -316,8 +316,15 @@ export class TransparentProxyController {
       // Get period start based on project's limit period
       const periodStart = this.getPeriodStart(project.limitPeriod || 'daily');
 
-      // Estimate tokens
-      const estimatedTokens = processedBody.max_tokens || 0;
+      // Estimate tokens from input messages (for pre-check before request)
+      // This closes the race condition window where requests could slip through
+      // before actual tokens are counted after streaming
+      const estimatedInputTokens = this.estimateInputTokens(processedBody);
+      // Estimate output based on typical response ratio or max_tokens if set
+      const estimatedOutputTokens = processedBody.max_tokens 
+        ? Math.min(processedBody.max_tokens, 500)  // Cap at 500 for estimate
+        : Math.ceil(estimatedInputTokens * 0.5);   // Assume 50% of input as output
+      const estimatedTokens = estimatedInputTokens + estimatedOutputTokens;
 
       // FLOW EXECUTION: If project has a valid flow config, use flow executor
       if (this.flowExecutorService.hasValidFlow(project.flowConfig)) {
@@ -1436,6 +1443,15 @@ export class TransparentProxyController {
     }
     
     return totalChars;
+  }
+
+  /**
+   * Estimate input tokens from request body (for pre-check before request)
+   * Uses ~4 characters per token for English text
+   */
+  private estimateInputTokens(body: any): number {
+    const chars = this.estimateInputChars(body);
+    return Math.ceil(chars / 4);
   }
 
   // ====================================
