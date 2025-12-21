@@ -151,6 +151,9 @@ curl -X POST https://api.airatelimit.com/api/projects/pk_xxx/identities \
 # Disable a user
 curl -X POST .../identities -d '{"identity": "user-123", "enabled": false}'
 
+# Upgrade their limit
+PUT /identities/user-123  {"tokenLimit": 50000}
+
 # Gift tokens to a user
 curl -X POST .../identities/user-123/gift -d '{"tokens": 10000}'
 

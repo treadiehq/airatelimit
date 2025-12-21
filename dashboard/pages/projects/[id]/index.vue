@@ -229,7 +229,7 @@
           <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider">Usage by Identity (Today)</h3>
           <div class="bg-gray-500/10 border border-gray-500/10 rounded-lg">
             <!-- Guided Empty State -->
-            <div v-if="identities.length === 0" class="space-y-6">
+            <div v-if="identities.length === 0" class="space-y-6 py-6">
               <div class="text-center">
                 <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-300/10 mb-3">
                   <svg class="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
