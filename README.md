@@ -156,6 +156,9 @@ curl -X POST .../identities/user-123/gift -d '{"tokens": 10000}'
 
 # Give unlimited access until date
 curl -X POST .../identities/user-123/promo -d '{"unlimitedUntil": "2025-12-31"}'
+
+# Reset usage after payment (clears current period's usage)
+curl -X POST .../identities/user-123/reset -d '{"resetTokens": true, "resetRequests": true}'
 ```
 
 Find your secret key in Dashboard → Project Settings → API Access.
