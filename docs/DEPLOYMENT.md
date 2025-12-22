@@ -2,21 +2,18 @@
 
 ## 1. Create Project
 
-1. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub**
-2. Select your `airatelimit` repository
+1. Go to [railway.app](https://railway.app) → **New Project**
+2. You'll need to create 3 services → Database, Backend (select repo from Github) and Dashboard (select repo from Github)
 
 ## 2. Add Database
 
-1. Click **+ New** → **Database** → **PostgreSQL**
+1. Click **+ Create** → **Database** → **PostgreSQL**
 
 ## 3. Add Backend Service
 
-1. Click **+ New** → **GitHub Repo** → Select repo again
-2. **Settings:**
-   - Root Directory: *(leave empty)*
-   - Start Command: `npm run start:prod`
+1. Click **+ Create** → **GitHub Repo** → Select repo
 
-3. **Variables** → Add:
+2. **Variables** → Add:
 ```
 DATABASE_URL=${{Postgres.DATABASE_URL}}
 JWT_SECRET=<run: openssl rand -base64 32>
@@ -27,18 +24,17 @@ EMAIL_FROM=noreply@yourdomain.com
 NODE_ENV=production
 ```
 
-4. **Settings** → **Networking** → **Generate Domain**
+3. **Settings** → **Networking** → **Generate Domain**
 
 ## 4. Add Dashboard Service
 
-1. Click **+ New** → **GitHub Repo** → Select repo again  
+1. Click **+ Create** → **GitHub Repo** → Select repo again  
 2. **Settings:**
-   - Root Directory: `dashboard`
-   - Start Command: `node .output/server/index.mjs`
+   - Dockerfile Path: `Dockerfile.dashboard`
 
 3. **Variables** → Add:
 ```
-NUXT_PUBLIC_API_URL=https://<your-backend-domain>.up.railway.app
+NUXT_PUBLIC_API_URL=https://<your-backend-domain>.up.railway.app/api
 NODE_ENV=production
 ```
 
