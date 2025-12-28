@@ -20,7 +20,10 @@ RUN npm ci && npm cache clean --force
 COPY --chown=nodejs:nodejs . .
 
 # Build the NestJS app
-RUN npm run build
+RUN npm run build && ls -la dist/ && ls -la dist/src/ || true
+
+# Verify build output exists
+RUN test -f dist/main.js || (echo "ERROR: dist/main.js not found after build!" && exit 1)
 
 # Remove dev dependencies and source after build
 # Reinstall production-only dependencies
