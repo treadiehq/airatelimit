@@ -13,8 +13,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install ALL dependencies (including dev) for building
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY --chown=nodejs:nodejs . .
@@ -23,7 +23,7 @@ COPY --chown=nodejs:nodejs . .
 RUN npm run build
 
 # Remove dev dependencies and source after build
-# Note: Cannot use --ignore-scripts because bcrypt needs to compile native bindings
+# Reinstall production-only dependencies
 RUN rm -rf src/ node_modules/ \
     && npm ci --only=production \
     && npm cache clean --force
