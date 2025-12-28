@@ -63,39 +63,61 @@
                     Identities
                   </button>
                   <button
-                    @click="handleSecurityTabClick"
-                    :class="configTab === 'security' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
-                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
-                  >
-                    Security
-                  </button>
-                  <button
-                    @click="configTab = 'privacy'"
-                    :class="configTab === 'privacy' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
-                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
-                  >
-                    Privacy
-                  </button>
-                  <button
-                    @click="configTab = 'routing'"
-                    :class="configTab === 'routing' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
-                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
-                  >
-                    Routing
-                  </button>
-                  <button
-                    @click="configTab = 'prompts'"
-                    :class="configTab === 'prompts' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
-                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
-                  >
-                    Prompts
-                  </button>
-                  <button
                     @click="configTab = 'api'"
                     :class="configTab === 'api' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
                     class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm"
                   >
                     API Access
+                  </button>
+                  <button
+                    @click="hasSecurity ? handleSecurityTabClick() : configTab = 'security'"
+                    :class="configTab === 'security' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
+                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm inline-flex items-center gap-1.5"
+                  >
+                    Security
+                    <svg v-if="!hasSecurity" class="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                  <button
+                    @click="configTab = 'privacy'"
+                    :class="configTab === 'privacy' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
+                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm inline-flex items-center gap-1.5"
+                  >
+                    Privacy
+                    <svg v-if="!hasPrivacy" class="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                  <button
+                    @click="configTab = 'routing'"
+                    :class="configTab === 'routing' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
+                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm inline-flex items-center gap-1.5"
+                  >
+                    Routing
+                    <svg v-if="!hasRouting" class="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                  <button
+                    @click="configTab = 'prompts'"
+                    :class="configTab === 'prompts' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
+                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm inline-flex items-center gap-1.5"
+                  >
+                    Prompts
+                    <svg v-if="!hasPrompts" class="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                  <button
+                    @click="configTab = 'public'"
+                    :class="configTab === 'public' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
+                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm inline-flex items-center gap-1.5"
+                  >
+                    Public Endpoints
+                    <svg v-if="!hasPublicEndpoints" class="w-3 h-3 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                    </svg>
                   </button>
                 </nav>
               </div>
@@ -131,6 +153,7 @@
               />
 
               <SecurityTab
+                v-if="hasSecurity"
                 v-show="configTab === 'security'"
                 ref="securityTabRef"
                 :project-id="project?.id"
@@ -138,18 +161,41 @@
                 :updating="updating"
                 @update="handleUpdate"
               />
+              <div v-else-if="configTab === 'security'" class="px-6 py-8">
+                <UpgradePrompt
+                  feature="securityConfig"
+                  title="Security"
+                  description="Enable content moderation, prompt injection detection, and other security features to protect your AI applications."
+                />
+              </div>
 
               <PrivacyTab
+                v-if="hasPrivacy"
                 v-show="configTab === 'privacy'"
                 :edit-form="editForm"
                 :updating="updating"
                 @update="handleUpdate"
               />
+              <div v-else-if="configTab === 'privacy'" class="px-6 py-8">
+                <UpgradePrompt
+                  feature="privacyConfig"
+                  title="Privacy"
+                  description="Enable PII anonymization and session-based rate limiting to protect your users' data privacy."
+                />
+              </div>
 
               <PromptsTab
+                v-if="hasPrompts"
                 v-show="configTab === 'prompts'"
                 :project-key="project?.projectKey"
               />
+              <div v-else-if="configTab === 'prompts'" class="px-6 py-8">
+                <UpgradePrompt
+                  feature="promptsConfig"
+                  title="Prompts"
+                  description="Manage system prompts server-side. Version control, A/B testing, and update prompts without redeploying your application."
+                />
+              </div>
 
               <ApiAccessTab
                 v-show="configTab === 'api'"
@@ -165,12 +211,37 @@
                 @update="handleProviderKeysUpdate"
               />
 
-              <div v-show="configTab === 'routing'" class="px-6 pb-6">
+              <div v-if="hasRouting" v-show="configTab === 'routing'" class="px-6 pb-6">
                 <RoutingConfig
                   :project-id="project?.id"
                   :routing-enabled="project?.routingEnabled"
                   :routing-config="project?.routingConfig"
                   @saved="handleRoutingSaved"
+                />
+              </div>
+              <div v-else-if="configTab === 'routing'" class="px-6 py-8">
+                <UpgradePrompt
+                  feature="smartRouting"
+                  title="Smart Routing"
+                  description="Route requests intelligently between AI providers based on cost, latency, or custom rules. Add fallbacks and load balancing."
+                />
+              </div>
+
+              <PublicEndpointsTab
+                v-if="hasPublicEndpoints"
+                v-show="configTab === 'public'"
+                :project-id="project?.id"
+                :project-key="project?.projectKey"
+                :edit-form="editForm"
+                :updating="updating"
+                :has-stored-provider-keys="hasProviderKeys"
+                @update="handleUpdate"
+              />
+              <div v-else-if="configTab === 'public'" class="px-6 py-8">
+                <UpgradePrompt
+                  feature="publicEndpoints"
+                  title="Public Endpoints"
+                  description="Call the AI API directly from your frontend without exposing API keys. Requests are validated against allowed origins for security."
                 />
               </div>
             </div>
@@ -191,6 +262,7 @@ import PromptsTab from './settings/PromptsTab.vue'
 import ApiAccessTab from './settings/ApiAccessTab.vue'
 import ProviderKeysTab from './settings/ProviderKeysTab.vue'
 import RoutingConfig from './settings/RoutingConfig.vue'
+import PublicEndpointsTab from './settings/PublicEndpointsTab.vue'
 
 const props = defineProps<{
   isOpen: boolean
@@ -200,6 +272,14 @@ const props = defineProps<{
   updateError: string
   updateSuccess: boolean
 }>()
+
+// Plan feature checks
+const { hasFeature, loaded: planLoaded } = usePlan()
+const hasPrivacy = computed(() => hasFeature('privacyConfig'))
+const hasSecurity = computed(() => hasFeature('securityConfig'))
+const hasRouting = computed(() => hasFeature('smartRouting'))
+const hasPrompts = computed(() => hasFeature('promptsConfig'))
+const hasPublicEndpoints = computed(() => hasFeature('publicEndpoints'))
 
 // Track changes for diff view
 const changes = computed(() => {

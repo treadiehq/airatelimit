@@ -3,10 +3,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsageCounter } from './usage.entity';
 import { UsageService } from './usage.service';
 import { IdentityLimitsModule } from '../identity-limits/identity-limits.module';
+import { Organization } from '../organizations/organization.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UsageCounter]),
+    TypeOrmModule.forFeature([UsageCounter, Organization]),
     forwardRef(() => IdentityLimitsModule),
   ],
   providers: [UsageService],

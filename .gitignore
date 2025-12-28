@@ -20,10 +20,24 @@ logs/
 *.log
 npm-debug.log*
 
-# Environment variables
+# Environment variables - NEVER commit these!
 .env
+.env.*
+!.env.example
+!.env*.example
+*.env
 .env.local
 .env.*.local
+dashboard/.env
+dashboard/.env.*
+# Internal docs - not for public repo
+docs/ENTERPRISE.md
+docs/DEPLOYMENT-INT.md
+env.internal.example
+
+# License private key - NEVER commit this!
+license-private.pem
+*.pem
 
 # IDE
 .vscode/

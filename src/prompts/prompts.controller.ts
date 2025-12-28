@@ -13,6 +13,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { ProjectAuthGuard } from '../common/guards/project-auth.guard';
+import { PlanGuard, RequirePlanFeature } from '../common/guards/plan.guard';
 import { PromptsService, CreatePromptDto, UpdatePromptDto } from './prompts.service';
 import { ProjectsService } from '../projects/projects.service';
 
@@ -21,6 +22,7 @@ import { ProjectsService } from '../projects/projects.service';
  *
  * Manage system prompts stored server-side.
  * Supports JWT and secret key authentication.
+ * Requires Pro plan or higher.
  *
  * Example:
  *   curl -X POST /api/projects/pk_xxx/prompts \
@@ -28,7 +30,8 @@ import { ProjectsService } from '../projects/projects.service';
  *     -d '{"name": "assistant-v1", "content": "You are a helpful assistant..."}'
  */
 @Controller('projects/:projectKey/prompts')
-@UseGuards(ProjectAuthGuard)
+@UseGuards(ProjectAuthGuard, PlanGuard)
+@RequirePlanFeature('promptsConfig')
 export class PromptsController {
   constructor(
     private readonly promptsService: PromptsService,

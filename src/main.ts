@@ -4,11 +4,50 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { json, urlencoded } from 'express';
 import { ProxyRateLimitMiddleware } from './common/proxy-rate-limit.middleware';
+import { getEnterpriseLicense } from './config/license';
+import { getDeploymentMode } from './config/features';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
+  
+  // ====================================
+  // License validation for enterprise mode
+  // ====================================
+  const deploymentMode = getDeploymentMode();
+  if (deploymentMode === 'enterprise') {
+    const license = getEnterpriseLicense();
+    if (!license || !license.isValid) {
+      console.error('');
+      console.error('═'.repeat(60));
+      console.error('❌ ENTERPRISE LICENSE ERROR');
+      console.error('═'.repeat(60));
+      if (!license) {
+        console.error('No license key configured.');
+        console.error('Set ENTERPRISE_LICENSE_KEY in your .env file.');
+      } else if (license.isExpired) {
+        console.error(`License expired on ${license.expiresAt}`);
+        console.error('Please contact sales to renew your license.');
+      } else {
+        console.error(license.error || 'Invalid license');
+      }
+      console.error('═'.repeat(60));
+      console.error('');
+      // In production, you might want to exit here:
+      // process.exit(1);
+    } else {
+      console.log('');
+      console.log('═'.repeat(60));
+      console.log('✅ ENTERPRISE LICENSE VALID');
+      console.log('═'.repeat(60));
+      console.log(`   Organization: ${license.org}`);
+      console.log(`   Seats:        ${license.seats}`);
+      console.log(`   Expires:      ${license.expiresAt} (${license.daysRemaining} days)`);
+      console.log('═'.repeat(60));
+      console.log('');
+    }
+  }
 
   // ====================================
   // SECURITY: Request body size limits

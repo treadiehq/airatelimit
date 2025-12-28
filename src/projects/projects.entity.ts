@@ -287,6 +287,21 @@ export class Project {
     budgetAction?: 'alert' | 'block';
   };
 
+  // ====================================
+  // PUBLIC ENDPOINTS CONFIGURATION
+  // ====================================
+  // Allows frontend-only usage without exposing API keys
+  // Requests are validated against allowed origins
+
+  // Enable public mode (allows requests from browser without secret key)
+  @Column({ default: false })
+  publicModeEnabled: boolean;
+
+  // Allowed origins for public mode (e.g., ["https://myapp.com", "https://staging.myapp.com"])
+  // Requests are validated against Origin/Referer header
+  @Column({ type: 'jsonb', nullable: true })
+  allowedOrigins: string[];
+
   @CreateDateColumn()
   createdAt: Date;
 

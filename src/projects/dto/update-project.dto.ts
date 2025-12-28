@@ -198,4 +198,16 @@ export class UpdateProjectDto {
     alertEmail?: string;
     budgetAction?: 'alert' | 'block';
   };
+
+  // Public endpoints configuration
+  // Allows frontend-only usage without exposing API keys
+  @IsOptional()
+  @IsBoolean()
+  publicModeEnabled?: boolean;
+
+  // Allowed origins for public mode (e.g., ["https://myapp.com"])
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  allowedOrigins?: string[];
 }

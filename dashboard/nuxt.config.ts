@@ -14,6 +14,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || 'http://localhost:3000/api',
+      deploymentMode: process.env.NUXT_PUBLIC_DEPLOYMENT_MODE || 'self-hosted',
+      stripePublishableKey: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
+      enterpriseUrl: process.env.NUXT_PUBLIC_ENTERPRISE_URL || 'mailto:enterprise@airatelimit.com?subject=Enterprise%20Inquiry',
+      cloudSignupUrl: process.env.NUXT_PUBLIC_CLOUD_SIGNUP_URL || 'https://airatelimit.com/signup',
     },
   },
 

@@ -11,6 +11,7 @@ import { ProxyModule } from './proxy/proxy.module';
 import { IdentityLimitsModule } from './identity-limits/identity-limits.module';
 import { HealthModule } from './health/health.module';
 import { PromptsModule } from './prompts/prompts.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
@@ -26,6 +27,8 @@ import { PromptsModule } from './prompts/prompts.module';
     IdentityLimitsModule,
     HealthModule,
     PromptsModule,
+    // Conditionally loaded based on DEPLOYMENT_MODE
+    BillingModule.register(),
   ],
 })
 export class AppModule {}

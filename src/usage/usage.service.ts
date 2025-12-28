@@ -3,7 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsageCounter } from './usage.entity';
 import { Project } from '../projects/projects.entity';
+import { Organization } from '../organizations/organization.entity';
 import { IdentityLimitsService } from '../identity-limits/identity-limits.service';
+import { isCloudMode } from '../config/features';
 
 const DEFAULT_LIMIT_RESPONSE = {
   error: 'limit_exceeded',
@@ -51,6 +53,8 @@ export class UsageService {
   constructor(
     @InjectRepository(UsageCounter)
     private usageRepository: Repository<UsageCounter>,
+    @InjectRepository(Organization)
+    private organizationRepository: Repository<Organization>,
     @Inject(forwardRef(() => IdentityLimitsService))
     private identityLimitsService: IdentityLimitsService,
   ) {}
@@ -569,6 +573,49 @@ export class UsageService {
         session,
         periodStartStr,
       ],
+    );
+
+    // Increment organization-level usage for plan limits (cloud mode only)
+    if (isCloudMode() && project.organizationId) {
+      await this.incrementOrganizationUsage(
+        project.organizationId,
+        1, // 1 request
+        inputTokens + outputTokens,
+      );
+    }
+  }
+
+  /**
+   * Increment organization's monthly usage counters (for plan limits)
+   */
+  private async incrementOrganizationUsage(
+    organizationId: string,
+    requests: number,
+    tokens: number,
+  ): Promise<void> {
+    // Reset usage if new billing period
+    const currentPeriodStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    
+    await this.organizationRepository.query(
+      `UPDATE organizations 
+       SET 
+         "monthlyRequestCount" = CASE 
+           WHEN "usagePeriodStart" IS NULL OR "usagePeriodStart" < $2 
+           THEN $3 
+           ELSE "monthlyRequestCount" + $3 
+         END,
+         "monthlyTokenCount" = CASE 
+           WHEN "usagePeriodStart" IS NULL OR "usagePeriodStart" < $2 
+           THEN $4 
+           ELSE "monthlyTokenCount" + $4 
+         END,
+         "usagePeriodStart" = CASE 
+           WHEN "usagePeriodStart" IS NULL OR "usagePeriodStart" < $2 
+           THEN $2 
+           ELSE "usagePeriodStart" 
+         END
+       WHERE id = $1`,
+      [organizationId, currentPeriodStart, requests, tokens],
     );
   }
 

@@ -412,7 +412,7 @@ curl https://api.airatelimit.com/v1/chat/completions \
 
 <script setup lang="ts">
 definePageMeta({
-  middleware: 'auth'
+  middleware: ['auth', 'trial']
 })
 
 const route = useRoute()
@@ -568,6 +568,9 @@ const editForm = ref({
   sessionTokenLimit: null as number | null,
   // Provider keys for stored key mode
   providerKeys: null as Record<string, { apiKey: string; baseUrl?: string }> | null,
+  // Public endpoints configuration
+  publicModeEnabled: false,
+  allowedOrigins: [] as string[],
 })
 
 const updating = ref(false)
@@ -646,6 +649,10 @@ const loadProject = async () => {
     
     // Load upgrade URL
     editForm.value.upgradeUrl = project.value.upgradeUrl || ''
+    
+    // Load public endpoints configuration
+    editForm.value.publicModeEnabled = project.value.publicModeEnabled || false
+    editForm.value.allowedOrigins = project.value.allowedOrigins || []
     
     // Extract limit message from JSON
     if (project.value.limitExceededResponse) {
@@ -795,6 +802,10 @@ const handleUpdate = async () => {
     if (editForm.value.providerKeys) {
       payload.providerKeys = editForm.value.providerKeys
     }
+
+    // Public endpoints configuration
+    payload.publicModeEnabled = editForm.value.publicModeEnabled
+    payload.allowedOrigins = editForm.value.allowedOrigins?.filter((o: string) => o.trim()) || []
 
     await api(`/projects/${projectId}`, {
       method: 'PATCH',

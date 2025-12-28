@@ -92,72 +92,95 @@
 
           <!-- Snippet Tab Content -->
           <div v-show="mainTab === 'snippet'">
-            <!-- <p class="text-sm text-gray-500 mb-4 text-center">Integration is just 3 lines of code</p> -->
-            <div class="bg-gray-500/10 inner-container mb-[-1px] ml-[-1px] relative border border-gray-500/10 font-mono">
-              <div class="divide-y divide-gray-500/15">
-                <div class="border-b-0 border-t-0 border-l-0 border-r-0 border-gray-500/10">
-                  <!-- Terminal Header -->
-                  <div class="border-b border-gray-500/10 flex items-center space-x-3 text-xs">
-                    <button 
-                      v-for="tab in tabs" 
-                      :key="tab.id"
-                      @click="activeTab = tab.id"
-                      :class="[
-                        'px-3 py-3 transition-colors',
-                        activeTab === tab.id 
-                          ? 'border-b-2 border-blue-300 text-white' 
-                          : 'text-gray-500 hover:text-gray-300'
-                      ]"
-                    >
-                      {{ tab.label }}
-                    </button>
+            <div class="bg-gray-900/80 inner-container mb-[-1px] ml-[-1px] relative border border-gray-500/20 rounded-lg overflow-hidden font-mono shadow-2xl shadow-black/50">
+              <!-- Window Chrome Header -->
+              <div class="flex items-center justify-between px-4 py-3 bg-gray-800/50 border-b border-gray-500/10">
+                <div class="flex items-center gap-2">
+                  <!-- Traffic lights -->
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-3 h-3 rounded-full bg-red-400/80 hover:bg-red-400 transition-colors cursor-pointer"></span>
+                    <span class="w-3 h-3 rounded-full bg-yellow-400/80 hover:bg-yellow-400 transition-colors cursor-pointer"></span>
+                    <span class="w-3 h-3 rounded-full bg-green-400/80 hover:bg-green-400 transition-colors cursor-pointer"></span>
                   </div>
-                  
-                  <!-- Code Content -->
-                  <div class="p-4 px-4 text-left">
-                    <!-- JavaScript Tab -->
-                    <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-purple-300">import</span> OpenAI <span class="text-purple-300">from</span> <span class="text-green-300">'openai'</span>
+                  <!-- File name -->
+                  <span class="text-xs text-gray-500 ml-3">{{ activeTab === 'javascript' ? 'app.ts' : 'terminal' }}</span>
+                </div>
+                
+                <!-- Language tabs -->
+                <div class="flex items-center gap-1 bg-gray-500/10 rounded-lg p-0.5">
+                  <button 
+                    v-for="tab in tabs" 
+                    :key="tab.id"
+                    @click="activeTab = tab.id"
+                    :class="[
+                      'px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200',
+                      activeTab === tab.id 
+                        ? 'bg-gray-700/50 text-white shadow-sm' 
+                        : 'text-gray-500 hover:text-gray-300'
+                    ]"
+                  >
+                    {{ tab.label }}
+                  </button>
+                </div>
+                
+                <!-- Copy button -->
+                <button 
+                  @click="copyCode"
+                  class="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md transition-all duration-200"
+                  :class="copied ? 'bg-green-400/10 text-green-400' : 'text-gray-500 hover:text-white hover:bg-gray-500/10'"
+                >
+                  <svg v-if="!copied" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>{{ copied ? 'Copied!' : 'Copy' }}</span>
+                </button>
+              </div>
+              
+              <!-- Code Content with Line Numbers -->
+              <div class="flex text-left">
+                <!-- Line numbers -->
+                <div class="select-none py-4 pl-4 pr-3 text-right border-r border-gray-500/10 bg-gray-900/30">
+                  <div v-for="n in (activeTab === 'javascript' ? 14 : 8)" :key="n" class="text-xs text-gray-600 leading-relaxed font-mono">
+                    {{ n }}
+                  </div>
+                </div>
+                
+                <!-- Code -->
+                <div class="flex-1 p-4 overflow-x-auto">
+                  <!-- JavaScript Tab -->
+                  <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-purple-400">import</span> <span class="text-cyan-300">OpenAI</span> <span class="text-purple-400">from</span> <span class="text-amber-300">'openai'</span>
 
-<span class="text-purple-300">const</span> openai = <span class="text-purple-300">new</span> <span class="text-blue-300">OpenAI</span>({
-  apiKey: <span class="text-green-300">'sk-your-key'</span>, <span class="text-gray-500">// Optional</span>
-  baseURL: <span class="text-red-400">'https://api.airatelimit.com/v1'</span>,
-  defaultHeaders: {
-    <span class="text-red-400">'x-project-key'</span>: <span class="text-red-400">'pk_xxx'</span>,
-    <span class="text-red-400">'x-identity'</span>: <span class="text-red-400">'user-123'</span>,
+<span class="text-purple-400">const</span> <span class="text-blue-300">openai</span> = <span class="text-purple-400">new</span> <span class="text-cyan-300">OpenAI</span>({
+  <span class="text-blue-300">apiKey</span>: <span class="text-amber-300">'sk-your-key'</span>, <span class="text-gray-500 italic">// Optional</span>
+  <span class="text-blue-300">baseURL</span>: <span class="text-amber-300">'https://api.airatelimit.com/v1'</span>,
+  <span class="text-blue-300">defaultHeaders</span>: {
+    <span class="text-amber-300">'x-project-key'</span>: <span class="text-amber-300">'pk_xxx'</span>,
+    <span class="text-amber-300">'x-identity'</span>: <span class="text-amber-300">'user-123'</span>,
   },
 })
 
-<span class="text-purple-300">const</span> response = <span class="text-purple-300">await</span> openai.chat.completions.<span class="text-blue-300">create</span>({
-  model: <span class="text-green-300">'gpt-4o'</span>,
-  messages: [{ role: <span class="text-green-300">'user'</span>, content: <span class="text-green-300">'Hello!'</span> }]
+<span class="text-purple-400">const</span> <span class="text-blue-300">response</span> = <span class="text-purple-400">await</span> <span class="text-blue-300">openai</span>.<span class="text-cyan-300">chat</span>.<span class="text-cyan-300">completions</span>.<span class="text-yellow-300">create</span>({
+  <span class="text-blue-300">model</span>: <span class="text-amber-300">'gpt-4o'</span>,
+  <span class="text-blue-300">messages</span>: [{ <span class="text-blue-300">role</span>: <span class="text-amber-300">'user'</span>, <span class="text-blue-300">content</span>: <span class="text-amber-300">'Hello!'</span> }]
 })</code></pre>
 
-                    <!-- API Tab -->
-                    <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500">$</span> curl -X POST <span class="text-blue-300">https://api.airatelimit.com/v1/chat/completions</span> \
-  -H <span class="text-green-300">"Authorization: Bearer sk-your-key"</span> \ <span class="text-gray-500">// Optional</span>
-  -H <span class="text-blue-300">"x-project-key: pk_xxx"</span> \
-  -H <span class="text-blue-300">"x-identity: user-123"</span> \
-  -H <span class="text-green-300">"Content-Type: application/json"</span> \
-  -d <span class="text-green-300">'{
+                  <!-- API Tab -->
+                  <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-green-400">$</span> curl -X POST <span class="text-cyan-300">https://api.airatelimit.com/v1/chat/completions</span> \
+  -H <span class="text-amber-300">"Authorization: Bearer sk-your-key"</span> \ <span class="text-gray-500 italic"># Optional</span>
+  -H <span class="text-amber-300">"x-project-key: pk_xxx"</span> \
+  -H <span class="text-amber-300">"x-identity: user-123"</span> \
+  -H <span class="text-amber-300">"Content-Type: application/json"</span> \
+  -d <span class="text-amber-300">'{
     "model": "gpt-4o",
     "messages": [{"role": "user", "content": "Hello!"}]
   }'</span></code></pre>
-                    
-                    <button 
-                      @click="copyCode"
-                      class="absolute top-14 right-6 p-2 text-gray-500 hover:text-white transition cursor-pointer"
-                      :class="{ 'text-green-300': copied }"
-                    >
-                      <svg v-if="!copied" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                      <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </button>
-                  </div>
                 </div>
               </div>
+              
+              <!-- Corner accents -->
               <span class="main-section bottom-l absolute w-[1px] h-[1px] bottom-[-1px] left-[-1px]"></span>
               <span class="main-section bottom-l absolute w-[1px] h-[1px] bottom-[-1px] right-[-1px]"></span>
               <span class="main-section bottom-l absolute w-[1px] h-[1px] top-[-1px] right-[-1px]"></span>

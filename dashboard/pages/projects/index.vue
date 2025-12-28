@@ -9,11 +9,12 @@
         <div>
           <h2 class="text-xl font-bold text-white">Projects</h2>
           <p class="text-sm text-gray-400 mt-1">
-            {{ projects.length }} {{ projects.length === 1 ? 'project' : 'projects' }}
+            {{ projects.length }}<span v-if="limits.maxProjects !== Infinity">/{{ limits.maxProjects }}</span> {{ projects.length === 1 ? 'project' : 'projects' }}
+            <span v-if="!canCreateProject" class="text-amber-400 ml-2">• Limit reached</span>
           </p>
         </div>
         <button
-          @click="showModal = true"
+          @click="handleNewProject"
           class="px-3 py-1.5 bg-blue-300 text-black text-sm font-medium rounded-lg hover:bg-blue-400 transition-colors inline-flex items-center space-x-2"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -49,7 +50,7 @@
           <h3 class="text-lg font-medium text-white mb-2">No projects yet</h3>
           <p class="text-gray-400 text-sm mb-6 max-w-sm mx-auto">Create your first project to start managing your AI API rate limits and usage tracking.</p>
           <button
-            @click="showModal = true"
+            @click="handleNewProject"
             class="px-4 py-2 bg-blue-300 text-black text-sm font-medium rounded-lg hover:bg-blue-400 inline-flex items-center space-x-2 transition-colors"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -243,7 +244,7 @@
 
 <script setup lang="ts">
 definePageMeta({
-  middleware: 'auth'
+  middleware: ['auth', 'trial']
 })
 
 useHead({
@@ -252,12 +253,22 @@ useHead({
 
 const api = useApi()
 const { success, error: showError } = useToast()
+const { canCreateProject, projectsRemaining, usage, limits, loadPlan } = usePlan()
 
 const projects = ref<any[]>([])
 const projectUsage = ref<Record<string, any>>({})
 const loading = ref(true)
 const error = ref('')
 const showModal = ref(false)
+
+// Check if user can create a new project
+const handleNewProject = () => {
+  if (!canCreateProject.value) {
+    showError(`You've reached the limit of ${limits.value.maxProjects} projects. Upgrade your plan to create more.`)
+    return
+  }
+  showModal.value = true
+}
 const showDeleteConfirm = ref(false)
 const projectToDelete = ref<string | null>(null)
 
@@ -300,6 +311,9 @@ const loadProjects = async () => {
 const handleProjectCreated = async (projectId: string) => {
   showModal.value = false
   success('Project created! Configure it now.')
+  
+  // Reload plan limits to update usage
+  loadPlan()
   
   // Redirect to project settings page
   navigateTo(`/projects/${projectId}`)

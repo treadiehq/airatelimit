@@ -6,6 +6,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { CreateUserProjectDto } from './dto/create-user-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CryptoService } from '../common/crypto.service';
+import { PlanService } from '../common/services/plan.service';
 import { randomBytes } from 'crypto';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class ProjectsService {
     @InjectRepository(Project)
     private projectsRepository: Repository<Project>,
     private cryptoService: CryptoService,
+    private planService: PlanService,
   ) {}
 
   // Admin methods (legacy compatibility)
@@ -45,6 +47,9 @@ export class ProjectsService {
     organizationId: string,
     dto: CreateUserProjectDto,
   ): Promise<Project & { secretKeyPlain?: string }> {
+    // Enforce project limit based on plan
+    await this.planService.enforceProjectLimit(organizationId);
+
     // TRANSPARENT PROXY MODE: Always generate project key on creation
     // API keys are now passed per-request, not stored
     const projectKey = this.generateProjectKey();

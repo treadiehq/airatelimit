@@ -9,6 +9,7 @@ import {
   HttpStatus,
   HttpCode,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -24,6 +25,9 @@ import { AnonymizationLog } from '../anonymization/anonymization-log.entity';
 import { PricingService } from '../pricing/pricing.service';
 import { validateProxyHeaders } from './dto/proxy-headers.dto';
 import { PromptsService } from '../prompts/prompts.service';
+import { UsageLimitService } from '../common/services/usage-limit.service';
+import { isCloudMode } from '../config/features';
+import { LicenseGuard } from '../common/guards/license.guard';
 
 // ====================================
 // SECURITY CONSTANTS
@@ -48,6 +52,7 @@ const STREAMING_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes max streaming
  * - Your Authorization header with your API key is passed through
  */
 @Controller('v1')
+@UseGuards(LicenseGuard)  // Blocks all requests if enterprise license is expired
 export class TransparentProxyController {
   constructor(
     private readonly projectsService: ProjectsService,
@@ -58,6 +63,7 @@ export class TransparentProxyController {
     private readonly pricingService: PricingService,
     private readonly flowExecutorService: FlowExecutorService,
     private readonly promptsService: PromptsService,
+    private readonly usageLimitService: UsageLimitService,
     @InjectRepository(SecurityEvent)
     private readonly securityEventRepository: Repository<SecurityEvent>,
     @InjectRepository(AnonymizationLog)
@@ -76,6 +82,8 @@ export class TransparentProxyController {
     @Headers('x-identity') identity: string,
     @Headers('x-tier') tier: string,
     @Headers('x-session') session: string,
+    @Headers('origin') origin: string,
+    @Headers('referer') referer: string,
     @Body() body: any,
     @Res() res: Response,
   ) {
@@ -135,6 +143,65 @@ export class TransparentProxyController {
     try {
       // Get project configuration
       const project = await this.projectsService.findByProjectKey(projectKey);
+
+      // ====================================
+      // PUBLIC MODE: Origin validation for frontend-safe endpoints
+      // ====================================
+      if (project.publicModeEnabled) {
+        // Validate origin if allowedOrigins is configured
+        if (project.allowedOrigins && project.allowedOrigins.length > 0) {
+          const requestOrigin = origin || this.extractOriginFromReferer(referer);
+          if (!requestOrigin) {
+            throw new UnauthorizedException({
+              error: 'origin_required',
+              message: 'Public mode requires Origin or Referer header for security. This endpoint is configured for browser-based access only.',
+            });
+          }
+          
+          if (!this.isOriginAllowed(requestOrigin, project.allowedOrigins)) {
+            console.warn('Public mode: Origin rejected', {
+              projectId: project.id,
+              requestOrigin,
+              allowedOrigins: project.allowedOrigins,
+            });
+            throw new UnauthorizedException({
+              error: 'origin_not_allowed',
+              message: `Origin "${requestOrigin}" is not allowed. Configure allowed origins in the dashboard.`,
+            });
+          }
+          
+          console.log('Public mode: Origin validated', {
+            projectId: project.id,
+            origin: requestOrigin,
+          });
+        }
+      }
+
+      // ====================================
+      // PLAN LIMIT CHECK (cloud mode only)
+      // Block if organization has exceeded monthly request limit
+      // ====================================
+      if (isCloudMode() && project.organizationId) {
+        const usageCheck = await this.usageLimitService.checkRequestLimit(project.organizationId);
+        if (!usageCheck.allowed) {
+          throw new HttpException(
+            {
+              error: {
+                message: usageCheck.reason || 'Monthly request limit exceeded',
+                type: 'plan_limit_exceeded',
+                code: 'rate_limit_exceeded',
+                param: null,
+              },
+              usage: {
+                current: usageCheck.currentUsage,
+                limit: usageCheck.limit,
+                resets_at: usageCheck.resetAt.toISOString(),
+              },
+            },
+            HttpStatus.TOO_MANY_REQUESTS,
+          );
+        }
+      }
 
       // ====================================
       // SYSTEM PROMPT INJECTION
@@ -2010,5 +2077,58 @@ export class TransparentProxyController {
       'content_filter': 'content_filter',
     };
     return reason ? (mapping[reason] || 'end_turn') : 'end_turn';
+  }
+
+  // ====================================
+  // PUBLIC ENDPOINTS: Origin Validation
+  // ====================================
+
+  /**
+   * Extract origin from Referer header as fallback
+   * Some browsers may send Referer but not Origin (e.g., same-origin requests)
+   */
+  private extractOriginFromReferer(referer: string | undefined): string | null {
+    if (!referer) return null;
+    try {
+      const url = new URL(referer);
+      return `${url.protocol}//${url.host}`;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Check if request origin matches allowed origins
+   * Supports exact matches and wildcard subdomains (*.example.com)
+   */
+  private isOriginAllowed(requestOrigin: string, allowedOrigins: string[]): boolean {
+    // Normalize request origin (lowercase, no trailing slash)
+    const normalizedRequest = requestOrigin.toLowerCase().replace(/\/$/, '');
+    
+    for (const allowed of allowedOrigins) {
+      const normalizedAllowed = allowed.toLowerCase().replace(/\/$/, '');
+      
+      // Exact match
+      if (normalizedRequest === normalizedAllowed) {
+        return true;
+      }
+      
+      // Wildcard subdomain match (e.g., *.example.com)
+      if (normalizedAllowed.startsWith('*.')) {
+        const baseDomain = normalizedAllowed.slice(2); // Remove '*.'
+        try {
+          const requestUrl = new URL(normalizedRequest);
+          const host = requestUrl.host;
+          // Match exact base domain or any subdomain
+          if (host === baseDomain || host.endsWith('.' + baseDomain)) {
+            return true;
+          }
+        } catch {
+          // Invalid URL, skip
+        }
+      }
+    }
+    
+    return false;
   }
 }

@@ -52,6 +52,8 @@ Done. Railway auto-deploys on every `git push`.
 
 ## Environment Variables
 
+### Required
+
 | Variable | How to Generate |
 |----------|-----------------|
 | `JWT_SECRET` | `openssl rand -base64 32` |

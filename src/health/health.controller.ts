@@ -1,6 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { getFeatureFlags, getDeploymentMode } from '../config/features';
+import { getEnterpriseLicense } from '../config/license';
 
 /**
  * Health check endpoint for container orchestration
@@ -49,6 +51,56 @@ export class HealthController {
     } catch (error) {
       return { status: 'not_ready', timestamp: new Date().toISOString() };
     }
+  }
+
+  /**
+   * Return enabled features based on deployment mode
+   * Useful for dashboard to discover what's available
+   */
+  @Get('features')
+  getFeatures() {
+    return {
+      deploymentMode: getDeploymentMode(),
+      features: getFeatureFlags(),
+    };
+  }
+
+  /**
+   * Return enterprise license status
+   * Only relevant in enterprise deployment mode
+   */
+  @Get('license')
+  getLicenseStatus() {
+    const mode = getDeploymentMode();
+    
+    if (mode !== 'enterprise') {
+      return {
+        mode,
+        message: 'License only applies to enterprise deployment mode',
+      };
+    }
+
+    const license = getEnterpriseLicense();
+    
+    if (!license) {
+      return {
+        mode,
+        valid: false,
+        error: 'No license key configured',
+      };
+    }
+
+    return {
+      mode,
+      valid: license.isValid,
+      org: license.org,
+      seats: license.seats,
+      expiresAt: license.expiresAt,
+      daysRemaining: license.daysRemaining,
+      isExpired: license.isExpired,
+      features: license.features,
+      error: license.error,
+    };
   }
 }
 

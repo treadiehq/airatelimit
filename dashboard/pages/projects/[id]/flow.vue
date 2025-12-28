@@ -1,5 +1,29 @@
 <template>
   <div class="min-h-screen h-screen bg-black flex flex-col">
+    <!-- Upgrade Required for Basic Plan -->
+    <div v-if="planLoaded && !hasFlowDesigner" class="flex-1 flex flex-col items-center justify-center p-8">
+      <div class="max-w-lg">
+        <UpgradePrompt
+          feature="flowDesigner"
+          title="Flow Designer"
+          description="Build visual AI workflows with our drag-and-drop Flow Designer."
+        />
+        <div class="mt-4 text-center">
+          <NuxtLink 
+            :to="`/projects/${projectId}`"
+            class="text-xs text-gray-400 hover:text-white transition-colors inline-flex items-center gap-1"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to project
+          </NuxtLink>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flow Designer Content -->
+    <template v-else>
     <!-- Header -->
     <div class="bg-gray-500/10 border-b border-gray-500/10 p-3 flex justify-between items-center">
       <div class="flex items-center gap-4">
@@ -67,6 +91,7 @@
         </template>
       </ClientOnly>
     </div>
+    </template>
   </div>
 </template>
 
@@ -76,8 +101,12 @@ import { useRoute } from 'vue-router'
 import { useApi } from '~/composables/useApi'
 import { useToast } from '~/composables/useToast'
 
+// Plan access check
+const { hasFeature, loaded: planLoaded } = usePlan()
+const hasFlowDesigner = computed(() => hasFeature('flowDesigner'))
+
 definePageMeta({
-  middleware: ['auth']
+  middleware: ['auth', 'trial']
 })
 
 const route = useRoute()
