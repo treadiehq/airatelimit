@@ -20,10 +20,10 @@ RUN npm ci && npm cache clean --force
 COPY --chown=nodejs:nodejs . .
 
 # Build the NestJS app
-RUN npm run build && ls -la dist/ && ls -la dist/src/ || true
+RUN npm run build
 
-# Verify build output exists
-RUN test -f dist/main.js || (echo "ERROR: dist/main.js not found after build!" && exit 1)
+# Verify build output exists (NestJS outputs to dist/src/)
+RUN test -f dist/src/main.js || (echo "ERROR: dist/src/main.js not found after build!" && exit 1)
 
 # Remove dev dependencies and source after build
 # Reinstall production-only dependencies
@@ -44,5 +44,5 @@ ENV NODE_ENV=production
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
-# Start the server
-CMD ["node", "dist/main.js"]
+# Start the server (NestJS outputs to dist/src/)
+CMD ["node", "dist/src/main.js"]
