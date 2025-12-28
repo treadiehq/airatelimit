@@ -187,6 +187,14 @@ export class AuthService {
     // Reset rate limit on successful verification
     this.rateLimitService.reset(rateLimitKey);
 
+    // Auto-upgrade admin emails to enterprise on every login
+    if (user.organizationId && this.organizationsService.isAdminEmail(user.email)) {
+      const org = await this.organizationsService.findById(user.organizationId);
+      if (org && org.plan !== 'enterprise') {
+        await this.organizationsService.upgradePlan(user.organizationId, 'enterprise');
+      }
+    }
+
     // Generate JWT with organizationId
     const payload = {
       sub: user.id,

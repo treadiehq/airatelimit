@@ -119,4 +119,14 @@ export class OrganizationsService {
     await this.organizationsRepository.update(id, updates);
     return this.findById(id);
   }
+
+  /**
+   * Upgrade an organization's plan
+   */
+  async upgradePlan(
+    id: string,
+    plan: 'trial' | 'basic' | 'pro' | 'enterprise',
+  ): Promise<void> {
+    await this.organizationsRepository.update(id, { plan });
+  }
 }
