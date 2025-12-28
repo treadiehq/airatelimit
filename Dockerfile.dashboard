@@ -39,6 +39,6 @@ USER nodejs
 # Railway provides PORT env var
 ENV PORT=3000
 
-# Serve the static files
-CMD ["serve", ".output/public", "-l", "3000"]
+# Serve the static files with SPA fallback (-s flag)
+CMD ["serve", ".output/public", "-s", "-l", "3000"]
 
