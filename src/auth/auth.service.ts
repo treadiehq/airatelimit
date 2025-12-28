@@ -187,11 +187,19 @@ export class AuthService {
     // Reset rate limit on successful verification
     this.rateLimitService.reset(rateLimitKey);
 
-    // Auto-upgrade admin emails to enterprise on every login
-    if (user.organizationId && this.organizationsService.isAdminEmail(user.email)) {
+    // Auto-manage admin emails: upgrade if admin, downgrade if removed from admin list
+    if (user.organizationId) {
       const org = await this.organizationsService.findById(user.organizationId);
-      if (org && org.plan !== 'enterprise') {
-        await this.organizationsService.upgradePlan(user.organizationId, 'enterprise');
+      const isAdmin = this.organizationsService.isAdminEmail(user.email);
+      
+      if (org) {
+        if (isAdmin && org.plan !== 'enterprise') {
+          // Admin email not on enterprise → upgrade
+          await this.organizationsService.upgradePlan(user.organizationId, 'enterprise');
+        } else if (!isAdmin && org.plan === 'enterprise' && !org.stripeSubscriptionId) {
+          // Not admin, on enterprise, no paid subscription → downgrade to trial
+          await this.organizationsService.upgradePlan(user.organizationId, 'trial');
+        }
       }
     }
 
