@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { Organization } from './organization.entity';
 import { ReservedOrganizationName } from './reserved-names.entity';
@@ -15,9 +16,26 @@ export class OrganizationsService {
     private organizationsRepository: Repository<Organization>,
     @InjectRepository(ReservedOrganizationName)
     private reservedNamesRepository: Repository<ReservedOrganizationName>,
+    private configService: ConfigService,
   ) {}
 
-  async create(name: string, description?: string): Promise<Organization> {
+  /**
+   * Check if an email is in the admin list (gets enterprise plan)
+   */
+  isAdminEmail(email: string): boolean {
+    const adminEmails = this.configService.get<string>('ADMIN_EMAILS') || '';
+    const adminList = adminEmails
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter((e) => e.length > 0);
+    return adminList.includes(email.toLowerCase());
+  }
+
+  async create(
+    name: string,
+    description?: string,
+    options?: { email?: string },
+  ): Promise<Organization> {
     // Check if name is reserved
     const reserved = await this.isNameReserved(name);
     if (reserved) {
@@ -32,9 +50,14 @@ export class OrganizationsService {
       throw new ConflictException('Organization name already taken');
     }
 
+    // Determine plan: enterprise for admin emails, trial for everyone else
+    const plan =
+      options?.email && this.isAdminEmail(options.email) ? 'enterprise' : 'trial';
+
     const organization = this.organizationsRepository.create({
       name,
       description,
+      plan,
     });
     return this.organizationsRepository.save(organization);
   }

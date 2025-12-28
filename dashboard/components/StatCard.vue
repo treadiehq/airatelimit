@@ -2,7 +2,7 @@
   <div :class="['p-4 rounded-lg group transition-all duration-300 hover:border-gray-500/20', 'bg-gray-500/10 border border-gray-500/10']">
     <div class="flex items-center justify-between mb-2">
       <div class="flex items-center gap-2">
-        <div class="text-sm text-white">{{ label }}</div>
+      <div class="text-sm text-white">{{ label }}</div>
         <!-- Status pill -->
         <span 
           v-if="max !== null"

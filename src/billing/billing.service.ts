@@ -184,7 +184,7 @@ export class BillingService {
     }
 
     const dashboardUrl = this.configService.get<string>('CORS_ORIGIN') || 'http://localhost:3001';
-    
+
     // Use product-specific portal configuration if set
     const portalConfigId = this.configService.get<string>('STRIPE_PORTAL_CONFIG_ID');
 

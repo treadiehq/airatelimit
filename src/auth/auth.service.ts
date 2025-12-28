@@ -51,9 +51,11 @@ export class AuthService {
       throw new ConflictException('Organization name already taken');
     }
 
-    // Create organization first
+    // Create organization first (admins get enterprise plan automatically)
     const organization = await this.organizationsService.create(
       signupDto.organizationName,
+      undefined,
+      { email: signupDto.email },
     );
 
     // Create user with organization - they'll use magic links
