@@ -132,7 +132,10 @@ export class BillingController {
   @UseGuards(JwtAuthGuard)
   async getPlanLimits(@Req() req: Request) {
     const user = req.user as any;
-    return this.planService.getUsageSummary(user.organizationId);
+    this.logger.log(`getPlanLimits called for org: ${user.organizationId}`);
+    const result = await this.planService.getUsageSummary(user.organizationId);
+    this.logger.log(`getPlanLimits result: ${JSON.stringify(result)}`);
+    return result;
   }
 
   /**
