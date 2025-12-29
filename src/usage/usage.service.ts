@@ -92,13 +92,15 @@ export class UsageService {
     // Check for active promotional override (unlimited access)
     if (identityLimit?.unlimitedUntil && identityLimit.unlimitedUntil > new Date()) {
       // Promo is active - allow request but still track usage
+      // NOTE: Only increment requestsUsed here, NOT tokensUsed.
+      // Tokens are incremented later in finalizeUsageWithCost with actual values.
       const periodStartStr = periodStart.toISOString().split('T')[0];
       await this.usageRepository.query(
         `INSERT INTO usage_counters (id, "projectId", identity, model, "session", "periodStart", "requestsUsed", "tokensUsed", "inputTokens", "outputTokens", "costUsd", "blockedRequests", "savedUsd", "createdAt", "updatedAt")
-         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, 0, 0, 0, 0, 0, NOW(), NOW())
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, 0, 0, 0, 0, 0, 0, NOW(), NOW())
          ON CONFLICT ("projectId", identity, "periodStart", model, "session") 
-         DO UPDATE SET "requestsUsed" = usage_counters."requestsUsed" + $6, "tokensUsed" = usage_counters."tokensUsed" + $7, "updatedAt" = NOW()`,
-        [project.id, identity, model, session, periodStartStr, requestedRequests, requestedTokens],
+         DO UPDATE SET "requestsUsed" = usage_counters."requestsUsed" + $6, "updatedAt" = NOW()`,
+        [project.id, identity, model, session, periodStartStr, requestedRequests],
       );
       return { allowed: true, promoActive: true };
     }
@@ -169,11 +171,13 @@ export class UsageService {
 
     // Step 2: Atomic UPDATE with limit check in WHERE clause
     // This is the key: the UPDATE only succeeds if we're under the limit
+    // NOTE: We only increment requestsUsed here, NOT tokensUsed.
+    // Tokens are incremented later in finalizeUsageWithCost with actual values.
+    // This prevents double-counting (estimated + actual).
     const updateResult = await this.usageRepository.query(
       `UPDATE usage_counters
        SET 
          "requestsUsed" = "requestsUsed" + $1,
-         "tokensUsed" = "tokensUsed" + $2,
          "updatedAt" = NOW()
        WHERE 
          "projectId" = $3
@@ -241,10 +245,12 @@ export class UsageService {
 
     if (giftResult.consumed) {
       // Gifted credits covered the request - track usage but allow
+      // NOTE: Only increment requestsUsed here, NOT tokensUsed.
+      // Tokens are incremented later in finalizeUsageWithCost with actual values.
       await this.usageRepository.query(
-        `UPDATE usage_counters SET "requestsUsed" = "requestsUsed" + $1, "tokensUsed" = "tokensUsed" + $2, "updatedAt" = NOW()
+        `UPDATE usage_counters SET "requestsUsed" = "requestsUsed" + $1, "updatedAt" = NOW()
          WHERE "projectId" = $3 AND identity = $4 AND model = $5 AND "session" = $6 AND "periodStart" = $7`,
-        [requestedRequests, requestedTokens, project.id, identity, model, session, periodStartStr],
+        [requestedRequests, project.id, identity, model, session, periodStartStr],
       );
       return { allowed: true, giftedCreditsUsed: true };
     }

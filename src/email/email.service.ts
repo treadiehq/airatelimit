@@ -73,15 +73,22 @@ If you didn't request this email, you can safely ignore it.
 AI Ratelimit
 https://airatelimit.com`;
 
-      await this.resend.emails.send({
+      // Resend SDK returns { data, error } - must check error property
+      // See: https://resend.com/docs/send-with-nodejs
+      const { data, error } = await this.resend.emails.send({
         from: fromEmail,
         to: email,
         subject,
         text: textContent,
       });
 
+      // Check for API-level errors (invalid API key, rate limits, validation errors, etc.)
+      if (error) {
+        throw new Error(error.message);
+      }
+
       this.logger.log(
-        `Magic link email sent to ${email} via Resend (${isNewUser ? 'new user' : 'existing user'})`,
+        `Magic link email sent to ${email} via Resend (${isNewUser ? 'new user' : 'existing user'}, id: ${data?.id})`,
       );
     } catch (error) {
       this.logger.error(`Failed to send email via Resend: ${error.message}`);

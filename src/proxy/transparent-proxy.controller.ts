@@ -423,15 +423,17 @@ export class TransparentProxyController {
           return;
         }
 
-        // Flow allows - continue with request (still track usage after)
-      } else {
-        // FALLBACK: Use traditional limit checking when no flow configured
+        // Flow allows - continue with atomic usage increment below
+      }
+
+      // ATOMIC USAGE CHECK: Always perform atomic check-and-increment
+      // This prevents race conditions where concurrent requests bypass flow limits
       const usageCheck = await this.usageService.checkAndUpdateUsage({
         project,
         identity,
         tier,
         model,
-          session: sessionId,
+        session: sessionId,
         periodStart,
         requestedTokens: estimatedTokens,
         requestedRequests: 1,
@@ -444,7 +446,7 @@ export class TransparentProxyController {
           project,
           identity,
           model,
-            session: sessionId,
+          session: sessionId,
           periodStart,
           estimatedSavings,
         });
@@ -457,7 +459,6 @@ export class TransparentProxyController {
           },
         });
         return;
-        }
       }
 
       // Check session limits if enabled

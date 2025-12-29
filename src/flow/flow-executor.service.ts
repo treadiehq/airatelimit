@@ -412,28 +412,34 @@ export class FlowExecutorService {
 
   /**
    * Get period start date based on period type
+   * IMPORTANT: Must match the calculation in transparent-proxy.controller.ts
+   * to ensure queries return the correct usage data.
+   * Uses UTC time and Monday as week start for consistency.
    */
   private getPeriodStart(period: string): Date {
     const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const date = now.getUTCDate();
+    const hour = now.getUTCHours();
+    const day = now.getUTCDay();
+
     switch (period) {
       case 'hourly':
       case 'hour':
-        return new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours());
+        return new Date(Date.UTC(year, month, date, hour));
       case 'daily':
       case 'day':
-        return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        return new Date(Date.UTC(year, month, date));
       case 'weekly':
-        // Start of current week (Sunday)
-        const dayOfWeek = now.getDay();
-        const weekStart = new Date(now);
-        weekStart.setDate(now.getDate() - dayOfWeek);
-        weekStart.setHours(0, 0, 0, 0);
-        return weekStart;
+        // Start of current week (Monday) - matches proxy controller
+        const daysToMonday = (day + 6) % 7;
+        return new Date(Date.UTC(year, month, date - daysToMonday));
       case 'monthly':
-        return new Date(now.getFullYear(), now.getMonth(), 1);
+        return new Date(Date.UTC(year, month, 1));
       default:
         // Default to daily
-        return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        return new Date(Date.UTC(year, month, date));
     }
   }
 }

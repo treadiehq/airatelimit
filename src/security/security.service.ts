@@ -9,6 +9,33 @@ export interface SecurityCheckResult {
 
 @Injectable()
 export class SecurityService {
+  /**
+   * Extract text content from message content (handles both string and array formats)
+   * 
+   * OpenAI's API supports two content formats:
+   * 1. String format (simple text): { content: "Hello" }
+   * 2. Array format (multi-modal): { content: [{ type: "text", text: "Hello" }, { type: "image_url", ... }] }
+   * 
+   * This method ensures security checks work correctly regardless of format.
+   */
+  private extractTextContent(content: string | any[]): string {
+    // Handle string content (simple text messages)
+    if (typeof content === 'string') {
+      return content;
+    }
+
+    // Handle array content (multi-modal messages - vision models)
+    if (Array.isArray(content)) {
+      return content
+        .filter(part => part?.type === 'text' && typeof part.text === 'string')
+        .map(part => part.text)
+        .join('\n');  // Join multiple text parts with newlines
+    }
+
+    // Unknown format - return empty string (safe default)
+    return '';
+  }
+
   // Known prompt injection patterns categorized by attack type
   private readonly injectionPatterns = {
     // Direct system prompt extraction
@@ -82,11 +109,20 @@ export class SecurityService {
 
   /**
    * Check if a message contains prompt injection attempts
+   * Supports both string content and array content (multi-modal/vision format)
    */
   checkMessage(
-    content: string,
+    content: string | any[],
     enabledCategories?: string[],
   ): SecurityCheckResult {
+    // Extract text from content (handles both string and array formats)
+    const textContent = this.extractTextContent(content);
+    
+    // If no text content, allow (nothing to check)
+    if (!textContent) {
+      return { allowed: true };
+    }
+
     const categories = enabledCategories || Object.keys(this.injectionPatterns);
 
     for (const category of categories) {
@@ -94,7 +130,7 @@ export class SecurityService {
       if (!patterns) continue;
 
       for (const pattern of patterns) {
-        if (pattern.test(content)) {
+        if (pattern.test(textContent)) {
           return {
             allowed: false,
             reason: this.getReasonForCategory(category),
@@ -110,9 +146,10 @@ export class SecurityService {
 
   /**
    * Check all messages in a conversation
+   * Supports both string content and array content (multi-modal/vision format)
    */
   checkMessages(
-    messages: Array<{ role: string; content: string }>,
+    messages: Array<{ role: string; content: string | any[] }>,
     enabledCategories?: string[],
   ): SecurityCheckResult {
     // Only check user messages, not system/assistant messages
@@ -130,10 +167,19 @@ export class SecurityService {
 
   /**
    * Advanced heuristic checks for sophisticated attacks
+   * Supports both string content and array content (multi-modal/vision format)
    */
-  checkAdvancedHeuristics(content: string): SecurityCheckResult {
+  checkAdvancedHeuristics(content: string | any[]): SecurityCheckResult {
+    // Extract text from content (handles both string and array formats)
+    const textContent = this.extractTextContent(content);
+    
+    // If no text content, allow (nothing to check)
+    if (!textContent) {
+      return { allowed: true };
+    }
+
     // Check for unusual repetition of special characters
-    const specialCharCount = (content.match(/[<>[\]{}|\\]/g) || []).length;
+    const specialCharCount = (textContent.match(/[<>[\]{}|\\]/g) || []).length;
     if (specialCharCount > 20) {
       return {
         allowed: false,
@@ -144,7 +190,7 @@ export class SecurityService {
     }
 
     // Check for very long words (possible obfuscation)
-    const words = content.split(/\s+/);
+    const words = textContent.split(/\s+/);
     const hasVeryLongWord = words.some((word) => word.length > 100);
     if (hasVeryLongWord) {
       return {
@@ -156,7 +202,7 @@ export class SecurityService {
     }
 
     // Check for excessive newlines (boundary breaking attempt)
-    const newlineCount = (content.match(/\n/g) || []).length;
+    const newlineCount = (textContent.match(/\n/g) || []).length;
     if (newlineCount > 50) {
       return {
         allowed: false,

@@ -302,13 +302,22 @@ export class TransparentProxyService {
 
       const stream = response.data;
 
+      // Buffer for incomplete lines across chunk boundaries
+      // HTTP chunks can split SSE events mid-line, so we must reassemble them
+      let buffer = '';
+
       for await (const chunk of stream) {
-        const lines = chunk
-          .toString()
-          .split('\n')
-          .filter((line: string) => line.trim() !== '');
+        // Append chunk to buffer instead of processing independently
+        buffer += chunk.toString();
+        const lines = buffer.split('\n');
+
+        // Keep the last (potentially incomplete) line in the buffer for next iteration
+        // If the chunk ended with \n, the last element will be empty string which is fine
+        buffer = lines.pop() || '';
 
         for (const line of lines) {
+          if (line.trim() === '') continue;
+
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') {
@@ -334,8 +343,32 @@ export class TransparentProxyService {
                 yield parsed;
               }
             } catch (e) {
-              // Skip malformed JSON
+              // Log malformed JSON for debugging (should be rare with proper buffering)
+              console.warn('Failed to parse SSE data:', data.substring(0, 100));
             }
+          }
+        }
+      }
+
+      // Process any remaining buffered data after stream ends
+      if (buffer.trim() !== '' && buffer.startsWith('data: ')) {
+        const data = buffer.slice(6);
+        if (data !== '[DONE]') {
+          try {
+            const parsed = JSON.parse(data);
+            if (isAnthropic) {
+              const transformed = this.transformStreamChunkFromAnthropic(
+                parsed,
+                body.model,
+              );
+              if (transformed) {
+                yield transformed;
+              }
+            } else {
+              yield parsed;
+            }
+          } catch (e) {
+            console.warn('Failed to parse final SSE data:', data.substring(0, 100));
           }
         }
       }

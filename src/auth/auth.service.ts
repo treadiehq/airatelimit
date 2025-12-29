@@ -101,7 +101,19 @@ export class AuthService {
   }
 
   async requestMagicLink(dto: RequestMagicLinkDto, isNewUser: boolean = false) {
-    // Rate limit magic link requests per email
+    // Check if user exists FIRST - prevents attackers from consuming
+    // rate limit quota for legitimate users by making failed requests
+    const user = await this.usersService.findByEmail(dto.email);
+
+    // Don't auto-create users from login - they must sign up first
+    if (!user) {
+      throw new UnauthorizedException(
+        'No account found with this email. Please sign up first.',
+      );
+    }
+
+    // Only apply rate limiting for valid users - this prevents denial-of-service
+    // attacks where attackers lock out legitimate users by exhausting their quota
     const rateLimitKey = `magic-link:${dto.email.toLowerCase()}`;
     const rateLimit = this.rateLimitService.check(
       rateLimitKey,
@@ -116,15 +128,6 @@ export class AuthService {
           retryAfter: rateLimit.retryAfter,
         },
         HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
-    const user = await this.usersService.findByEmail(dto.email);
-
-    // Don't auto-create users from login - they must sign up first
-    if (!user) {
-      throw new UnauthorizedException(
-        'No account found with this email. Please sign up first.',
       );
     }
 

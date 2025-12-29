@@ -11,6 +11,8 @@ import {
   HttpCode,
   HttpStatus,
   Req,
+  NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ProjectAuthGuard } from '../common/guards/project-auth.guard';
 import {
@@ -54,8 +56,20 @@ export class IdentityLimitsController {
       }
       return request.project;
     }
+
     // Otherwise, look up by projectKey (JWT auth)
-    return this.projectsService.findByProjectKey(projectKey);
+    const project = await this.projectsService.findByProjectKey(projectKey);
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    // Verify user owns this project - prevents cross-tenant access
+    if (project.ownerId !== request.user?.userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    return project;
   }
 
   /**
