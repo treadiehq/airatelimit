@@ -48,7 +48,7 @@ export class BillingController {
   @UseGuards(JwtAuthGuard)
   async getSubscription(@Req() req: Request) {
     const user = req.user as any;
-    return this.billingService.getSubscription(user.id);
+    return this.billingService.getSubscription(user.userId);
   }
 
   /**
@@ -61,7 +61,7 @@ export class BillingController {
     @Body() body: { plan: 'pro' | 'enterprise' },
   ) {
     const user = req.user as any;
-    return this.billingService.createCheckoutSession(user.id, body.plan);
+    return this.billingService.createCheckoutSession(user.userId, body.plan);
   }
 
   /**
@@ -71,7 +71,7 @@ export class BillingController {
   @UseGuards(JwtAuthGuard)
   async createPortal(@Req() req: Request) {
     const user = req.user as any;
-    return this.billingService.createPortalSession(user.id);
+    return this.billingService.createPortalSession(user.userId);
   }
 
   /**
@@ -82,7 +82,7 @@ export class BillingController {
   @HttpCode(HttpStatus.OK)
   async cancelSubscription(@Req() req: Request) {
     const user = req.user as any;
-    await this.billingService.cancelSubscription(user.id);
+    await this.billingService.cancelSubscription(user.userId);
     return { success: true };
   }
 
@@ -93,7 +93,7 @@ export class BillingController {
   @UseGuards(JwtAuthGuard)
   async getInvoices(@Req() req: Request) {
     const user = req.user as any;
-    return this.billingService.getInvoices(user.id);
+    return this.billingService.getInvoices(user.userId);
   }
 
   /**
@@ -122,7 +122,7 @@ export class BillingController {
   @UseGuards(JwtAuthGuard)
   async getTrialInfo(@Req() req: Request) {
     const user = req.user as any;
-    return this.billingService.getTrialInfo(user.id);
+    return this.billingService.getTrialInfo(user.userId);
   }
 
   /**
