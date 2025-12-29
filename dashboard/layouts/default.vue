@@ -25,8 +25,8 @@
               <!-- Animated glow ring for urgent trials -->
               <span 
                 v-if="isTrialUrgent" 
-                class="absolute inset-0 rounded-md animate-ping-slow opacity-75"
-                :class="trialDaysRemaining <= 0 ? 'bg-red-400/20' : 'bg-orange-400/20'"
+                class="absolute inset-0 rounded-md opacity-75"
+                :class="trialDaysRemaining <= 0 ? 'bg-red-400/10' : 'bg-orange-300/10'"
               ></span>
               <span class="relative">{{ planLabel }}</span>
             </NuxtLink>
@@ -59,7 +59,7 @@
                   v-if="features.showBilling"
                   to="/billing"
                   @click="showDropdown = false"
-                  class="w-full text-left px-4 py-2 text-sm text-gray-400 hover:bg-gray-500/10 hover:text-white flex items-center justify-between"
+                  class="w-full text-left px-4 py-2 text-xs text-gray-400 hover:bg-gray-500/10 hover:text-white flex items-center justify-between"
                 >
                   <span class="flex items-center space-x-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,14 +67,14 @@
                     </svg>
                     <span>Billing</span>
                   </span>
-                  <span v-if="planLoaded" :class="['text-xs px-2 py-0.5 rounded-full', planBadgeClasses]">
+                  <span v-if="planLoaded" :class="['text-[10px] px-2 py-0.5 rounded-full', planBadgeClasses]">
                     {{ planLabel }}
                   </span>
                 </NuxtLink>
                 
                 <button
                   @click="handleLogout"
-                  class="w-full text-left px-4 py-2 text-sm text-gray-400 hover:bg-gray-500/10 hover:text-white flex items-center space-x-2"
+                  class="w-full text-left px-4 py-2 text-xs text-gray-400 hover:bg-gray-500/10 hover:text-white flex items-center space-x-2"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -219,21 +219,21 @@ const isTrialUrgent = computed(() => {
 const planBadgeClasses = computed(() => {
   switch (currentPlan.value) {
     case 'enterprise':
-      return 'bg-gray-500/15 border border-gray-500/10 text-gray-300 hover:bg-gray-500/20'
+      return 'bg-gray-500/10 border border-gray-500/10 text-gray-300 hover:bg-gray-500/15'
     case 'pro':
-      return 'bg-gray-500/15 border border-gray-500/10 text-gray-300 hover:bg-gray-500/20'
+      return 'bg-gray-500/10 border border-gray-500/10 text-gray-300 hover:bg-gray-500/15'
     case 'basic':
-      return 'bg-gray-500/15 border border-gray-500/10 text-gray-300 hover:bg-gray-500/20'
+      return 'bg-gray-500/10 border border-gray-500/10 text-gray-300 hover:bg-gray-500/15'
     default:
       // Trial - yellow normally, red if expired or nearly expired
       if (trialDaysRemaining.value <= 0) {
-        return 'bg-red-400/15 border border-red-400/30 text-red-300 hover:bg-red-400/20'
+        return 'bg-red-400/10 border border-red-400/10 text-red-300 hover:bg-red-400/15'
       }
       if (trialDaysRemaining.value <= 2) {
-        return 'bg-orange-400/15 border border-orange-400/30 text-orange-300 hover:bg-orange-400/20'
+        return 'bg-orange-300/10 border border-orange-300/10 text-orange-300 hover:bg-orange-300/15'
       }
       if (trialDaysRemaining.value <= 3) {
-        return 'bg-yellow-400/15 border border-yellow-400/30 text-yellow-300 hover:bg-yellow-400/20'
+        return 'bg-yellow-300/10 border border-yellow-300/10 text-yellow-300 hover:bg-yellow-300/15'
       }
       return 'bg-yellow-300/10 text-yellow-300 hover:bg-yellow-300/10'
   }
