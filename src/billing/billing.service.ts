@@ -49,7 +49,23 @@ export class BillingService {
       relations: ['organization'],
     });
 
-    if (!user?.organization?.stripeSubscriptionId) {
+    if (!user?.organization) {
+      return null;
+    }
+
+    // If no Stripe subscription but has a paid plan (e.g., admin-granted enterprise)
+    // Return a virtual subscription so dashboard shows the correct plan
+    if (!user.organization.stripeSubscriptionId) {
+      const dbPlan = user.organization.plan;
+      if (dbPlan === 'enterprise' || dbPlan === 'pro' || dbPlan === 'basic') {
+        return {
+          id: 'admin-granted',
+          status: 'active',
+          plan: dbPlan,
+          currentPeriodEnd: undefined,
+          cancelAtPeriodEnd: false,
+        };
+      }
       return null;
     }
 
