@@ -9,7 +9,7 @@
         <div>
           <h2 class="text-xl font-bold text-white">Projects</h2>
           <p class="text-sm text-gray-400 mt-1">
-            {{ projects.length }}<span v-if="limits.maxProjects !== Infinity">/{{ limits.maxProjects }}</span> {{ projects.length === 1 ? 'project' : 'projects' }}
+            {{ projects.length }}<span v-if="limits.maxProjects !== null && limits.maxProjects !== Infinity">/{{ limits.maxProjects }}</span> {{ projects.length === 1 ? 'project' : 'projects' }}
             <span v-if="!canCreateProject" class="text-amber-400 ml-2">• Limit reached</span>
           </p>
         </div>

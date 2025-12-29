@@ -171,12 +171,16 @@ export function usePlan() {
   };
 
   const canCreateProject = computed(() => {
-    return usage.value.projects.current < usage.value.projects.limit;
+    const limit = usage.value.projects.limit;
+    // null means unlimited (Infinity serialized as null in JSON)
+    if (limit === null || limit === Infinity) return true;
+    return usage.value.projects.current < limit;
   });
 
   const projectsRemaining = computed(() => {
     const limit = usage.value.projects.limit;
-    if (limit === Infinity) return 'Unlimited';
+    // null means unlimited (Infinity serialized as null in JSON)
+    if (limit === null || limit === Infinity) return 'Unlimited';
     return Math.max(0, limit - usage.value.projects.current);
   });
 
