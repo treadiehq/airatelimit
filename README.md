@@ -222,12 +222,14 @@ When limits are exceeded (HTTP 429):
 }
 ```
 
-## Environment Variables
+## BE Environment Variables
 
 ```bash
 # Required
 DATABASE_URL=postgresql://...
 JWT_SECRET=your-secret-key
+CORS_ORIGIN=https://your-dashboard.railway.app
+NODE_ENV=production
 
 # Required for Stored Keys Mode (production)
 ENCRYPTION_KEY=your-32-char-key  # Generate with: openssl rand -hex 32
@@ -235,6 +237,16 @@ ENCRYPTION_KEY=your-32-char-key  # Generate with: openssl rand -hex 32
 # Optional
 PORT=3000
 RESEND_API_KEY=re_...  # For magic link emails
+EMAIL_FROM=noreply@yourdomain.com
+```
+
+## Dashboard Environment Variables
+
+```bash
+NODE_ENV=production
+
+# Backend API URL (update after backend is deployed)
+NUXT_PUBLIC_API_BASE_URL=https://your-backend-url.railway.app/api
 ```
 
 ## Examples

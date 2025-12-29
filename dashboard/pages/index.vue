@@ -52,11 +52,11 @@
         <div class="mb-12 relative z-10">
           <!-- Tab Switcher -->
           <div class="flex justify-center mb-6">
-            <div class="inline-flex bg-gray-500/10 rounded-xl p-1 border border-gray-500/10">
+            <div class="inline-flex bg-gray-500/10 rounded-xl p-0.5 border border-gray-500/10">
               <button 
                 @click="mainTab = 'playground'"
                 :class="[
-                  'px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2',
+                  'px-2.5 py-2 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1.5',
                   mainTab === 'playground' 
                     ? 'bg-gray-500/5 border border-gray-500/10 text-white' 
                     : 'text-gray-500 hover:text-gray-300 border border-transparent'
@@ -71,7 +71,7 @@
               <button 
                 @click="mainTab = 'snippet'"
                 :class="[
-                  'px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 flex items-center gap-2',
+                  'px-2.5 py-2 text-xs font-medium rounded-lg transition-all duration-200 flex items-center gap-1.5',
                   mainTab === 'snippet' 
                     ? 'bg-gray-500/5 border border-gray-500/10 text-white' 
                     : 'text-gray-500 hover:text-gray-300 border border-transparent'
@@ -92,30 +92,30 @@
 
           <!-- Snippet Tab Content -->
           <div v-show="mainTab === 'snippet'">
-            <div class="bg-gray-900/80 inner-container mb-[-1px] ml-[-1px] relative border border-gray-500/20 rounded-lg overflow-hidden font-mono shadow-2xl shadow-black/50">
+            <div class="bg-gray-500/10 inner-container mb-[-1px] ml-[-1px] relative border border-gray-500/10 rounded-lg overflow-hidden font-mono shadow-2xl shadow-black/50">
               <!-- Window Chrome Header -->
-              <div class="flex items-center justify-between px-4 py-3 bg-gray-800/50 border-b border-gray-500/10">
+              <div class="flex items-center justify-between px-4 py-1 border-b border-gray-500/10">
                 <div class="flex items-center gap-2">
                   <!-- Traffic lights -->
                   <div class="flex items-center gap-1.5">
                     <span class="w-3 h-3 rounded-full bg-red-400/80 hover:bg-red-400 transition-colors cursor-pointer"></span>
-                    <span class="w-3 h-3 rounded-full bg-yellow-400/80 hover:bg-yellow-400 transition-colors cursor-pointer"></span>
-                    <span class="w-3 h-3 rounded-full bg-green-400/80 hover:bg-green-400 transition-colors cursor-pointer"></span>
+                    <span class="w-3 h-3 rounded-full bg-yellow-300/80 hover:bg-yellow-300 transition-colors cursor-pointer"></span>
+                    <span class="w-3 h-3 rounded-full bg-green-300/80 hover:bg-green-300 transition-colors cursor-pointer"></span>
                   </div>
                   <!-- File name -->
                   <span class="text-xs text-gray-500 ml-3">{{ activeTab === 'javascript' ? 'app.ts' : 'terminal' }}</span>
                 </div>
                 
                 <!-- Language tabs -->
-                <div class="flex items-center gap-1 bg-gray-500/10 rounded-lg p-0.5">
+                <div class="flex items-center gap-1 bg-gray-500/5 border border-gray-500/5 rounded-lg p-0.5">
                   <button 
                     v-for="tab in tabs" 
                     :key="tab.id"
                     @click="activeTab = tab.id"
                     :class="[
-                      'px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200',
+                      'px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-200',
                       activeTab === tab.id 
-                        ? 'bg-gray-700/50 text-white shadow-sm' 
+                        ? 'bg-gray-500/10 text-white shadow-sm' 
                         : 'text-gray-500 hover:text-gray-300'
                     ]"
                   >
@@ -127,7 +127,7 @@
                 <button 
                   @click="copyCode"
                   class="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md transition-all duration-200"
-                  :class="copied ? 'bg-green-400/10 text-green-400' : 'text-gray-500 hover:text-white hover:bg-gray-500/10'"
+                  :class="copied ? 'bg-green-300/10 text-green-300' : 'text-gray-500 hover:text-white hover:bg-gray-500/10'"
                 >
                   <svg v-if="!copied" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -142,7 +142,7 @@
               <!-- Code Content with Line Numbers -->
               <div class="flex text-left">
                 <!-- Line numbers -->
-                <div class="select-none py-4 pl-4 pr-3 text-right border-r border-gray-500/10 bg-gray-900/30">
+                <div class="select-none py-4 pl-4 pr-3 text-right border-r border-gray-500/10">
                   <div v-for="n in (activeTab === 'javascript' ? 14 : 8)" :key="n" class="text-xs text-gray-600 leading-relaxed font-mono">
                     {{ n }}
                   </div>
@@ -151,9 +151,9 @@
                 <!-- Code -->
                 <div class="flex-1 p-4 overflow-x-auto">
                   <!-- JavaScript Tab -->
-                  <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-purple-400">import</span> <span class="text-cyan-300">OpenAI</span> <span class="text-purple-400">from</span> <span class="text-amber-300">'openai'</span>
+                  <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-purple-300">import</span> <span class="text-cyan-300">OpenAI</span> <span class="text-purple-300">from</span> <span class="text-amber-300">'openai'</span>
 
-<span class="text-purple-400">const</span> <span class="text-blue-300">openai</span> = <span class="text-purple-400">new</span> <span class="text-cyan-300">OpenAI</span>({
+<span class="text-purple-300">const</span> <span class="text-blue-300">openai</span> = <span class="text-purple-300">new</span> <span class="text-cyan-300">OpenAI</span>({
   <span class="text-blue-300">apiKey</span>: <span class="text-amber-300">'sk-your-key'</span>, <span class="text-gray-500 italic">// Optional</span>
   <span class="text-blue-300">baseURL</span>: <span class="text-amber-300">'https://api.airatelimit.com/v1'</span>,
   <span class="text-blue-300">defaultHeaders</span>: {
@@ -162,13 +162,13 @@
   },
 })
 
-<span class="text-purple-400">const</span> <span class="text-blue-300">response</span> = <span class="text-purple-400">await</span> <span class="text-blue-300">openai</span>.<span class="text-cyan-300">chat</span>.<span class="text-cyan-300">completions</span>.<span class="text-yellow-300">create</span>({
+<span class="text-purple-300">const</span> <span class="text-blue-300">response</span> = <span class="text-purple-300">await</span> <span class="text-blue-300">openai</span>.<span class="text-cyan-300">chat</span>.<span class="text-cyan-300">completions</span>.<span class="text-yellow-300">create</span>({
   <span class="text-blue-300">model</span>: <span class="text-amber-300">'gpt-4o'</span>,
   <span class="text-blue-300">messages</span>: [{ <span class="text-blue-300">role</span>: <span class="text-amber-300">'user'</span>, <span class="text-blue-300">content</span>: <span class="text-amber-300">'Hello!'</span> }]
 })</code></pre>
 
                   <!-- API Tab -->
-                  <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-green-400">$</span> curl -X POST <span class="text-cyan-300">https://api.airatelimit.com/v1/chat/completions</span> \
+                  <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-green-300">$</span> curl -X POST <span class="text-cyan-300">https://api.airatelimit.com/v1/chat/completions</span> \
   -H <span class="text-amber-300">"Authorization: Bearer sk-your-key"</span> \ <span class="text-gray-500 italic"># Optional</span>
   -H <span class="text-amber-300">"x-project-key: pk_xxx"</span> \
   -H <span class="text-amber-300">"x-identity: user-123"</span> \
