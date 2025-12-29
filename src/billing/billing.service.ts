@@ -57,14 +57,17 @@ export class BillingService {
     // Return a virtual subscription so dashboard shows the correct plan
     if (!user.organization.stripeSubscriptionId) {
       const dbPlan = user.organization.plan;
+      this.logger.log(`User ${userId} has no Stripe sub, DB plan: ${dbPlan}`);
       if (dbPlan === 'enterprise' || dbPlan === 'pro' || dbPlan === 'basic') {
-        return {
+        const result = {
           id: 'admin-granted',
           status: 'active',
           plan: dbPlan,
-          currentPeriodEnd: undefined,
+          currentPeriodEnd: null,
           cancelAtPeriodEnd: false,
         };
+        this.logger.log(`Returning admin-granted subscription: ${JSON.stringify(result)}`);
+        return result;
       }
       return null;
     }
