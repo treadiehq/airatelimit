@@ -44,7 +44,8 @@
           <!-- Subheading -->
           <p class="font-normal text-center text-gray-400 max-w-md mx-auto mb-1 sm:mt-4 text-pretty text-base sm:text-lg sm:leading-6">
             <!-- Track usage, enforce limits, and monetize your AI app without storing conversations. -->
-            Secure your API keys, rate limit users, track costs, and upsell upgrades, all without building a server.
+            <!-- Secure your API keys, rate limit users, track costs, and monetize upgrades, just by changing your base URL. -->
+            Secure your API keys, rate limit users, track costs, and monetize upgrades, all without building a server.
           </p>
         </div>
         
