@@ -27,6 +27,7 @@ export interface PlanUsage {
   limits: PlanLimits;
   usage: {
     projects: { current: number; limit: number };
+    requests: { current: number; limit: number; periodStart: string | null; periodEnd: string };
   };
 }
 
@@ -93,8 +94,12 @@ export function usePlan() {
   
   const plan = ref<string>('trial');
   const limits = ref<PlanLimits>(DEFAULT_LIMITS);
-  const usage = ref<{ projects: { current: number; limit: number } }>({
+  const usage = ref<{ 
+    projects: { current: number; limit: number };
+    requests: { current: number; limit: number; periodStart: string | null; periodEnd: string };
+  }>({
     projects: { current: 0, limit: 3 },
+    requests: { current: 0, limit: 100_000, periodStart: null, periodEnd: '' },
   });
   const loaded = ref(false);
 
@@ -158,7 +163,10 @@ export function usePlan() {
       if (data) {
         plan.value = data.plan || 'trial';
         limits.value = data.limits || DEFAULT_LIMITS;
-        usage.value = data.usage || { projects: { current: 0, limit: 3 } };
+        usage.value = data.usage || { 
+          projects: { current: 0, limit: 3 },
+          requests: { current: 0, limit: 100_000, periodStart: null, periodEnd: '' },
+        };
       }
     } catch (err) {
       console.warn('Failed to load plan limits:', err);

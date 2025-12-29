@@ -6,6 +6,7 @@ import { RateLimitService } from './rate-limit.service';
 import { ProxyRateLimitMiddleware } from './proxy-rate-limit.middleware';
 import { FeatureGuard } from './guards/feature.guard';
 import { PlanGuard } from './guards/plan.guard';
+import { ProjectFieldsGuard } from './guards/project-fields.guard';
 import { LicenseGuard } from './guards/license.guard';
 import { PlanService } from './services/plan.service';
 import { UsageLimitService } from './services/usage-limit.service';
@@ -24,6 +25,7 @@ import { Project } from '../projects/projects.entity';
     ProxyRateLimitMiddleware,
     FeatureGuard,
     PlanGuard,
+    ProjectFieldsGuard,
     LicenseGuard,
     PlanService,
     UsageLimitService,
@@ -34,6 +36,7 @@ import { Project } from '../projects/projects.entity';
     ProxyRateLimitMiddleware,
     FeatureGuard,
     PlanGuard,
+    ProjectFieldsGuard,
     LicenseGuard,
     PlanService,
     UsageLimitService,

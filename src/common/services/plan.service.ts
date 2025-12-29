@@ -146,7 +146,7 @@ export class PlanService {
     limits: PlanLimits;
     usage: {
       projects: { current: number; limit: number };
-      // requests would be tracked separately via usage module
+      requests: { current: number; limit: number; periodStart: Date | null; periodEnd: Date };
     };
   }> {
     const org = await this.organizationRepository.findOne({
@@ -160,6 +160,20 @@ export class PlanService {
       where: { organization: { id: organizationId } },
     });
 
+    // Calculate period end (first of next month)
+    const now = new Date();
+    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    // Reset usage if new billing period (check if periodStart is in a previous month)
+    let currentRequests = org?.monthlyRequestCount || 0;
+    const usagePeriodStart = org?.usagePeriodStart;
+    const currentPeriodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    if (usagePeriodStart && usagePeriodStart < currentPeriodStart) {
+      // Period has passed, usage should be reset (will be reset on next request)
+      currentRequests = 0;
+    }
+
     return {
       plan,
       limits,
@@ -167,6 +181,12 @@ export class PlanService {
         projects: {
           current: projectCount,
           limit: limits.maxProjects,
+        },
+        requests: {
+          current: currentRequests,
+          limit: limits.maxRequestsPerMonth,
+          periodStart: usagePeriodStart || currentPeriodStart,
+          periodEnd,
         },
       },
     };

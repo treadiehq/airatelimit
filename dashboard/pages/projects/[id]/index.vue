@@ -194,6 +194,38 @@
 
         <!-- Usage Tab Content -->
         <div v-if="activeTab === 'usage'" class="space-y-6">
+        <!-- Plan Usage (Cloud mode only) -->
+        <div v-if="features.showBilling && planUsage.requests" class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-gray-400 uppercase tracking-wider">Plan Usage</span>
+                <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-gray-500/10 text-gray-400">
+                  {{ currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1) }}
+                </span>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-sm text-white font-medium">
+                {{ formatNumber(planUsage.requests.current) }} / {{ planUsage.requests.limit === Infinity ? '∞' : formatNumber(planUsage.requests.limit) }}
+              </div>
+              <div class="text-xs text-gray-500">requests this month</div>
+            </div>
+          </div>
+          <div v-if="planUsage.requests.limit !== Infinity" class="mt-3">
+            <div class="w-full bg-gray-500/10 rounded-full h-1.5 overflow-hidden">
+              <div
+                :class="[
+                  'h-full transition-all duration-500 ease-out rounded-full',
+                  planUsage.requests.current / planUsage.requests.limit >= 0.9 ? 'bg-red-400' :
+                  planUsage.requests.current / planUsage.requests.limit >= 0.7 ? 'bg-yellow-300' : 'bg-green-300'
+                ]"
+                :style="{ width: `${Math.min((planUsage.requests.current / planUsage.requests.limit) * 100, 100)}%` }"
+              ></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Usage Summary -->
         <div class="space-y-4">
           <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider">Today's Usage</h3>
@@ -417,6 +449,8 @@ definePageMeta({
 
 const route = useRoute()
 const api = useApi()
+const { features } = useFeatures()
+const { usage: planUsage, limits: planLimits, plan: currentPlan, loadPlan } = usePlan()
 
 const projectId = route.params.id as string
 
@@ -491,7 +525,7 @@ const statusBadge = computed(() => {
 
   if (!hasLimits.value) {
     return {
-      text: 'No Limits',
+      text: 'No Project Limits',
       class: 'bg-blue-300/10 text-blue-300',
       dotClass: 'bg-blue-300'
     }
@@ -681,6 +715,14 @@ const copyProjectKey = () => {
 
 const curlCopied = ref(false)
 const curlMode = ref<'stored' | 'passthrough'>('stored')
+
+// Format large numbers for display
+const formatNumber = (num: number) => {
+  if (num === Infinity) return '∞'
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'K'
+  return num.toLocaleString()
+}
 
 const copyCurlCommand = () => {
   const command = curlMode.value === 'stored'
@@ -927,6 +969,7 @@ const confirmDelete = async () => {
 
 onMounted(() => {
   loadProject()
+  loadPlan() // Load plan usage
   document.addEventListener('click', handleClickOutside)
 })
 

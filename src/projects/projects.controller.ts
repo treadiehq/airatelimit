@@ -11,6 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ProjectFieldsGuard } from '../common/guards/project-fields.guard';
 import { ProjectsService } from './projects.service';
 import { CreateUserProjectDto } from './dto/create-user-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -48,6 +49,7 @@ export class ProjectsController {
   }
 
   @Put(':id')
+  @UseGuards(ProjectFieldsGuard)
   async update(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
     return this.projectsService.update(id, dto);
   }
@@ -118,6 +120,7 @@ export class ProjectsController {
    * Update routing configuration
    */
   @Put(':id/routing')
+  @UseGuards(ProjectFieldsGuard)
   async updateRouting(
     @Param('id') id: string,
     @Body() dto: { routingEnabled?: boolean; routingConfig?: any },
