@@ -3,6 +3,13 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
 
+  vue: {
+    compilerOptions: {
+      // Treat el-* components from @tailwindplus/elements as custom elements
+      isCustomElement: (tag) => tag.startsWith('el-'),
+    },
+  },
+
   css: ['~/assets/css/main.css'],
 
   postcss: {

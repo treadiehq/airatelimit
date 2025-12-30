@@ -42,48 +42,48 @@
       </div>
     </div>
 		<el-dialog>
-    <dialog id="mobile-menu" class="backdrop:bg-transparent lg:hidden">
-      <div tabindex="0" class="fixed inset-0 focus:outline-none">
-        <el-dialog-panel class="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-black p-6 sm:max-w-sm border border-gray-500/20 rounded-lg shadow-xl">
-          <div class="flex items-center justify-between">
-            <a href="#" class="-m-1.5 p-1.5">
-              <span class="sr-only">AI Ratelimit</span>
-              <img src="/logo.png" alt="AI Ratelimit" class="h-8 w-auto" />
-            </a>
-            <button type="button" command="close" commandfor="mobile-menu" class="-m-2.5 rounded-md p-2.5 text-gray-400">
-              <span class="sr-only">Close menu</span>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-6">
-                <path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </button>
-          </div>
-          <div class="mt-6 flow-root">
-            <div class="-my-6 divide-y divide-gray-500/15">
-              <div class="space-y-2 py-6">
-                <a href="/#features" class="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500/10">Features</a>
-                <a href="/#how-it-works" class="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500/10">How It Works</a>
-                <a href="/#pricing" class="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500/10">Pricing</a>
-              </div>
-              <div class="py-6 flex flex-col gap-2">
-								<a href="https://github.com/treadiehq/airatelimit" class="-mx-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500/20" title="GitHub" target="_blank" rel="noopener noreferrer">
-									<span>View on Github</span>
-									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
-										<path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM6.75 9.25a.75.75 0 0 0 0 1.5h4.59l-2.1 1.95a.75.75 0 0 0 1.02 1.1l3.5-3.25a.75.75 0 0 0 0-1.1l-3.5-3.25a.75.75 0 1 0-1.02 1.1l2.1 1.95H6.75Z" clip-rule="evenodd" />
-									</svg>
-								</a>
-                <NuxtLink to="/login" class="-mx-3 flex border border-gray-500/10 bg-gray-500/10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500/20">
-									Log in
-									<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
-										<path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM6.75 9.25a.75.75 0 0 0 0 1.5h4.59l-2.1 1.95a.75.75 0 0 0 1.02 1.1l3.5-3.25a.75.75 0 0 0 0-1.1l-3.5-3.25a.75.75 0 1 0-1.02 1.1l2.1 1.95H6.75Z" clip-rule="evenodd" />
-									</svg>
-								</NuxtLink>
-              </div>
-            </div>
-          </div>
-        </el-dialog-panel>
-      </div>
-    </dialog>
-  </el-dialog>
+			<dialog id="mobile-menu" class="backdrop:bg-transparent lg:hidden">
+				<div tabindex="0" class="fixed inset-0 focus:outline-none">
+					<el-dialog-panel class="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-black p-6 sm:max-w-sm border border-gray-500/20 rounded-lg shadow-xl">
+						<div class="flex items-center justify-between">
+							<a href="#" class="-m-1.5 p-1.5">
+								<span class="sr-only">AI Ratelimit</span>
+								<img src="/logo.png" alt="AI Ratelimit" class="h-8 w-auto" />
+							</a>
+							<button type="button" command="close" commandfor="mobile-menu" class="-m-2.5 rounded-md p-2.5 text-gray-400">
+								<span class="sr-only">Close menu</span>
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" data-slot="icon" aria-hidden="true" class="size-6">
+									<path d="M6 18 18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round" />
+								</svg>
+							</button>
+						</div>
+						<div class="mt-6 flow-root">
+							<div class="-my-6 divide-y divide-gray-500/15">
+								<div class="space-y-2 py-6">
+									<a href="/#features" class="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500/10">Features</a>
+									<a href="/#how-it-works" class="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500/10">How It Works</a>
+									<a href="/#pricing" class="-mx-3 block rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500/10">Pricing</a>
+								</div>
+								<div class="py-6 flex flex-col gap-2">
+									<a href="https://github.com/treadiehq/airatelimit" class="-mx-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500/20" title="GitHub" target="_blank" rel="noopener noreferrer">
+										<span>View on Github</span>
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+											<path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM6.75 9.25a.75.75 0 0 0 0 1.5h4.59l-2.1 1.95a.75.75 0 0 0 1.02 1.1l3.5-3.25a.75.75 0 0 0 0-1.1l-3.5-3.25a.75.75 0 1 0-1.02 1.1l2.1 1.95H6.75Z" clip-rule="evenodd" />
+										</svg>
+									</a>
+									<NuxtLink to="/login" class="-mx-3 flex border border-gray-500/10 bg-gray-500/10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white hover:bg-gray-500/20">
+										Log in
+										<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+											<path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM6.75 9.25a.75.75 0 0 0 0 1.5h4.59l-2.1 1.95a.75.75 0 0 0 1.02 1.1l3.5-3.25a.75.75 0 0 0 0-1.1l-3.5-3.25a.75.75 0 1 0-1.02 1.1l2.1 1.95H6.75Z" clip-rule="evenodd" />
+										</svg>
+									</NuxtLink>
+								</div>
+							</div>
+						</div>
+					</el-dialog-panel>
+				</div>
+			</dialog>
+		</el-dialog>
   </nav>
 </template>
 
