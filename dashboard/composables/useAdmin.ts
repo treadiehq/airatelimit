@@ -15,43 +15,41 @@ export const PLAN_OPTIONS = [
   { value: 'enterprise', label: 'Enterprise', color: 'amber' },
 ] as const
 
+// Shared state for admin status (loaded once, shared across components)
+const adminStatus = ref<boolean | null>(null)
+const adminStatusLoading = ref(false)
+
 export function useAdmin() {
   const api = useApi()
   const { user } = useAuth()
-  const config = useRuntimeConfig()
 
   const organizations = ref<OrganizationInfo[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  // Debug: Log config on composable init
-  if (process.client) {
-    console.log('[useAdmin] Config check:', {
-      adminEmails: config.public.adminEmails,
-      allPublicConfig: JSON.stringify(config.public)
-    })
+  /**
+   * Load admin status from backend
+   */
+  const loadAdminStatus = async () => {
+    if (adminStatus.value !== null || adminStatusLoading.value) return
+    if (!user.value) return
+
+    adminStatusLoading.value = true
+    try {
+      const data = await api('/auth/me')
+      adminStatus.value = data.isAdmin === true
+    } catch (err) {
+      console.error('Failed to check admin status:', err)
+      adminStatus.value = false
+    } finally {
+      adminStatusLoading.value = false
+    }
   }
 
   /**
-   * Check if current user is a dashboard admin
+   * Check if current user is a dashboard admin (loaded from backend)
    */
-  const isAdmin = computed(() => {
-    const result = (() => {
-      if (!user.value?.email) return false
-      const adminEmails = (config.public.adminEmails || '').split(',').map((e: string) => e.trim().toLowerCase())
-      return adminEmails.includes(user.value.email.toLowerCase())
-    })()
-    
-    // Debug log - remove after testing
-    if (process.client) {
-      console.log('[Admin Check]', { 
-        userEmail: user.value?.email, 
-        configValue: config.public.adminEmails,
-        isAdmin: result
-      })
-    }
-    return result
-  })
+  const isAdmin = computed(() => adminStatus.value === true)
 
   /**
    * Load all organizations (admin only)
@@ -100,10 +98,11 @@ export function useAdmin() {
     loading,
     error,
     isAdmin,
+    adminStatusLoading: computed(() => adminStatusLoading.value),
 
     // Actions
+    loadAdminStatus,
     loadOrganizations,
     updateOrganizationPlan,
   }
 }
-

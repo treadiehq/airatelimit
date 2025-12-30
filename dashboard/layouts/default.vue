@@ -193,7 +193,7 @@ const { organization, loadOrganization } = useOrganization()
 const { features, mode, enterpriseUpgradeUrl, isEnterprise } = useFeatures()
 const { loadLicense, expirationWarning, isExpired: licenseExpired, daysRemaining: licenseDaysRemaining } = useLicense()
 const { isOwner, loadMembers } = useTeam()
-const { isAdmin } = useAdmin()
+const { isAdmin, loadAdminStatus } = useAdmin()
 const api = useApi()
 
 const showDropdown = ref(false)
@@ -334,16 +334,11 @@ onMounted(() => {
   loadPlan()
   loadLicense() // Load license status for enterprise mode
   loadMembers() // Load team members to determine user role
+  loadAdminStatus() // Load admin status from backend
   if (process.client) {
     document.addEventListener('click', handleClickOutside)
     // Restore dismissed state
     dismissedUpsell.value = localStorage.getItem('enterprise-upsell-dismissed') === 'true'
-    // Debug: Log admin visibility conditions
-    console.log('[Layout] Admin link conditions:', {
-      mode: mode.value,
-      isAdmin: isAdmin.value,
-      showLink: mode.value === 'cloud' && isAdmin.value
-    })
   }
 })
 
