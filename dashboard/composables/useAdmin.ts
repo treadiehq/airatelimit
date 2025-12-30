@@ -30,6 +30,12 @@ export function useAdmin() {
   const isAdmin = computed(() => {
     if (!user.value?.email) return false
     const adminEmails = (config.public.adminEmails || '').split(',').map((e: string) => e.trim().toLowerCase())
+    // Debug log - remove after testing
+    console.log('[Admin Check]', { 
+      userEmail: user.value.email, 
+      adminEmails, 
+      configValue: config.public.adminEmails 
+    })
     return adminEmails.includes(user.value.email.toLowerCase())
   })
 
