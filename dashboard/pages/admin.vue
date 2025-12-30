@@ -171,10 +171,11 @@ const formatDate = (dateStr: string) => {
                 {{ org.plan.charAt(0).toUpperCase() + org.plan.slice(1) }}
               </span>
             </td>
-            <td class="px-4 py-4 text-gray-400">
-              {{ org.userCount }} {{ org.userCount === 1 ? 'member' : 'members' }}
+            <td class="px-4 py-4 text-gray-400 text-sm">
+              {{ org.userCount }} 
+              <!-- {{ org.userCount === 1 ? 'member' : 'members' }} -->
             </td>
-            <td class="px-4 py-4 text-gray-400">
+            <td class="px-4 py-4 text-gray-400 text-sm">
               {{ formatDate(org.createdAt) }}
             </td>
             <td class="px-4 py-4">
@@ -188,7 +189,7 @@ const formatDate = (dateStr: string) => {
                   <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
                 </svg>
 
-                Edit Plan
+                Edit
               </button>
             </td>
           </tr>

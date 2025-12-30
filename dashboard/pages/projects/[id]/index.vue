@@ -1,5 +1,5 @@
 <template>
-  <NuxtLayout>
+  <div>
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <!-- Breadcrumbs -->
       <Breadcrumbs :items="breadcrumbs" v-if="!loading && !error" />
@@ -397,7 +397,6 @@ curl https://api.airatelimit.com/v1/chat/completions \
               </div>
             </div>
           </div>
-        </div>
         </div><!-- End Usage Tab Content -->
       </div>
     </div>
@@ -436,10 +435,11 @@ curl https://api.airatelimit.com/v1/chat/completions \
       :actions="quickActions"
       @action="handleQuickAction"
     /> -->
+    </div>
     
     <!-- Confetti celebration -->
     <Confetti ref="confettiRef" />
-  </NuxtLayout>
+  </div>
 </template>
 
 <script setup lang="ts">

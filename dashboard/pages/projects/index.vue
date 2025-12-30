@@ -1,6 +1,5 @@
 <template>
-  <NuxtLayout>
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Breadcrumbs -->
       <!-- <Breadcrumbs :items="breadcrumbs" /> -->
 
@@ -219,7 +218,6 @@
           @delete="handleDeleteRequest"
         />
       </div>
-    </div>
 
     <!-- Create Project Modal -->
     <CreateProjectModal
@@ -239,7 +237,7 @@
       @confirm="confirmDelete"
       @cancel="showDeleteConfirm = false"
     />
-  </NuxtLayout>
+  </div>
 </template>
 
 <script setup lang="ts">

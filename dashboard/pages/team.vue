@@ -1,6 +1,5 @@
 <template>
-  <NuxtLayout>
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Feature Gate: Only show in cloud/enterprise mode -->
       <FeatureGate
         feature="showTeamManagement"
@@ -291,7 +290,6 @@
       @confirm="confirmDialog.onConfirm"
       @cancel="confirmDialog.open = false"
     />
-  </NuxtLayout>
 </template>
 
 <script setup lang="ts">

@@ -1,6 +1,5 @@
 <template>
-  <NuxtLayout>
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Feature Gate: Only show in cloud mode -->
       <FeatureGate
         feature="showBilling"
@@ -82,7 +81,6 @@
         </div>
       </FeatureGate>
     </div>
-  </NuxtLayout>
 </template>
 
 <script setup lang="ts">
