@@ -163,7 +163,7 @@ const formatDate = (dateStr: string | null) => {
                   <button
                     @click="savePlan(org.id)"
                     :disabled="updating"
-                    class="px-2 py-1 text-xs bg-green-300/10 text-green-300 rounded hover:bg-green-300/20 disabled:opacity-50"
+                    class="px-2 py-1 text-xs bg-blue-300/10 text-blue-300 rounded hover:bg-blue-300/15 disabled:opacity-50"
                   >
                     Save
                   </button>
