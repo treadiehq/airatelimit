@@ -48,6 +48,7 @@ const featurePlanMap: Record<string, { plan: string; price: number }> = {
   smartRouting: { plan: 'Pro', price: 50 },
   securityConfig: { plan: 'Pro', price: 50 },
   publicEndpoints: { plan: 'Pro', price: 50 },
+  teamManagement: { plan: 'Pro', price: 50 },
   sso: { plan: 'Enterprise', price: 0 },
   selfHosting: { plan: 'Enterprise', price: 0 },
   dedicatedSupport: { plan: 'Enterprise', price: 0 },

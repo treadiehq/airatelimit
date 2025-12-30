@@ -5,6 +5,8 @@ import {
   BadRequestException,
   HttpException,
   HttpStatus,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -12,6 +14,7 @@ import { UsersService } from '../users/users.service';
 import { EmailService } from '../email/email.service';
 import { OrganizationsService } from '../organizations/organizations.service';
 import { RateLimitService } from '../common/rate-limit.service';
+import { MembersService } from '../members/members.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { RequestMagicLinkDto } from './dto/request-magic-link.dto';
@@ -35,12 +38,24 @@ export class AuthService {
     private emailService: EmailService,
     private configService: ConfigService,
     private rateLimitService: RateLimitService,
+    @Inject(forwardRef(() => MembersService))
+    private membersService: MembersService,
   ) {}
 
   async signup(signupDto: SignupDto) {
     const existing = await this.usersService.findByEmail(signupDto.email);
     if (existing) {
       throw new ConflictException('Email already registered');
+    }
+
+    // Handle invite-based signup
+    if (signupDto.inviteToken) {
+      return this.signupWithInvite(signupDto.email, signupDto.inviteToken);
+    }
+
+    // Regular signup - requires organization name
+    if (!signupDto.organizationName) {
+      throw new BadRequestException('Organization name is required');
     }
 
     // Check if organization name is already taken
@@ -64,6 +79,9 @@ export class AuthService {
       organization.id,
     );
 
+    // Create membership record (user is owner of new org)
+    await this.membersService.ensureMembership(user.id, organization.id);
+
     // Automatically send magic link for first login
     await this.requestMagicLink({ email: user.email }, true);
 
@@ -71,6 +89,39 @@ export class AuthService {
       message: 'Account created! Check your email for a magic link to sign in.',
       email: user.email,
       organizationName: organization.name,
+    };
+  }
+
+  /**
+   * Signup with an invite token - creates user and accepts invite in one step
+   */
+  private async signupWithInvite(email: string, inviteToken: string) {
+    // Validate the invite token first
+    const inviteDetails = await this.membersService.getInviteByToken(inviteToken);
+    if (!inviteDetails) {
+      throw new BadRequestException('Invalid or expired invitation');
+    }
+
+    // Verify email matches the invite
+    if (email.toLowerCase() !== inviteDetails.email.toLowerCase()) {
+      throw new BadRequestException(
+        `This invitation was sent to ${inviteDetails.email}. Please use that email address.`,
+      );
+    }
+
+    // Create user with the organization from the invite
+    const user = await this.usersService.create(email, inviteDetails.organizationId);
+
+    // Accept the invite (this creates membership and deletes the invite)
+    await this.membersService.acceptInvite(inviteToken, user.id);
+
+    // Send magic link for first login
+    await this.requestMagicLink({ email: user.email }, true);
+
+    return {
+      message: `Account created! You've joined ${inviteDetails.organizationName}. Check your email for a magic link to sign in.`,
+      email: user.email,
+      organizationName: inviteDetails.organizationName,
     };
   }
 
@@ -204,6 +255,9 @@ export class AuthService {
           await this.organizationsService.upgradePlan(user.organizationId, 'trial');
         }
       }
+
+      // Ensure user has a membership record (for users created before team management)
+      await this.membersService.ensureMembership(user.id, user.organizationId);
     }
 
     // Generate JWT with organizationId

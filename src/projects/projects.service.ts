@@ -93,6 +93,15 @@ export class ProjectsService {
     return projects.map(p => this.decryptProject(p));
   }
 
+  async findByOrganization(organizationId: string): Promise<Project[]> {
+    const projects = await this.projectsRepository.find({
+      where: { organizationId },
+      order: { createdAt: 'DESC' },
+    });
+    // Decrypt provider keys for each project
+    return projects.map(p => this.decryptProject(p));
+  }
+
   async findById(id: string): Promise<Project | null> {
     const project = await this.projectsRepository.findOne({ where: { id } });
     return this.decryptProject(project);

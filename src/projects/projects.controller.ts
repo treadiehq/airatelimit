@@ -33,16 +33,16 @@ export class ProjectsController {
   ) {}
 
   /**
-   * Helper to verify project exists and user owns it.
+   * Helper to verify project exists and user has access (same organization).
    * Throws NotFoundException if project doesn't exist.
-   * Throws ForbiddenException if user doesn't own the project.
+   * Throws ForbiddenException if user is not in the same organization.
    */
-  private async verifyProjectOwnership(projectId: string, userId: string) {
+  private async verifyProjectAccess(projectId: string, organizationId: string) {
     const project = await this.projectsService.findById(projectId);
     if (!project) {
       throw new NotFoundException('Project not found');
     }
-    if (project.ownerId !== userId) {
+    if (project.organizationId !== organizationId) {
       throw new ForbiddenException('Access denied');
     }
     return project;
@@ -57,26 +57,26 @@ export class ProjectsController {
 
   @Get()
   async findAll(@Request() req) {
-    const userId = req.user.userId;
-    return this.projectsService.findByOwner(userId);
+    const organizationId = req.user.organizationId;
+    return this.projectsService.findByOrganization(organizationId);
   }
 
   @Get(':id')
   async findOne(@Request() req, @Param('id') id: string) {
-    const project = await this.verifyProjectOwnership(id, req.user.userId);
+    const project = await this.verifyProjectAccess(id, req.user.organizationId);
     return project;
   }
 
   @Put(':id')
   @UseGuards(ProjectFieldsGuard)
   async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateProjectDto) {
-    await this.verifyProjectOwnership(id, req.user.userId);
+    await this.verifyProjectAccess(id, req.user.organizationId);
     return this.projectsService.update(id, dto);
   }
 
   @Delete(':id')
   async delete(@Request() req, @Param('id') id: string) {
-    await this.verifyProjectOwnership(id, req.user.userId);
+    await this.verifyProjectAccess(id, req.user.organizationId);
     await this.projectsService.delete(id);
     return { message: 'Project deleted successfully' };
   }
@@ -90,7 +90,7 @@ export class ProjectsController {
    */
   @Get(':id/analytics/costs')
   async getCostSummary(@Request() req, @Param('id') projectId: string) {
-    await this.verifyProjectOwnership(projectId, req.user.userId);
+    await this.verifyProjectAccess(projectId, req.user.organizationId);
     const summary = await this.usageService.getCostSummaryForProject(projectId);
     const projected = await this.usageService.getProjectedCost(projectId);
     
@@ -109,7 +109,7 @@ export class ProjectsController {
     @Param('id') projectId: string,
     @Query('days') days?: string,
   ) {
-    await this.verifyProjectOwnership(projectId, req.user.userId);
+    await this.verifyProjectAccess(projectId, req.user.organizationId);
     const daysNum = days ? parseInt(days, 10) : 30;
     return this.usageService.getCostByModel(projectId, daysNum);
   }
@@ -124,7 +124,7 @@ export class ProjectsController {
     @Query('days') days?: string,
     @Query('limit') limit?: string,
   ) {
-    await this.verifyProjectOwnership(projectId, req.user.userId);
+    await this.verifyProjectAccess(projectId, req.user.organizationId);
     const daysNum = days ? parseInt(days, 10) : 30;
     const limitNum = limit ? parseInt(limit, 10) : 20;
     return this.usageService.getTopUsersByCost(projectId, daysNum, limitNum);
@@ -139,7 +139,7 @@ export class ProjectsController {
     @Param('id') projectId: string,
     @Query('days') days?: string,
   ) {
-    await this.verifyProjectOwnership(projectId, req.user.userId);
+    await this.verifyProjectAccess(projectId, req.user.organizationId);
     const daysNum = days ? parseInt(days, 10) : 30;
     return this.usageService.getCostHistory(projectId, daysNum);
   }
@@ -154,7 +154,7 @@ export class ProjectsController {
     @Param('id') id: string,
     @Body() dto: { routingEnabled?: boolean; routingConfig?: any },
   ) {
-    await this.verifyProjectOwnership(id, req.user.userId);
+    await this.verifyProjectAccess(id, req.user.organizationId);
     return this.projectsService.update(id, dto);
   }
 
@@ -167,7 +167,7 @@ export class ProjectsController {
     @Param('id') id: string,
     @Body() dto: { budgetConfig?: any },
   ) {
-    await this.verifyProjectOwnership(id, req.user.userId);
+    await this.verifyProjectAccess(id, req.user.organizationId);
     return this.projectsService.update(id, dto);
   }
 
@@ -177,7 +177,7 @@ export class ProjectsController {
     @Param('id') projectId: string,
     @Query('limit') limit?: string,
   ) {
-    await this.verifyProjectOwnership(projectId, req.user.userId);
+    await this.verifyProjectAccess(projectId, req.user.organizationId);
     const limitNum = limit ? parseInt(limit, 10) : 50;
 
     const events = await this.securityEventRepository.find({

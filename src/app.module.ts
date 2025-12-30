@@ -12,6 +12,7 @@ import { IdentityLimitsModule } from './identity-limits/identity-limits.module';
 import { HealthModule } from './health/health.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { BillingModule } from './billing/billing.module';
+import { MembersModule } from './members/members.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { BillingModule } from './billing/billing.module';
     IdentityLimitsModule,
     HealthModule,
     PromptsModule,
+    MembersModule,
     // Conditionally loaded based on DEPLOYMENT_MODE
     BillingModule.register(),
   ],

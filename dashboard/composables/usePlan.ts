@@ -7,6 +7,7 @@
 export interface PlanLimits {
   maxProjects: number;
   maxRequestsPerMonth: number;
+  maxTeamMembers: number;
   costTracking: boolean;
   usageAnalytics: boolean;
   emailSupport: boolean;
@@ -16,6 +17,7 @@ export interface PlanLimits {
   smartRouting: boolean;
   securityConfig: boolean;
   publicEndpoints: boolean;
+  teamManagement: boolean;
   selfHosting: boolean;
   dedicatedSupport: boolean;
   auditLogs: boolean;
@@ -35,6 +37,7 @@ export interface PlanUsage {
 const DEFAULT_LIMITS: PlanLimits = {
   maxProjects: 3,
   maxRequestsPerMonth: 100_000,
+  maxTeamMembers: 1,
   costTracking: true,
   usageAnalytics: true,
   emailSupport: true,
@@ -44,6 +47,7 @@ const DEFAULT_LIMITS: PlanLimits = {
   smartRouting: false,
   securityConfig: false,
   publicEndpoints: false,
+  teamManagement: false,
   selfHosting: false,
   dedicatedSupport: false,
   auditLogs: false,
@@ -54,6 +58,7 @@ const DEFAULT_LIMITS: PlanLimits = {
 export const FEATURE_NAMES: Record<keyof PlanLimits, string> = {
   maxProjects: 'Projects',
   maxRequestsPerMonth: 'Requests/month',
+  maxTeamMembers: 'Team Members',
   costTracking: 'Cost Tracking',
   usageAnalytics: 'Usage Analytics',
   emailSupport: 'Email Support',
@@ -63,6 +68,7 @@ export const FEATURE_NAMES: Record<keyof PlanLimits, string> = {
   smartRouting: 'Smart Routing',
   securityConfig: 'Security Configuration',
   publicEndpoints: 'Public Endpoints',
+  teamManagement: 'Team Management',
   selfHosting: 'Self-Hosting License',
   dedicatedSupport: 'Dedicated Support',
   auditLogs: 'Audit Logs',
@@ -73,6 +79,7 @@ export const FEATURE_NAMES: Record<keyof PlanLimits, string> = {
 export const FEATURE_MIN_PLAN: Record<keyof PlanLimits, string> = {
   maxProjects: 'trial',
   maxRequestsPerMonth: 'trial',
+  maxTeamMembers: 'pro',
   costTracking: 'trial',
   usageAnalytics: 'trial',
   emailSupport: 'trial',
@@ -82,6 +89,7 @@ export const FEATURE_MIN_PLAN: Record<keyof PlanLimits, string> = {
   smartRouting: 'pro',
   securityConfig: 'pro',
   publicEndpoints: 'pro',
+  teamManagement: 'pro',
   selfHosting: 'enterprise',
   dedicatedSupport: 'enterprise',
   auditLogs: 'enterprise',
@@ -112,12 +120,14 @@ export function usePlan() {
         ...DEFAULT_LIMITS,
         maxProjects: Infinity,
         maxRequestsPerMonth: Infinity,
+        maxTeamMembers: Infinity,
         flowDesigner: true,
         promptsConfig: true,
         privacyConfig: true,
         smartRouting: true,
         securityConfig: true,
         publicEndpoints: true,
+        teamManagement: true,
         selfHosting: true,
         dedicatedSupport: true,
         auditLogs: true,
@@ -134,6 +144,7 @@ export function usePlan() {
         ...DEFAULT_LIMITS,
         maxProjects: Infinity,
         maxRequestsPerMonth: Infinity,
+        maxTeamMembers: 1,  // No team management in self-hosted
         // Pro features - available
         flowDesigner: true,
         promptsConfig: true,
@@ -141,6 +152,7 @@ export function usePlan() {
         smartRouting: true,
         securityConfig: true,
         publicEndpoints: true,
+        teamManagement: false,  // Requires cloud or enterprise
         // Enterprise features - NOT available (require license)
         selfHosting: false,
         dedicatedSupport: false,

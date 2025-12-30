@@ -23,6 +23,12 @@ export const useApi = () => {
       throw new Error(error.message || 'Request failed')
     }
 
+    // Handle empty responses (204 No Content, etc.)
+    const contentType = response.headers.get('content-type')
+    if (response.status === 204 || !contentType?.includes('application/json')) {
+      return null
+    }
+
     return response.json()
   }
 }

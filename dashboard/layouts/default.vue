@@ -12,9 +12,9 @@
           </div>
           
           <div class="flex items-center space-x-4">
-            <!-- Plan badge (cloud mode only, shown after data loads) -->
+            <!-- Plan badge (cloud mode only, shown for owners after data loads) -->
             <NuxtLink 
-              v-if="features.showBilling && planLoaded"
+              v-if="features.showBilling && planLoaded && isOwner"
               to="/billing"
               :class="[
                 'relative text-[10px] font-medium px-2.5 py-1 rounded-md transition-all duration-300',
@@ -54,9 +54,9 @@
                   <!-- <p class="text-xs text-gray-500 mt-1 capitalize">{{ mode }} mode</p> -->
                 </div>
                 
-                <!-- Billing link in dropdown (cloud mode) -->
+                <!-- Billing link in dropdown (cloud mode, owners only) -->
                 <NuxtLink
-                  v-if="features.showBilling"
+                  v-if="features.showBilling && isOwner"
                   to="/billing"
                   @click="showDropdown = false"
                   class="w-full text-left px-4 py-2 text-xs text-gray-400 hover:bg-gray-500/10 hover:text-white flex items-center justify-between"
@@ -70,6 +70,19 @@
                   <span v-if="planLoaded" :class="['text-[10px] px-2 py-0.5 rounded-full', planBadgeClasses]">
                     {{ planLabel }}
                   </span>
+                </NuxtLink>
+                
+                <!-- Team link (cloud + enterprise mode) -->
+                <NuxtLink
+                  v-if="features.showTeamManagement"
+                  to="/team"
+                  @click="showDropdown = false"
+                  class="w-full text-left px-4 py-2 text-xs text-gray-400 hover:bg-gray-500/10 hover:text-white flex items-center space-x-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  <span>Team</span>
                 </NuxtLink>
                 
                 <button
@@ -166,6 +179,7 @@ const { user, logout } = useAuth()
 const { organization, loadOrganization } = useOrganization()
 const { features, mode, enterpriseUpgradeUrl, isEnterprise } = useFeatures()
 const { loadLicense, expirationWarning, isExpired: licenseExpired, daysRemaining: licenseDaysRemaining } = useLicense()
+const { isOwner, loadMembers } = useTeam()
 const api = useApi()
 
 const showDropdown = ref(false)
@@ -305,6 +319,7 @@ onMounted(() => {
   loadOrganization()
   loadPlan()
   loadLicense() // Load license status for enterprise mode
+  loadMembers() // Load team members to determine user role
   if (process.client) {
     document.addEventListener('click', handleClickOutside)
     // Restore dismissed state

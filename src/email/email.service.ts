@@ -117,4 +117,91 @@ https://airatelimit.com`;
     console.log(`🔗 Magic Link: ${magicLink}`);
     console.log('='.repeat(80) + '\n');
   }
+
+  async sendTeamInvitation(
+    email: string,
+    organizationName: string,
+    inviteLink: string,
+    role: string,
+  ): Promise<void> {
+    const roleDisplay = role === 'owner' ? 'an Owner' : role === 'admin' ? 'an Admin' : 'a Member';
+    
+    if (this.resend) {
+      await this.sendInviteViaResend(email, organizationName, inviteLink, roleDisplay);
+    } else {
+      this.logInviteToConsole(email, organizationName, inviteLink, role);
+    }
+  }
+
+  private async sendInviteViaResend(
+    email: string,
+    organizationName: string,
+    inviteLink: string,
+    roleDisplay: string,
+  ): Promise<void> {
+    try {
+      const fromEmail =
+        this.configService.get<string>('emailFrom') ||
+        'AI Ratelimit <noreply@airatelimit.com>';
+
+      const textContent = `You've been invited to join ${organizationName}!
+
+You've been invited to join ${organizationName} as ${roleDisplay}.
+
+Click the link below to accept the invitation:
+
+${inviteLink}
+
+This invitation expires in 7 days.
+
+If you didn't expect this invitation, you can safely ignore this email.
+
+—
+AI Ratelimit
+https://airatelimit.com`;
+
+      const { data, error } = await this.resend.emails.send({
+        from: fromEmail,
+        to: email,
+        subject: `You're invited to join ${organizationName} on AI Ratelimit`,
+        text: textContent,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      this.logger.log(
+        `Team invitation email sent to ${email} for ${organizationName} (id: ${data?.id})`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to send invitation email via Resend: ${error.message}`);
+      throw new Error('Failed to send invitation email');
+    }
+  }
+
+  private logInviteToConsole(
+    email: string,
+    organizationName: string,
+    inviteLink: string,
+    role: string,
+  ): void {
+    this.logger.log('\n' + '='.repeat(80));
+    this.logger.log('👥 TEAM INVITATION');
+    this.logger.log('='.repeat(80));
+    this.logger.log(`📧 Email: ${email}`);
+    this.logger.log(`🏢 Organization: ${organizationName}`);
+    this.logger.log(`👤 Role: ${role}`);
+    this.logger.log(`🔗 Invite Link: ${inviteLink}`);
+    this.logger.log('='.repeat(80) + '\n');
+
+    console.log('\n' + '='.repeat(80));
+    console.log('👥 TEAM INVITATION');
+    console.log('='.repeat(80));
+    console.log(`📧 Email: ${email}`);
+    console.log(`🏢 Organization: ${organizationName}`);
+    console.log(`👤 Role: ${role}`);
+    console.log(`🔗 Invite Link: ${inviteLink}`);
+    console.log('='.repeat(80) + '\n');
+  }
 }

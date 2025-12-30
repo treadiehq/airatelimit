@@ -533,7 +533,7 @@
               </li>
               <li class="flex items-center gap-2 text-sm text-gray-300">
                 <svg class="w-4 h-4 text-blue-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                Team collaboration
+                Team (up to 5 members)
               </li>
             </ul>
             <NuxtLink to="/signup" class="block w-full text-center py-2 px-4 rounded-lg bg-blue-300 text-black hover:bg-blue-200 transition-colors text-sm font-medium mt-auto">
@@ -559,6 +559,10 @@
               <li class="flex items-center gap-2 text-sm text-gray-300">
                 <svg class="w-4 h-4 text-blue-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 Unlimited projects
+              </li>
+              <li class="flex items-center gap-2 text-sm text-gray-300">
+                <svg class="w-4 h-4 text-blue-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Unlimited team members
               </li>
               <li class="flex items-center gap-2 text-sm text-gray-300">
                 <svg class="w-4 h-4 text-blue-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>

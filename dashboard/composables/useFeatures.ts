@@ -19,7 +19,7 @@ export interface DashboardFeatures {
   showSSO: boolean
   // showSAML: boolean
   showAuditLogs: boolean
-  showTeamManagement: boolean
+  showTeamManagement: boolean  // Show team management UI (cloud: Pro+ only, enterprise: always)
   // showAdvancedAnalytics: boolean
   showCustomBranding: boolean
   showWebhooks: boolean

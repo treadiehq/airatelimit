@@ -10,6 +10,7 @@ export interface PlanLimits {
   // Resource limits
   maxProjects: number;
   maxRequestsPerMonth: number;
+  maxTeamMembers: number;  // Team size limit (Infinity for unlimited)
   
   // Features
   costTracking: boolean;
@@ -21,6 +22,7 @@ export interface PlanLimits {
   smartRouting: boolean;
   securityConfig: boolean;
   publicEndpoints: boolean;  // Frontend-safe public API endpoints with origin restriction
+  teamManagement: boolean;   // Invite and manage team members
   selfHosting: boolean;
   dedicatedSupport: boolean;
   auditLogs: boolean;
@@ -32,6 +34,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   trial: {
     maxProjects: 3,
     maxRequestsPerMonth: 100_000,
+    maxTeamMembers: 1,  // No team management
     costTracking: true,
     usageAnalytics: true,
     emailSupport: true,
@@ -41,6 +44,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     smartRouting: false,
     securityConfig: false,
     publicEndpoints: false,
+    teamManagement: false,
     selfHosting: false,
     dedicatedSupport: false,
     auditLogs: false,
@@ -50,6 +54,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   basic: {
     maxProjects: 3,
     maxRequestsPerMonth: 100_000,
+    maxTeamMembers: 1,  // No team management
     costTracking: true,
     usageAnalytics: true,
     emailSupport: true,
@@ -59,6 +64,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     smartRouting: false,
     securityConfig: false,
     publicEndpoints: false,
+    teamManagement: false,
     selfHosting: false,
     dedicatedSupport: false,
     auditLogs: false,
@@ -68,6 +74,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   pro: {
     maxProjects: 50,
     maxRequestsPerMonth: 1_000_000,
+    maxTeamMembers: 5,  // Up to 5 team members
     costTracking: true,
     usageAnalytics: true,
     emailSupport: true,
@@ -77,6 +84,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     smartRouting: true,
     securityConfig: true,
     publicEndpoints: true,
+    teamManagement: true,
     selfHosting: false,
     dedicatedSupport: false,
     auditLogs: false,
@@ -86,6 +94,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
   enterprise: {
     maxProjects: Infinity,
     maxRequestsPerMonth: Infinity,
+    maxTeamMembers: Infinity,  // Unlimited team members
     costTracking: true,
     usageAnalytics: true,
     emailSupport: true,
@@ -95,6 +104,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     smartRouting: true,
     securityConfig: true,
     publicEndpoints: true,
+    teamManagement: true,
     selfHosting: true,
     dedicatedSupport: true,
     auditLogs: true,
@@ -137,6 +147,7 @@ export function getPlanDisplayName(plan: string | null | undefined): string {
 export const FEATURE_NAMES: Record<keyof PlanLimits, string> = {
   maxProjects: 'Projects',
   maxRequestsPerMonth: 'Requests/month',
+  maxTeamMembers: 'Team Members',
   costTracking: 'Cost Tracking',
   usageAnalytics: 'Usage Analytics',
   emailSupport: 'Email Support',
@@ -146,6 +157,7 @@ export const FEATURE_NAMES: Record<keyof PlanLimits, string> = {
   smartRouting: 'Smart Routing',
   securityConfig: 'Security Configuration',
   publicEndpoints: 'Public Endpoints',
+  teamManagement: 'Team Management',
   selfHosting: 'Self-Hosting License',
   dedicatedSupport: 'Dedicated Support',
   auditLogs: 'Audit Logs',
@@ -158,6 +170,7 @@ export const FEATURE_NAMES: Record<keyof PlanLimits, string> = {
 export const FEATURE_MIN_PLAN: Record<keyof PlanLimits, PlanType> = {
   maxProjects: 'trial',
   maxRequestsPerMonth: 'trial',
+  maxTeamMembers: 'pro',
   costTracking: 'trial',
   usageAnalytics: 'trial',
   emailSupport: 'trial',
@@ -167,6 +180,7 @@ export const FEATURE_MIN_PLAN: Record<keyof PlanLimits, PlanType> = {
   smartRouting: 'pro',
   securityConfig: 'pro',
   publicEndpoints: 'pro',
+  teamManagement: 'pro',
   selfHosting: 'enterprise',
   dedicatedSupport: 'enterprise',
   auditLogs: 'enterprise',

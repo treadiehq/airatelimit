@@ -303,11 +303,13 @@ const proFeatures = [
   'Smart routing',
   'Public endpoints',
   'Security',
+  'Team (up to 5 members)',
 ]
 
 const enterpriseFeatures = [
   'Everything in Pro',
   'Unlimited projects & requests',
+  'Unlimited team members',
   'SSO',
   'Self-hosting',
   'Dedicated support',
