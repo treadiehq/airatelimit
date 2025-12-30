@@ -283,7 +283,7 @@
         <section class="space-y-4">
           <h2 class="text-xl font-semibold text-white">Contact Us</h2>
           <p>
-            If you have any questions about this Privacy Policy, please contact us by email: <a href="mailto:info@airatelimit.com" class="text-blue-300 hover:underline">info@airatelimit.com</a>
+            If you have any questions about this Privacy Policy, please contact us by email: <a href="mailto:info@treadie.com" class="text-blue-300 hover:underline">info@treadie.com</a>
           </p>
         </section>
       </div>

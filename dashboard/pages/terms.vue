@@ -24,7 +24,7 @@
         <section class="space-y-4">
           <h2 class="text-xl font-semibold text-white">Accepting these Terms</h2>
           <p>
-            If you access or use the Service, it means you agree to be bound by all of the terms below. So, before you use the Service, please read all of the terms. If you don't agree to all of the terms below, please do not use the Service. Also, if a term does not make sense to you, please let us know by sending a mail to <a href="mailto:info@airatelimit.com" class="text-blue-300 hover:underline">info@airatelimit.com</a>.
+            If you access or use the Service, it means you agree to be bound by all of the terms below. So, before you use the Service, please read all of the terms. If you don't agree to all of the terms below, please do not use the Service. Also, if a term does not make sense to you, please let us know by sending a mail to <a href="mailto:info@treadie.com" class="text-blue-300 hover:underline">info@treadie.com</a>.
           </p>
         </section>
 
@@ -210,7 +210,7 @@
         <section class="space-y-4">
           <h2 class="text-xl font-semibold text-white">Questions & Contact Information</h2>
           <p>
-            Questions or comments about the Service may be directed to us at the email address: <a href="mailto:info@airatelimit.com" class="text-blue-300 hover:underline">info@airatelimit.com</a>
+            Questions or comments about the Service may be directed to us at the email address: <a href="mailto:info@treadie.com" class="text-blue-300 hover:underline">info@treadie.com</a>
           </p>
         </section>
       </div>
