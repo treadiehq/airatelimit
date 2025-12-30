@@ -13,6 +13,7 @@ import { HealthModule } from './health/health.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { BillingModule } from './billing/billing.module';
 import { MembersModule } from './members/members.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { MembersModule } from './members/members.module';
     HealthModule,
     PromptsModule,
     MembersModule,
+    AdminModule,
     // Conditionally loaded based on DEPLOYMENT_MODE
     BillingModule.register(),
   ],

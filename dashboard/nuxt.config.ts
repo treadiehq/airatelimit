@@ -25,6 +25,7 @@ export default defineNuxtConfig({
       stripePublishableKey: process.env.NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
       enterpriseUrl: process.env.NUXT_PUBLIC_ENTERPRISE_URL || 'mailto:enterprise@airatelimit.com?subject=Enterprise%20Inquiry',
       cloudSignupUrl: process.env.NUXT_PUBLIC_CLOUD_SIGNUP_URL || 'https://airatelimit.com/signup',
+      adminEmails: process.env.NUXT_PUBLIC_ADMIN_EMAILS || '',
     },
   },
 

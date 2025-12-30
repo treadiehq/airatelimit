@@ -85,6 +85,19 @@
                   <span>Team</span>
                 </NuxtLink>
                 
+                <!-- Admin link (cloud mode, admin users only) -->
+                <NuxtLink
+                  v-if="mode === 'cloud' && isAdmin"
+                  to="/admin"
+                  @click="showDropdown = false"
+                  class="w-full text-left px-4 py-2 text-xs text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 flex items-center space-x-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  <span>Admin</span>
+                </NuxtLink>
+                
                 <button
                   @click="handleLogout"
                   class="w-full text-left px-4 py-2 text-xs text-gray-400 hover:bg-gray-500/10 hover:text-white flex items-center space-x-2"
@@ -180,6 +193,7 @@ const { organization, loadOrganization } = useOrganization()
 const { features, mode, enterpriseUpgradeUrl, isEnterprise } = useFeatures()
 const { loadLicense, expirationWarning, isExpired: licenseExpired, daysRemaining: licenseDaysRemaining } = useLicense()
 const { isOwner, loadMembers } = useTeam()
+const { isAdmin } = useAdmin()
 const api = useApi()
 
 const showDropdown = ref(false)
