@@ -28,10 +28,14 @@ export class AdminService {
           where: { organizationId: org.id },
         });
 
+        // Normalize plan to valid values (handle legacy 'free' or null values)
+        const validPlans = ['trial', 'basic', 'pro', 'enterprise'];
+        const normalizedPlan = validPlans.includes(org.plan) ? org.plan : 'trial';
+
         return {
           id: org.id,
           name: org.name,
-          plan: org.plan || 'trial',
+          plan: normalizedPlan,
           userCount,
           createdAt: org.createdAt,
         };
