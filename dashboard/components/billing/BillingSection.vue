@@ -298,7 +298,7 @@ const proFeatures = [
   '50 projects',
   '1M requests/month',
   'Flow Designer',
-  'Prompts',
+  'Server-side Prompts',
   'Privacy',
   'Smart routing',
   'Public endpoints',
