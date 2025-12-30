@@ -136,22 +136,6 @@ export class UsageService {
       ? limits.tokenLimit 
       : null;
 
-    // DEBUG: Log limit check details
-    console.log('Limit check:', {
-      projectId: project.id,
-      identity,
-      tier,
-      limits,
-      hasTierRequestLimit,
-      hasTierTokenLimit,
-      shouldCheckRequests,
-      shouldCheckTokens,
-      effectiveRequestLimit,
-      effectiveTokenLimit,
-      requestedTokens,
-      requestedRequests,
-    });
-
     // Format periodStart as date string for PostgreSQL
     const periodStartStr = periodStart.toISOString().split('T')[0];
 
@@ -204,14 +188,6 @@ export class UsageService {
     // TypeORM raw query returns [rows, affectedCount] for PostgreSQL
     // Extract the actual rows array
     const rows = Array.isArray(updateResult[0]) ? updateResult[0] : updateResult;
-    
-    // DEBUG: Log UPDATE result
-    console.log('Limit UPDATE result:', {
-      rawLength: updateResult.length,
-      actualRowsReturned: rows.length,
-      allowed: rows.length > 0,
-      firstRow: rows[0] ? JSON.stringify(rows[0]) : 'none',
-    });
 
     // If UPDATE returned a row, the request was allowed
     if (rows.length > 0) {
