@@ -14,12 +14,15 @@ export class AdminService {
   ) {}
 
   /**
-   * Get all organizations with user counts
+   * Get all organizations with user counts and status info
    */
   async getAllOrganizations() {
     const organizations = await this.organizationRepository.find({
       order: { createdAt: 'DESC' },
     });
+
+    const TRIAL_DAYS = 7;
+    const now = new Date();
 
     // Get user counts for each organization
     const orgsWithStats = await Promise.all(
@@ -32,10 +35,34 @@ export class AdminService {
         const validPlans = ['trial', 'basic', 'pro', 'enterprise'];
         const normalizedPlan = validPlans.includes(org.plan) ? org.plan : 'trial';
 
+        // Calculate trial info
+        let status: 'active' | 'trial' | 'expired' = 'active';
+        let trialDaysRemaining: number | null = null;
+        let trialExpiresAt: Date | null = null;
+
+        if (normalizedPlan === 'trial') {
+          const trialStart = org.trialStartedAt || org.createdAt;
+          trialExpiresAt = new Date(trialStart);
+          trialExpiresAt.setDate(trialExpiresAt.getDate() + TRIAL_DAYS);
+          
+          const msRemaining = trialExpiresAt.getTime() - now.getTime();
+          trialDaysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+          
+          if (trialDaysRemaining <= 0) {
+            status = 'expired';
+            trialDaysRemaining = 0;
+          } else {
+            status = 'trial';
+          }
+        }
+
         return {
           id: org.id,
           name: org.name,
           plan: normalizedPlan,
+          status,
+          trialDaysRemaining,
+          trialExpiresAt: trialExpiresAt?.toISOString() || null,
           userCount,
           createdAt: org.createdAt,
         };

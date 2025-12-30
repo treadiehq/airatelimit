@@ -4,6 +4,9 @@ export interface OrganizationInfo {
   id: string
   name: string
   plan: 'trial' | 'basic' | 'pro' | 'enterprise'
+  status: 'active' | 'trial' | 'expired'
+  trialDaysRemaining: number | null
+  trialExpiresAt: string | null
   userCount: number
   createdAt: string
 }

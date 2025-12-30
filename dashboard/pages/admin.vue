@@ -106,11 +106,12 @@ const formatDate = (dateStr: string) => {
       <table class="w-full">
         <thead>
           <tr class="border-b border-gray-500/10 text-left">
-            <th class="px-4 py-3 text-gray-400 font-medium">Organization</th>
-            <th class="px-4 py-3 text-gray-400 font-medium">Plan</th>
-            <th class="px-4 py-3 text-gray-400 font-medium">Members</th>
-            <th class="px-4 py-3 text-gray-400 font-medium">Created</th>
-            <th class="px-4 py-3 text-gray-400 font-medium">Actions</th>
+            <th class="px-4 py-3 text-gray-400 font-medium text-sm">Organization</th>
+            <th class="px-4 py-3 text-gray-400 font-medium text-sm">Plan</th>
+            <th class="px-4 py-3 text-gray-400 font-medium text-sm">Status</th>
+            <th class="px-4 py-3 text-gray-400 font-medium text-sm">Members</th>
+            <th class="px-4 py-3 text-gray-400 font-medium text-sm">Created</th>
+            <th class="px-4 py-3 text-gray-400 font-medium text-sm">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -171,9 +172,34 @@ const formatDate = (dateStr: string) => {
                 {{ org.plan.charAt(0).toUpperCase() + org.plan.slice(1) }}
               </span>
             </td>
+            <td class="px-4 py-4">
+              <!-- Status badge -->
+              <span
+                v-if="org.status === 'expired'"
+                class="px-2 py-1 rounded text-xs font-medium bg-red-400/10 text-red-400"
+              >
+                Expired
+              </span>
+              <span
+                v-else-if="org.status === 'trial'"
+                :class="[
+                  'px-2 py-1 rounded text-xs font-medium',
+                  (org.trialDaysRemaining ?? 0) <= 2 
+                    ? 'bg-orange-300/10 text-orange-300' 
+                    : 'bg-yellow-300/10 text-yellow-300'
+                ]"
+              >
+                {{ org.trialDaysRemaining ?? 0 }} day{{ org.trialDaysRemaining === 1 ? '' : 's' }} left
+              </span>
+              <span
+                v-else
+                class="px-2 py-1 rounded text-xs font-medium bg-green-300/10 text-green-300"
+              >
+                Active
+              </span>
+            </td>
             <td class="px-4 py-4 text-gray-400 text-sm">
-              {{ org.userCount }} 
-              <!-- {{ org.userCount === 1 ? 'member' : 'members' }} -->
+              {{ org.userCount }}
             </td>
             <td class="px-4 py-4 text-gray-400 text-sm">
               {{ formatDate(org.createdAt) }}
@@ -203,16 +229,41 @@ const formatDate = (dateStr: string) => {
     </div>
 
     <!-- Stats Summary -->
-    <div v-if="!loading && organizations.length > 0" class="mt-8 grid grid-cols-4 gap-4">
-      <div
-        v-for="option in PLAN_OPTIONS"
-        :key="option.value"
-        class="bg-gray-500/10 rounded-lg border border-gray-500/10 p-4"
-      >
-        <div class="text-2xl font-bold">
-          {{ organizations.filter(o => o.plan === option.value).length }}
+    <div v-if="!loading && organizations.length > 0" class="mt-8 space-y-4">
+      <!-- Plan Stats -->
+      <div class="grid grid-cols-4 gap-4">
+        <div
+          v-for="option in PLAN_OPTIONS"
+          :key="option.value"
+          class="bg-gray-500/10 rounded-lg border border-gray-500/10 p-4"
+        >
+          <div class="text-2xl font-bold">
+            {{ organizations.filter(o => o.plan === option.value).length }}
+          </div>
+          <div class="text-gray-400 text-sm">{{ option.label }}</div>
         </div>
-        <div class="text-gray-400 text-sm">{{ option.label }} orgs</div>
+      </div>
+      
+      <!-- Status Stats -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-green-300/5 rounded-lg border border-green-300/10 p-4">
+          <div class="text-2xl font-bold text-green-300">
+            {{ organizations.filter(o => o.status === 'active').length }}
+          </div>
+          <div class="text-gray-400 text-sm">Active (paid)</div>
+        </div>
+        <div class="bg-yellow-300/5 rounded-lg border border-yellow-300/10 p-4">
+          <div class="text-2xl font-bold text-yellow-300">
+            {{ organizations.filter(o => o.status === 'trial').length }}
+          </div>
+          <div class="text-gray-400 text-sm">On Trial</div>
+        </div>
+        <div class="bg-red-400/5 rounded-lg border border-red-400/10 p-4">
+          <div class="text-2xl font-bold text-red-400">
+            {{ organizations.filter(o => o.status === 'expired').length }}
+          </div>
+          <div class="text-gray-400 text-sm">Expired</div>
+        </div>
       </div>
     </div>
   </div>
