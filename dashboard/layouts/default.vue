@@ -338,6 +338,12 @@ onMounted(() => {
     document.addEventListener('click', handleClickOutside)
     // Restore dismissed state
     dismissedUpsell.value = localStorage.getItem('enterprise-upsell-dismissed') === 'true'
+    // Debug: Log admin visibility conditions
+    console.log('[Layout] Admin link conditions:', {
+      mode: mode.value,
+      isAdmin: isAdmin.value,
+      showLink: mode.value === 'cloud' && isAdmin.value
+    })
   }
 })
 

@@ -24,19 +24,33 @@ export function useAdmin() {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  // Debug: Log config on composable init
+  if (process.client) {
+    console.log('[useAdmin] Config check:', {
+      adminEmails: config.public.adminEmails,
+      allPublicConfig: JSON.stringify(config.public)
+    })
+  }
+
   /**
    * Check if current user is a dashboard admin
    */
   const isAdmin = computed(() => {
-    if (!user.value?.email) return false
-    const adminEmails = (config.public.adminEmails || '').split(',').map((e: string) => e.trim().toLowerCase())
+    const result = (() => {
+      if (!user.value?.email) return false
+      const adminEmails = (config.public.adminEmails || '').split(',').map((e: string) => e.trim().toLowerCase())
+      return adminEmails.includes(user.value.email.toLowerCase())
+    })()
+    
     // Debug log - remove after testing
-    console.log('[Admin Check]', { 
-      userEmail: user.value.email, 
-      adminEmails, 
-      configValue: config.public.adminEmails 
-    })
-    return adminEmails.includes(user.value.email.toLowerCase())
+    if (process.client) {
+      console.log('[Admin Check]', { 
+        userEmail: user.value?.email, 
+        configValue: config.public.adminEmails,
+        isAdmin: result
+      })
+    }
+    return result
   })
 
   /**
