@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useAdmin, PLAN_OPTIONS } from '~/composables/useAdmin'
+import { useAdmin, PLAN_OPTIONS, DURATION_OPTIONS } from '~/composables/useAdmin'
 import { useFeatures } from '~/composables/useFeatures'
 
 definePageMeta({
@@ -41,16 +41,19 @@ onMounted(async () => {
 // Track which org is being edited
 const editingOrgId = ref<string | null>(null)
 const selectedPlan = ref<string>('')
+const selectedDuration = ref<number | null>(null)
 const updating = ref(false)
 
 const startEdit = (org: any) => {
   editingOrgId.value = org.id
   selectedPlan.value = org.plan
+  selectedDuration.value = 30 // Default to 30 days
 }
 
 const cancelEdit = () => {
   editingOrgId.value = null
   selectedPlan.value = ''
+  selectedDuration.value = null
 }
 
 const savePlan = async (orgId: string) => {
@@ -58,7 +61,9 @@ const savePlan = async (orgId: string) => {
   
   updating.value = true
   try {
-    await updateOrganizationPlan(orgId, selectedPlan.value)
+    // Trial doesn't need duration (uses 7-day trial period)
+    const duration = selectedPlan.value === 'trial' ? undefined : selectedDuration.value
+    await updateOrganizationPlan(orgId, selectedPlan.value, duration)
     editingOrgId.value = null
   } catch (err: any) {
     console.error('Failed to update plan:', err)
@@ -72,7 +77,8 @@ const getPlanColor = (plan: string) => {
   return option?.color || 'gray'
 }
 
-const formatDate = (dateStr: string) => {
+const formatDate = (dateStr: string | null) => {
+  if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -109,8 +115,8 @@ const formatDate = (dateStr: string) => {
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Organization</th>
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Plan</th>
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Status</th>
+            <th class="px-4 py-3 text-gray-400 font-medium text-sm">Expires</th>
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Members</th>
-            <th class="px-4 py-3 text-gray-400 font-medium text-sm">Created</th>
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Actions</th>
           </tr>
         </thead>
@@ -126,10 +132,10 @@ const formatDate = (dateStr: string) => {
             </td>
             <td class="px-4 py-4">
               <!-- Editing mode -->
-              <div v-if="editingOrgId === org.id" class="flex items-center gap-2">
+              <div v-if="editingOrgId === org.id" class="space-y-2">
                 <select
                   v-model="selectedPlan"
-                  class="bg-gray-500/10 border border-gray-500/10 rounded px-2 py-1 text-sm focus:outline-none focus:border-amber-300"
+                  class="w-full bg-gray-500/10 border border-gray-500/10 rounded px-2 py-1 text-sm focus:outline-none focus:border-amber-300"
                 >
                   <option
                     v-for="option in PLAN_OPTIONS"
@@ -139,24 +145,36 @@ const formatDate = (dateStr: string) => {
                     {{ option.label }}
                   </option>
                 </select>
-                <button
-                  @click="savePlan(org.id)"
-                  :disabled="updating"
-                  class="p-1 text-green-300 hover:text-green-400 disabled:opacity-50"
+                <!-- Duration selector (not for trial) -->
+                <select
+                  v-if="selectedPlan !== 'trial'"
+                  v-model="selectedDuration"
+                  class="w-full bg-gray-500/10 border border-gray-500/10 rounded px-2 py-1 text-sm focus:outline-none focus:border-amber-300"
                 >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                  </svg>
-                </button>
-                <button
-                  @click="cancelEdit"
-                  :disabled="updating"
-                  class="p-1 text-red-400 hover:text-red-300 disabled:opacity-50"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                  <option
+                    v-for="option in DURATION_OPTIONS"
+                    :key="option.value ?? 'null'"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+                <div class="flex items-center gap-2">
+                  <button
+                    @click="savePlan(org.id)"
+                    :disabled="updating"
+                    class="px-2 py-1 text-xs bg-green-300/10 text-green-300 rounded hover:bg-green-300/20 disabled:opacity-50"
+                  >
+                    Save
+                  </button>
+                  <button
+                    @click="cancelEdit"
+                    :disabled="updating"
+                    class="px-2 py-1 text-xs bg-gray-500/10 text-gray-400 rounded hover:bg-gray-500/20 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
               <!-- Display mode -->
               <span
@@ -180,17 +198,17 @@ const formatDate = (dateStr: string) => {
               >
                 Expired
               </span>
-              <span
-                v-else-if="org.status === 'trial'"
+              <div
+                v-else-if="org.daysRemaining !== null"
                 :class="[
-                  'px-2 py-1 rounded text-xs font-medium',
-                  (org.trialDaysRemaining ?? 0) <= 2 
-                    ? 'bg-orange-300/10 text-orange-300' 
-                    : 'bg-yellow-300/10 text-yellow-300'
+                  'px-2 py-1 rounded text-xs font-medium inline-block',
+                  org.status === 'trial'
+                    ? (org.daysRemaining <= 2 ? 'bg-orange-300/10 text-orange-300' : 'bg-yellow-300/10 text-yellow-300')
+                    : (org.daysRemaining <= 7 ? 'bg-orange-300/10 text-orange-300' : 'bg-green-300/10 text-green-300')
                 ]"
               >
-                {{ org.trialDaysRemaining ?? 0 }} day{{ org.trialDaysRemaining === 1 ? '' : 's' }} left
-              </span>
+                {{ org.daysRemaining }} day{{ org.daysRemaining === 1 ? '' : 's' }} left
+              </div>
               <span
                 v-else
                 class="px-2 py-1 rounded text-xs font-medium bg-green-300/10 text-green-300"
@@ -199,10 +217,10 @@ const formatDate = (dateStr: string) => {
               </span>
             </td>
             <td class="px-4 py-4 text-gray-400 text-sm">
-              {{ org.userCount }}
+              {{ formatDate(org.expiresAt) }}
             </td>
             <td class="px-4 py-4 text-gray-400 text-sm">
-              {{ formatDate(org.createdAt) }}
+              {{ org.userCount }}
             </td>
             <td class="px-4 py-4">
               <button
@@ -214,7 +232,6 @@ const formatDate = (dateStr: string) => {
                   <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
                   <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
                 </svg>
-
                 Edit
               </button>
             </td>
@@ -268,4 +285,3 @@ const formatDate = (dateStr: string) => {
     </div>
   </div>
 </template>
-

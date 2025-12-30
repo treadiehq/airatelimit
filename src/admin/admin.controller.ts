@@ -44,7 +44,11 @@ export class AdminController {
       throw new ForbiddenException('Admin features are only available in cloud mode');
     }
 
-    await this.adminService.updateOrganizationPlan(organizationId, updateDto.plan);
+    await this.adminService.updateOrganizationPlan(
+      organizationId,
+      updateDto.plan,
+      updateDto.durationDays,
+    );
     return { success: true, message: `Plan updated to ${updateDto.plan}` };
   }
 }

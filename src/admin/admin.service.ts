@@ -35,34 +35,48 @@ export class AdminService {
         const validPlans = ['trial', 'basic', 'pro', 'enterprise'];
         const normalizedPlan = validPlans.includes(org.plan) ? org.plan : 'trial';
 
-        // Calculate trial info
+        // Calculate status based on plan type
         let status: 'active' | 'trial' | 'expired' = 'active';
-        let trialDaysRemaining: number | null = null;
-        let trialExpiresAt: Date | null = null;
+        let daysRemaining: number | null = null;
+        let expiresAt: Date | null = null;
 
         if (normalizedPlan === 'trial') {
+          // Trial: calculate from trialStartedAt or createdAt
           const trialStart = org.trialStartedAt || org.createdAt;
-          trialExpiresAt = new Date(trialStart);
-          trialExpiresAt.setDate(trialExpiresAt.getDate() + TRIAL_DAYS);
+          expiresAt = new Date(trialStart);
+          expiresAt.setDate(expiresAt.getDate() + TRIAL_DAYS);
           
-          const msRemaining = trialExpiresAt.getTime() - now.getTime();
-          trialDaysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+          const msRemaining = expiresAt.getTime() - now.getTime();
+          daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
           
-          if (trialDaysRemaining <= 0) {
+          if (daysRemaining <= 0) {
             status = 'expired';
-            trialDaysRemaining = 0;
+            daysRemaining = 0;
           } else {
             status = 'trial';
           }
+        } else if (org.planExpiresAt) {
+          // Paid plan with expiry date
+          expiresAt = new Date(org.planExpiresAt);
+          const msRemaining = expiresAt.getTime() - now.getTime();
+          daysRemaining = Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
+          
+          if (daysRemaining <= 0) {
+            status = 'expired';
+            daysRemaining = 0;
+          } else {
+            status = 'active';
+          }
         }
+        // If paid plan with no expiry, status stays 'active' and expiresAt is null
 
         return {
           id: org.id,
           name: org.name,
           plan: normalizedPlan,
           status,
-          trialDaysRemaining,
-          trialExpiresAt: trialExpiresAt?.toISOString() || null,
+          daysRemaining,
+          expiresAt: expiresAt?.toISOString() || null,
           userCount,
           createdAt: org.createdAt,
         };
@@ -73,11 +87,12 @@ export class AdminService {
   }
 
   /**
-   * Update an organization's plan
+   * Update an organization's plan with optional duration
    */
   async updateOrganizationPlan(
     organizationId: string,
     plan: 'trial' | 'basic' | 'pro' | 'enterprise',
+    durationDays?: number | null,
   ) {
     const org = await this.organizationRepository.findOne({
       where: { id: organizationId },
@@ -88,9 +103,26 @@ export class AdminService {
     }
 
     org.plan = plan;
+
+    // Set expiry based on duration
+    if (durationDays === null || durationDays === undefined) {
+      // No expiry (lifetime/permanent)
+      org.planExpiresAt = null;
+    } else if (durationDays > 0) {
+      // Set expiry from now
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + durationDays);
+      org.planExpiresAt = expiresAt;
+    }
+
+    // If switching to trial, reset trial start
+    if (plan === 'trial') {
+      org.trialStartedAt = new Date();
+      org.planExpiresAt = null; // Trial uses trialStartedAt
+    }
+
     await this.organizationRepository.save(org);
 
     return org;
   }
 }
-

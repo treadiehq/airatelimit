@@ -5,8 +5,8 @@ export interface OrganizationInfo {
   name: string
   plan: 'trial' | 'basic' | 'pro' | 'enterprise'
   status: 'active' | 'trial' | 'expired'
-  trialDaysRemaining: number | null
-  trialExpiresAt: string | null
+  daysRemaining: number | null
+  expiresAt: string | null
   userCount: number
   createdAt: string
 }
@@ -16,6 +16,14 @@ export const PLAN_OPTIONS = [
   { value: 'basic', label: 'Basic', color: 'blue' },
   { value: 'pro', label: 'Pro', color: 'purple' },
   { value: 'enterprise', label: 'Enterprise', color: 'amber' },
+] as const
+
+export const DURATION_OPTIONS = [
+  { value: 30, label: '30 days' },
+  { value: 90, label: '90 days' },
+  { value: 180, label: '6 months' },
+  { value: 365, label: '1 year' },
+  { value: null, label: 'No expiry' },
 ] as const
 
 // Shared state for admin status (loaded once, shared across components)
@@ -73,20 +81,21 @@ export function useAdmin() {
   }
 
   /**
-   * Update an organization's plan
+   * Update an organization's plan with optional duration
    */
-  const updateOrganizationPlan = async (orgId: string, plan: string) => {
+  const updateOrganizationPlan = async (
+    orgId: string,
+    plan: string,
+    durationDays?: number | null,
+  ) => {
     try {
       await api(`/admin/organizations/${orgId}/plan`, {
         method: 'PATCH',
-        body: { plan },
+        body: { plan, durationDays },
       })
 
-      // Update local state
-      const org = organizations.value.find((o) => o.id === orgId)
-      if (org) {
-        org.plan = plan as OrganizationInfo['plan']
-      }
+      // Reload to get updated expiry info
+      await loadOrganizations()
 
       return { success: true }
     } catch (err: any) {

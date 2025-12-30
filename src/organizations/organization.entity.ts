@@ -35,6 +35,9 @@ export class Organization {
   plan: string; // 'trial' | 'basic' | 'pro' | 'enterprise'
 
   @Column({ nullable: true })
+  planExpiresAt: Date; // When the current plan expires (null = no expiry / lifetime)
+
+  @Column({ nullable: true })
   trialStartedAt: Date; // When the 7-day trial began (null = use createdAt)
 
   // === Usage Tracking (for plan limits) ===
