@@ -215,6 +215,8 @@
         </section>
       </div>
     </div>
+
+    <AppFooter />
   </div>
 </template>
 

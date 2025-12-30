@@ -23,9 +23,6 @@
 					<a href="/#pricing" class="text-sm font-medium text-gray-400 hover:text-white transition-colors cursor-pointer hover:bg-gray-500/15 rounded-lg px-3 py-1.5">Pricing</a>
 					<a href="/#features" class="text-sm font-medium text-gray-400 hover:text-white transition-colors cursor-pointer hover:bg-gray-500/15 rounded-lg px-3 py-1.5">Features</a>
 					<a href="/#how-it-works" class="text-sm font-medium text-gray-400 hover:text-white transition-colors cursor-pointer hover:bg-gray-500/15 rounded-lg px-3 py-1.5">How It Works</a>
-					<!-- <a href="#" class="text-sm/6 font-semibold text-gray-900 dark:text-white">Features</a>
-					<a href="#" class="text-sm/6 font-semibold text-gray-900 dark:text-white">Marketplace</a>
-					<a href="#" class="text-sm/6 font-semibold text-gray-900 dark:text-white">Company</a> -->
 				</div>
         
         <!-- Navigation -->
