@@ -72,6 +72,10 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+  layout: false,
+})
+
 useHead({
   title: 'Login - AI Ratelimit'
 })

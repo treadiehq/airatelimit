@@ -221,6 +221,10 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+  layout: false,
+})
+
 useHead({
   title: 'Terms of Use - AI Ratelimit'
 })
