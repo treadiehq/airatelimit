@@ -10,13 +10,12 @@
         <!-- Main Heading -->
         <div class="mb-14">
           <h1 class="mx-auto w-full text-balance text-center font-semibold tracking-tight text-white max-w-3xl text-2xl !leading-[1.2] sm:text-4xl md:text-5xl lg:text-6xl">
-            <span class="text-blue-300">Instant backend</span> for AI mobile apps
+            The <span class="text-blue-300">AI backend</span> your mobile app needs
           </h1>
           
           <!-- Subheading -->
-          <p class="font-normal text-center text-gray-400 max-w-md mx-auto sm:mt-4 text-pretty text-base sm:text-lg sm:leading-6 mb-10">
-            Secure your API keys, rate limit users, track costs, and monetize upgrades, just by changing your base URL.
-            <!-- Secure your API keys, rate limit users, track costs, and monetize upgrades, all without building a server. -->
+          <p class="font-normal text-center text-gray-400 max-w-lg mx-auto sm:mt-4 text-pretty text-base sm:text-lg sm:leading-6 mb-10">
+            Secure API keys, rate limit users, track costs, and monetize upgrades. Ready in 5 minutes.
           </p>
           <div class="flex items-center justify-center gap-2">
             <NuxtLink to="/signup" class="text-sm border justify-center w-44 font-medium flex items-center gap-2 rounded-lg bg-blue-300 border-blue-300 text-black hover:bg-blue-200 transition-colors py-2 px-4!">
@@ -126,7 +125,7 @@
               <div class="flex text-left">
                 <!-- Line numbers -->
                 <div class="select-none py-4 pl-4 pr-3 text-right border-r border-gray-500/10">
-                  <div v-for="n in (activeTab === 'javascript' ? 14 : 8)" :key="n" class="text-xs text-gray-600 leading-relaxed font-mono">
+                  <div v-for="n in (activeTab === 'javascript' ? 15 : 8)" :key="n" class="text-xs text-gray-600 leading-relaxed font-mono">
                     {{ n }}
                   </div>
                 </div>
@@ -137,29 +136,28 @@
                   <pre v-if="activeTab === 'javascript'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-purple-300">import</span> <span class="text-cyan-300">OpenAI</span> <span class="text-purple-300">from</span> <span class="text-amber-300">'openai'</span>
 
 <span class="text-purple-300">const</span> <span class="text-blue-300">openai</span> = <span class="text-purple-300">new</span> <span class="text-cyan-300">OpenAI</span>({
-  <span class="text-blue-300">apiKey</span>: <span class="text-amber-300">'sk-your-key'</span>, <span class="text-gray-500 italic">// Optional</span>
-  <span class="text-blue-300">baseURL</span>: <span class="text-amber-300">'https://api.airatelimit.com/v1'</span>,
+  <span class="text-blue-300">baseURL</span>: <span class="text-amber-300">'https://api.airatelimit.com/v1'</span>, <span class="text-gray-500 italic">// ← we proxy to OpenAI</span>
   <span class="text-blue-300">defaultHeaders</span>: {
-    <span class="text-amber-300">'x-project-key'</span>: <span class="text-amber-300">'pk_xxx'</span>,
-    <span class="text-amber-300">'x-identity'</span>: <span class="text-amber-300">'user-123'</span>,
+    <span class="text-amber-300">'x-project-key'</span>: <span class="text-amber-300">'pk_xxx'</span>,       <span class="text-gray-500 italic">// ← your project (has API key)</span>
+    <span class="text-amber-300">'x-identity'</span>: <span class="text-amber-300">'user-123'</span>,         <span class="text-gray-500 italic">// ← rate limit this user</span>
   },
 })
 
+<span class="text-gray-500 italic">// Works exactly like the OpenAI SDK</span>
 <span class="text-purple-300">const</span> <span class="text-blue-300">response</span> = <span class="text-purple-300">await</span> <span class="text-blue-300">openai</span>.<span class="text-cyan-300">chat</span>.<span class="text-cyan-300">completions</span>.<span class="text-yellow-300">create</span>({
   <span class="text-blue-300">model</span>: <span class="text-amber-300">'gpt-4o'</span>,
   <span class="text-blue-300">messages</span>: [{ <span class="text-blue-300">role</span>: <span class="text-amber-300">'user'</span>, <span class="text-blue-300">content</span>: <span class="text-amber-300">'Hello!'</span> }]
 })</code></pre>
 
                   <!-- API Tab -->
-                  <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-green-300">$</span> curl -X POST <span class="text-cyan-300">https://api.airatelimit.com/v1/chat/completions</span> \
-  -H <span class="text-amber-300">"Authorization: Bearer sk-your-key"</span> \ <span class="text-gray-500 italic"># Optional</span>
-  -H <span class="text-amber-300">"x-project-key: pk_xxx"</span> \
-  -H <span class="text-amber-300">"x-identity: user-123"</span> \
+                  <pre v-if="activeTab === 'api'" class="text-sm text-gray-300 font-mono leading-relaxed"><code><span class="text-gray-500 italic"># Same OpenAI API—just a different base URL</span>
+<span class="text-green-300">$</span> curl <span class="text-cyan-300">https://api.airatelimit.com/v1/chat/completions</span> \
+  -H <span class="text-amber-300">"x-project-key: pk_xxx"</span> \       <span class="text-gray-500 italic"># your project (has API key)</span>
+  -H <span class="text-amber-300">"x-identity: user-123"</span> \        <span class="text-gray-500 italic"># rate limit this user</span>
   -H <span class="text-amber-300">"Content-Type: application/json"</span> \
-  -d <span class="text-amber-300">'{
-    "model": "gpt-4o",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'</span></code></pre>
+  -d <span class="text-amber-300">'{"model": "gpt-4o", "messages": [...]}'</span>
+
+<span class="text-gray-500 italic"># We check limits → proxy to OpenAI → track cost → return response</span></code></pre>
                 </div>
               </div>
               
@@ -228,9 +226,9 @@
     <!-- Features Grid -->
     <section id="features" class="py-20 relative z-10">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-16">
-          <h2 class="text-3xl font-semibold text-white mb-4">Ship AI mobile apps without a backend</h2>
-          <p class="font-normal text-center text-gray-400 max-w-md mx-auto sm:mt-4 text-pretty text-base sm:text-lg sm:leading-6 mb-10">Stop building backend boilerplate. Focus on your product while we handle the infrastructure.</p>
+        <div class="text-center mb-16 max-w-lg mx-auto">
+          <h2 class="text-3xl font-semibold text-white mb-4">Your backend, handled</h2>
+          <p class="font-normal text-center text-gray-400 max-w-md mx-auto sm:mt-4 text-pretty text-base sm:text-lg sm:leading-6 mb-10">Everything you'd build yourself, ready to go.</p>
         </div>
         <div class="grid md:grid-cols-2 gap-6">
           <!-- API Key Security -->
@@ -290,24 +288,24 @@
             <div class="w-12 h-12 bg-blue-300/10 border border-blue-300/10 rounded-full flex items-center justify-center mx-auto mb-6">
               <span class="text-blue-300 font-semibold">1</span>
             </div>
-            <h3 class="text-lg font-semibold text-white mb-3">Create a project</h3>
-            <p class="text-gray-400 text-sm leading-relaxed">Sign up and create a project in 30 seconds. Add your AI provider API keys.</p>
+            <h3 class="text-lg font-semibold text-white mb-3">Store your API keys with us</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">Create a your project, and add your provider keys. They stay secure on our servers.</p>
           </div>
           <!-- Step 2 -->
           <div class="text-center">
             <div class="w-12 h-12 bg-blue-300/10 border border-blue-300/10 rounded-full flex items-center justify-center mx-auto mb-6">
               <span class="text-blue-300 font-semibold">2</span>
             </div>
-            <h3 class="text-lg font-semibold text-white mb-3">Change your base URL</h3>
-            <p class="text-gray-400 text-sm leading-relaxed">Point your OpenAI SDK to our proxy. Add your project key and user identity headers.</p>
+            <h3 class="text-lg font-semibold text-white mb-3">Change your SDK's base URL</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">One line change. We proxy to your provider and track every request per user.</p>
           </div>
           <!-- Step 3 -->
           <div class="text-center">
             <div class="w-12 h-12 bg-blue-300/10 border border-blue-300/10 rounded-full flex items-center justify-center mx-auto mb-6">
               <span class="text-blue-300 font-semibold">3</span>
             </div>
-            <h3 class="text-lg font-semibold text-white mb-3">Ship it</h3>
-            <p class="text-gray-400 text-sm leading-relaxed">That's it. Rate limiting, cost tracking, and upgrade prompts, all handled automatically.</p>
+            <h3 class="text-lg font-semibold text-white mb-3">Everything's handled</h3>
+            <p class="text-gray-400 text-sm leading-relaxed">See per-user usage. Block abuse. Trigger upgrade prompts. All automatic.</p>
           </div>
         </div>
       </div>
@@ -773,7 +771,6 @@ const codeExamples: Record<TabId, string> = {
   javascript: `import OpenAI from 'openai'
 
 const openai = new OpenAI({
-  apiKey: 'sk-your-key', // Optional
   baseURL: 'https://api.airatelimit.com/v1',
   defaultHeaders: {
     'x-project-key': 'pk_xxx',
@@ -785,15 +782,11 @@ const response = await openai.chat.completions.create({
   model: 'gpt-4o',
   messages: [{ role: 'user', content: 'Hello!' }]
 })`,
-  api: `curl -X POST https://api.airatelimit.com/v1/chat/completions \\
-  -H "Authorization: Bearer sk-your-key" \\ # Optional
+  api: `curl https://api.airatelimit.com/v1/chat/completions \\
   -H "x-project-key: pk_xxx" \\
   -H "x-identity: user-123" \\
   -H "Content-Type: application/json" \\
-  -d '{
-    "model": "gpt-4o",
-    "messages": [{"role": "user", "content": "Hello!"}]
-  }'`
+  -d '{"model": "gpt-4o", "messages": [{"role": "user", "content": "Hello!"}]}'`
 }
 
 const copyCode = () => {
