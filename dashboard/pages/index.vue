@@ -427,6 +427,18 @@
               <tr class="border-b border-gray-500/10">
                 <td class="text-gray-300 p-4">
                   <span class="group relative cursor-help">
+                    Model routing
+                    <span class="invisible group-hover:visible absolute left-0 top-full mt-2 w-64 p-2 bg-black border border-gray-500/20 rounded-lg text-xs text-gray-300 z-10 shadow-lg">
+                      Route requests to different providers based on model. Use OpenAI for GPT-4, Anthropic for Claude, all through one endpoint.
+                    </span>
+                  </span>
+                </td>
+                <td class="text-center text-gray-500 p-4">1-2 weeks</td>
+                <td class="text-center text-blue-300 p-4">✓ Included</td>
+              </tr>
+              <tr class="border-b border-gray-500/10">
+                <td class="text-gray-300 p-4">
+                  <span class="group relative cursor-help">
                     Dashboard & analytics
                     <span class="invisible group-hover:visible absolute left-0 top-full mt-2 w-64 p-2 bg-black border border-gray-500/20 rounded-lg text-xs text-gray-300 z-10 shadow-lg">
                       Visual dashboard to manage projects, view usage, and configure limits.
@@ -438,7 +450,7 @@
               </tr>
               <tr>
                 <td class="text-white font-medium p-4">Total time</td>
-                <td class="text-center text-gray-400 font-medium p-4">11-14 weeks</td>
+                <td class="text-center text-gray-400 font-medium p-4">12-16 weeks</td>
                 <td class="text-center text-blue-300 font-medium p-4">5 minutes</td>
               </tr>
             </tbody>
