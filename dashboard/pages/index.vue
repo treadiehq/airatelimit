@@ -580,7 +580,7 @@
               </li>
             </ul>
             <a href="mailto:info@treadie.com" class="block w-full text-center py-2 px-4 rounded-lg border border-gray-500/10 text-white hover:bg-gray-500/10 transition-colors text-sm font-medium mt-auto">
-              Contact Sales
+              Contact Us
             </a>
           </div>
         </div>
