@@ -50,8 +50,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
           return
         }
         
-        // If subscription is expired/canceled/unpaid, redirect to billing
-        if (['canceled', 'expired', 'unpaid', 'past_due'].includes(subscription?.status)) {
+        // Any other subscription status (canceled, expired, unpaid, past_due,
+        // incomplete, incomplete_expired, paused) means payment is required
+        if (subscription?.status) {
           return navigateTo('/billing')
         }
       }

@@ -334,10 +334,9 @@ export class TransparentProxyController {
         );
 
         // Run advanced heuristics if enabled
+        // SECURITY: Check ALL messages since the entire array is user-controlled input
         if (!securityResult.allowed || project.securityHeuristicsEnabled) {
-          for (const message of processedBody.messages.filter(
-            (m: any) => m.role === 'user',
-          )) {
+          for (const message of processedBody.messages) {
             const heuristicResult =
               this.securityService.checkAdvancedHeuristics(message.content);
             if (!heuristicResult.allowed) {
@@ -426,6 +425,33 @@ export class TransparentProxyController {
         // Flow allows - continue with atomic usage increment below
       }
 
+      // Check session limits FIRST (before incrementing usage)
+      // This prevents overcounting when session limits block requests
+      if (project.sessionLimitsEnabled && sessionId) {
+        const sessionCheck = await this.usageService.checkSessionLimits({
+          project,
+          identity,
+          session: sessionId,
+          tier,
+          model,
+          periodStart,
+          requestedTokens: estimatedTokens,
+          requestedRequests: 1,
+        });
+
+        if (!sessionCheck.allowed) {
+          res.status(HttpStatus.TOO_MANY_REQUESTS).json({
+            error: {
+              message:
+                sessionCheck.limitResponse?.message || 'Session limit exceeded',
+              type: 'session_limit_exceeded',
+              code: 'session_limit_exceeded',
+            },
+          });
+          return;
+        }
+      }
+
       // ATOMIC USAGE CHECK: Always perform atomic check-and-increment
       // This prevents race conditions where concurrent requests bypass flow limits
       const usageCheck = await this.usageService.checkAndUpdateUsage({
@@ -459,32 +485,6 @@ export class TransparentProxyController {
           },
         });
         return;
-      }
-
-      // Check session limits if enabled
-      if (project.sessionLimitsEnabled && sessionId) {
-        const sessionCheck = await this.usageService.checkSessionLimits({
-          project,
-          identity,
-          session: sessionId,
-          tier,
-          model,
-          periodStart,
-          requestedTokens: estimatedTokens,
-          requestedRequests: 1,
-        });
-
-        if (!sessionCheck.allowed) {
-          res.status(HttpStatus.TOO_MANY_REQUESTS).json({
-            error: {
-              message:
-                sessionCheck.limitResponse?.message || 'Session limit exceeded',
-              type: 'session_limit_exceeded',
-              code: 'session_limit_exceeded',
-            },
-          });
-          return;
-        }
       }
 
       // Get provider URL (provider already detected above for stored key resolution)
@@ -715,6 +715,32 @@ export class TransparentProxyController {
         }
       }
 
+      // Check session limits FIRST (before incrementing usage)
+      if (project.sessionLimitsEnabled && sessionId) {
+        const sessionCheck = await this.usageService.checkSessionLimits({
+          project,
+          identity,
+          session: sessionId,
+          tier,
+          model,
+          periodStart,
+          requestedTokens: 0,
+          requestedRequests: numImages,
+        });
+
+        if (!sessionCheck.allowed) {
+          res.status(HttpStatus.TOO_MANY_REQUESTS).json({
+            error: {
+              message:
+                sessionCheck.limitResponse?.message || 'Session limit exceeded',
+              type: 'session_limit_exceeded',
+              code: 'session_limit_exceeded',
+            },
+          });
+          return;
+        }
+      }
+
       // For images, count each image as a request (fallback if no flow)
       const usageCheck = await this.usageService.checkAndUpdateUsage({
         project,
@@ -750,32 +776,6 @@ export class TransparentProxyController {
           },
         });
         return;
-      }
-
-      // Check session limits
-      if (project.sessionLimitsEnabled && sessionId) {
-        const sessionCheck = await this.usageService.checkSessionLimits({
-          project,
-          identity,
-          session: sessionId,
-          tier,
-          model,
-          periodStart,
-          requestedTokens: 0,
-          requestedRequests: numImages,
-        });
-
-        if (!sessionCheck.allowed) {
-          res.status(HttpStatus.TOO_MANY_REQUESTS).json({
-            error: {
-              message:
-                sessionCheck.limitResponse?.message || 'Session limit exceeded',
-              type: 'session_limit_exceeded',
-              code: 'session_limit_exceeded',
-            },
-          });
-          return;
-        }
       }
 
       // Forward to OpenAI
@@ -962,6 +962,32 @@ export class TransparentProxyController {
         }
       }
 
+      // Check session limits FIRST (before incrementing usage)
+      if (project.sessionLimitsEnabled && sessionId) {
+        const sessionCheck = await this.usageService.checkSessionLimits({
+          project,
+          identity,
+          session: sessionId,
+          tier,
+          model,
+          periodStart,
+          requestedTokens: inputTokens,
+          requestedRequests: 1,
+        });
+
+        if (!sessionCheck.allowed) {
+          res.status(HttpStatus.TOO_MANY_REQUESTS).json({
+            error: {
+              message:
+                sessionCheck.limitResponse?.message || 'Session limit exceeded',
+              type: 'session_limit_exceeded',
+              code: 'session_limit_exceeded',
+            },
+          });
+          return;
+        }
+      }
+
       // Fallback to regular usage check if no flow
       const usageCheck = await this.usageService.checkAndUpdateUsage({
         project,
@@ -996,32 +1022,6 @@ export class TransparentProxyController {
           },
         });
         return;
-      }
-
-      // Check session limits
-      if (project.sessionLimitsEnabled && sessionId) {
-        const sessionCheck = await this.usageService.checkSessionLimits({
-          project,
-          identity,
-          session: sessionId,
-          tier,
-          model,
-          periodStart,
-          requestedTokens: inputTokens,
-          requestedRequests: 1,
-        });
-
-        if (!sessionCheck.allowed) {
-          res.status(HttpStatus.TOO_MANY_REQUESTS).json({
-            error: {
-              message:
-                sessionCheck.limitResponse?.message || 'Session limit exceeded',
-              type: 'session_limit_exceeded',
-              code: 'session_limit_exceeded',
-            },
-          });
-          return;
-        }
       }
 
       // Forward to OpenAI
@@ -1168,6 +1168,32 @@ export class TransparentProxyController {
         }
       }
 
+      // Check session limits FIRST (before incrementing usage)
+      if (project.sessionLimitsEnabled && sessionId) {
+        const sessionCheck = await this.usageService.checkSessionLimits({
+          project,
+          identity,
+          session: sessionId,
+          tier,
+          model,
+          periodStart,
+          requestedTokens: 0,
+          requestedRequests: 1,
+        });
+
+        if (!sessionCheck.allowed) {
+          res.status(HttpStatus.TOO_MANY_REQUESTS).json({
+            error: {
+              message:
+                sessionCheck.limitResponse?.message || 'Session limit exceeded',
+              type: 'session_limit_exceeded',
+              code: 'session_limit_exceeded',
+            },
+          });
+          return;
+        }
+      }
+
       // Audio transcriptions are request-based (per file) - fallback if no flow
       const usageCheck = await this.usageService.checkAndUpdateUsage({
         project,
@@ -1199,32 +1225,6 @@ export class TransparentProxyController {
           },
         });
         return;
-      }
-
-      // Check session limits
-      if (project.sessionLimitsEnabled && sessionId) {
-        const sessionCheck = await this.usageService.checkSessionLimits({
-          project,
-          identity,
-          session: sessionId,
-          tier,
-          model,
-          periodStart,
-          requestedTokens: 0,
-          requestedRequests: 1,
-        });
-
-        if (!sessionCheck.allowed) {
-          res.status(HttpStatus.TOO_MANY_REQUESTS).json({
-            error: {
-              message:
-                sessionCheck.limitResponse?.message || 'Session limit exceeded',
-              type: 'session_limit_exceeded',
-              code: 'session_limit_exceeded',
-            },
-          });
-          return;
-        }
       }
 
       // Forward to OpenAI (note: this endpoint typically uses multipart/form-data)

@@ -147,15 +147,16 @@ export class SecurityService {
   /**
    * Check all messages in a conversation
    * Supports both string content and array content (multi-modal/vision format)
+   * 
+   * SECURITY: Check ALL messages since the entire messages array is user-controlled input.
+   * An attacker can inject malicious content in any role (system/assistant/user).
    */
   checkMessages(
     messages: Array<{ role: string; content: string | any[] }>,
     enabledCategories?: string[],
   ): SecurityCheckResult {
-    // Only check user messages, not system/assistant messages
-    const userMessages = messages.filter((m) => m.role === 'user');
-
-    for (const message of userMessages) {
+    // Check all messages - the entire messages array is user-controlled input
+    for (const message of messages) {
       const result = this.checkMessage(message.content, enabledCategories);
       if (!result.allowed) {
         return result;

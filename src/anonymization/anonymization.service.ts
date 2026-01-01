@@ -189,13 +189,87 @@ export class AnonymizationService {
   }
 
   /**
+   * Extract text content from message content (handles both string and array formats)
+   * Used for multimodal/vision model messages where content is an array
+   */
+  private extractTextContent(content: string | any[]): string {
+    // Handle string content (simple text messages)
+    if (typeof content === 'string') {
+      return content;
+    }
+
+    // Handle array content (multi-modal messages - vision models)
+    if (Array.isArray(content)) {
+      return content
+        .filter(part => part?.type === 'text' && typeof part.text === 'string')
+        .map(part => part.text)
+        .join('\n');
+    }
+
+    // Unknown format - return empty string (safe default)
+    return '';
+  }
+
+  /**
+   * Anonymize content and reconstruct in original format
+   * For array content, processes each text part individually
+   */
+  private anonymizeContent(
+    content: string | any[],
+    config: Partial<AnonymizationConfig>,
+  ): { content: string | any[]; piiDetected: boolean; replacementCount: number } {
+    // Handle string content (simple text messages)
+    if (typeof content === 'string') {
+      const result = this.anonymizeText(content, config);
+      return {
+        content: result.text,
+        piiDetected: result.piiDetected,
+        replacementCount: result.replacements.length,
+      };
+    }
+
+    // Handle array content (multi-modal messages - vision models)
+    if (Array.isArray(content)) {
+      let piiDetected = false;
+      let replacementCount = 0;
+
+      const anonymizedContent = content.map(part => {
+        // Only process text parts
+        if (part?.type === 'text' && typeof part.text === 'string') {
+          const result = this.anonymizeText(part.text, config);
+          if (result.piiDetected) {
+            piiDetected = true;
+            replacementCount += result.replacements.length;
+          }
+          return {
+            ...part,
+            text: result.text,
+          };
+        }
+        // Return non-text parts unchanged (images, etc.)
+        return part;
+      });
+
+      return {
+        content: anonymizedContent,
+        piiDetected,
+        replacementCount,
+      };
+    }
+
+    // Unknown format - return unchanged
+    return { content, piiDetected: false, replacementCount: 0 };
+  }
+
+  /**
    * Anonymize messages array (for chat completions)
+   * Handles both string content and array content (multimodal/vision models)
    */
   anonymizeMessages(
-    messages: Array<{ role: string; content: string }>,
+    messages: Array<{ role: string; content: string | any[] }>,
     config: Partial<AnonymizationConfig> = {},
   ): {
-    messages: Array<{ role: string; content: string }>;
+    messages: Array<{ role: string; content: string | any[] }>;
     piiDetected: boolean;
     totalReplacements: number;
   } {
@@ -208,15 +282,15 @@ export class AnonymizationService {
         return message;
       }
 
-      const result = this.anonymizeText(message.content, config);
+      const result = this.anonymizeContent(message.content, config);
       if (result.piiDetected) {
         piiDetected = true;
-        totalReplacements += result.replacements.length;
+        totalReplacements += result.replacementCount;
       }
 
       return {
         ...message,
-        content: result.text,
+        content: result.content,
       };
     });
 
@@ -234,16 +308,24 @@ export class AnonymizationService {
   }
 
   /**
-   * Check if text contains PII without modifying it
+   * Check if content contains PII without modifying it
+   * Handles both string content and array content (multimodal/vision models)
    */
   detectPII(
-    text: string,
+    content: string | any[],
     config: Partial<AnonymizationConfig> = {},
   ): {
     hasPII: boolean;
     types: string[];
     count: number;
   } {
+    // Extract text from content (handles both string and array formats)
+    const text = this.extractTextContent(content);
+    
+    if (!text) {
+      return { hasPII: false, types: [], count: 0 };
+    }
+
     const mergedConfig = { ...DEFAULT_CONFIG, ...config };
     const detectedTypes: string[] = [];
     let count = 0;

@@ -8,7 +8,7 @@ import { getEnterpriseLicense } from './config/license';
 import { getDeploymentMode } from './config/features';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   const configService = app.get(ConfigService);
   

@@ -171,7 +171,7 @@ export class FlowExecutorService {
     context: FlowContext,
     edgesBySource: Map<string, FlowEdge[]>,
     nodesById: Map<string, FlowNode>,
-  ): { terminal: boolean; nextNode?: FlowNode } {
+  ): { terminal: boolean; action?: 'allow' | 'block'; nextNode?: FlowNode } {
     const tiers: string[] = node.data?.tiers || ['free', 'pro'];
     const requestTier = context.tier || 'free';
 
@@ -193,7 +193,7 @@ export class FlowExecutorService {
     }
 
     // No edges, allow by default
-    return { terminal: true };
+    return { terminal: true, action: 'allow' };
   }
 
   /**
@@ -204,7 +204,7 @@ export class FlowExecutorService {
     context: FlowContext,
     edgesBySource: Map<string, FlowEdge[]>,
     nodesById: Map<string, FlowNode>,
-  ): Promise<{ terminal: boolean; nextNode?: FlowNode }> {
+  ): Promise<{ terminal: boolean; action?: 'allow' | 'block'; nextNode?: FlowNode }> {
     const { limitType, scope, limit, period } = node.data || {};
     
     // Get current usage - we need to fetch it with the right period
@@ -236,11 +236,11 @@ export class FlowExecutorService {
 
     // Fallback: if exceeded and no exceeded edge, block
     if (isExceeded) {
-      return { terminal: true };
+      return { terminal: true, action: 'block' };
     }
 
     // If not exceeded and no pass edge, allow
-    return { terminal: true };
+    return { terminal: true, action: 'allow' };
   }
 
   /**
@@ -251,7 +251,7 @@ export class FlowExecutorService {
     context: FlowContext,
     edgesBySource: Map<string, FlowEdge[]>,
     nodesById: Map<string, FlowNode>,
-  ): Promise<{ terminal: boolean; nextNode?: FlowNode }> {
+  ): Promise<{ terminal: boolean; action?: 'allow' | 'block'; nextNode?: FlowNode }> {
     const { model, limit } = node.data || {};
     
     // If no specific model set, or model doesn't match, pass through
@@ -263,7 +263,7 @@ export class FlowExecutorService {
           return { terminal: false, nextNode };
         }
       }
-      return { terminal: true };
+      return { terminal: true, action: 'allow' };
     }
 
     // Get model-specific usage (daily)
@@ -292,10 +292,10 @@ export class FlowExecutorService {
 
     // Fallback
     if (isExceeded) {
-      return { terminal: true };
+      return { terminal: true, action: 'block' };
     }
 
-    return { terminal: true };
+    return { terminal: true, action: 'allow' };
   }
 
   /**

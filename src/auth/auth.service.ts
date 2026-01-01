@@ -241,17 +241,22 @@ export class AuthService {
     // Reset rate limit on successful verification
     this.rateLimitService.reset(rateLimitKey);
 
-    // Auto-manage admin emails: upgrade if admin, downgrade if removed from admin list
+    // Auto-manage admin emails: upgrade if admin member exists, downgrade if none
     if (user.organizationId) {
       const org = await this.organizationsService.findById(user.organizationId);
-      const isAdmin = this.organizationsService.isAdminEmail(user.email);
-      
+
       if (org) {
-        if (isAdmin && org.plan !== 'enterprise') {
-          // Admin email not on enterprise → upgrade
+        // Check if ANY member of the organization is an admin email (not just current user)
+        const members = await this.membersService.getMembers(user.organizationId);
+        const hasAdminMember = members.some(member =>
+          this.organizationsService.isAdminEmail(member.user?.email)
+        );
+
+        if (hasAdminMember && org.plan !== 'enterprise') {
+          // Organization has admin email member(s) → ensure enterprise plan
           await this.organizationsService.upgradePlan(user.organizationId, 'enterprise');
-        } else if (!isAdmin && org.plan === 'enterprise' && !org.stripeSubscriptionId) {
-          // Not admin, on enterprise, no paid subscription → downgrade to trial
+        } else if (!hasAdminMember && org.plan === 'enterprise' && !org.stripeSubscriptionId) {
+          // No admin members, on enterprise, no paid subscription → downgrade to trial
           await this.organizationsService.upgradePlan(user.organizationId, 'trial');
         }
       }

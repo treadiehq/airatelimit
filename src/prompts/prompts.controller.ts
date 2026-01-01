@@ -11,6 +11,8 @@ import {
   HttpCode,
   HttpStatus,
   Req,
+  NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ProjectAuthGuard } from '../common/guards/project-auth.guard';
 import { PlanGuard, RequirePlanFeature } from '../common/guards/plan.guard';
@@ -39,13 +41,28 @@ export class PromptsController {
   ) {}
 
   private async getProject(projectKey: string, request: any) {
+    // If authenticated via secret key, project is already attached
     if (request.authType === 'secret_key' && request.project) {
+      // Verify the projectKey matches the authenticated project
       if (request.project.projectKey !== projectKey) {
         throw new Error('Project key does not match authenticated project');
       }
       return request.project;
     }
-    return this.projectsService.findByProjectKey(projectKey);
+
+    // Otherwise, look up by projectKey (JWT auth)
+    const project = await this.projectsService.findByProjectKey(projectKey);
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    // Verify user owns this project - prevents cross-tenant access
+    if (project.ownerId !== request.user?.userId) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    return project;
   }
 
   /**
