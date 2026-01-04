@@ -140,9 +140,11 @@ export class BillingController {
 
   /**
    * Stripe webhook handler
-   * Note: This endpoint doesn't use JwtAuthGuard - it uses Stripe signature verification
+   * Note: This endpoint doesn't use JwtAuthGuard or FeatureGuard - it uses Stripe signature verification
+   * The RequireFeature(null) override bypasses the class-level feature guard
    */
   @Post('webhook')
+  @RequireFeature(null as any)
   @HttpCode(HttpStatus.OK)
   async handleWebhook(
     @Req() req: RawBodyRequest<Request>,
