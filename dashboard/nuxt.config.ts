@@ -40,12 +40,12 @@ export default defineNuxtConfig({
         { name: 'description', content: 'Secure your API keys, rate limit users, track costs, and upsell upgrades, all without building a server.' },
         { property: 'og:title', content: 'AI Ratelimit' },
         { property: 'og:description', content: 'Secure your API keys, rate limit users, track costs, and upsell upgrades, all without building a server.' },
-        { property: 'og:image', content: '/airatelimit.png' },
+        { property: 'og:image', content: 'https://airatelimit.com/airatelimit.png' },
         { property: 'og:type', content: 'website' },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: 'AI Ratelimit' },
         { name: 'twitter:description', content: 'Secure your API keys, rate limit users, track costs, and upsell upgrades, all without building a server.' },
-        { name: 'twitter:image', content: '/airatelimit.png' },
+        { name: 'twitter:image', content: 'https://airatelimit.com/airatelimit.png' },
       ],
       script: [
         {
