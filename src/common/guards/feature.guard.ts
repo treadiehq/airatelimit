@@ -86,6 +86,7 @@ export class FeatureGuard implements CanActivate {
       webhooks: 'Webhooks',
       dataExport: 'Data Export',
       prioritySupport: 'Priority Support',
+      sponsoredUsage: 'Sponsored Usage',
       rateLimiting: 'Rate Limiting',
       costTracking: 'Cost Tracking',
       multiProvider: 'Multi-Provider Support',

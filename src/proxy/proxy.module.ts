@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { HttpModule } from '@nestjs/axios';
 import { TransparentProxyController } from './transparent-proxy.controller';
@@ -10,6 +10,7 @@ import { PricingModule } from '../pricing/pricing.module';
 import { AnonymizationModule } from '../anonymization/anonymization.module';
 import { FlowModule } from '../flow/flow.module';
 import { PromptsModule } from '../prompts/prompts.module';
+import { SponsorshipModule } from '../sponsorship/sponsorship.module';
 import { SecurityEvent } from '../security/security-event.entity';
 import { AnonymizationLog } from '../anonymization/anonymization-log.entity';
 
@@ -22,6 +23,7 @@ import { AnonymizationLog } from '../anonymization/anonymization-log.entity';
     AnonymizationModule,
     FlowModule,
     PromptsModule,
+    forwardRef(() => SponsorshipModule),
     TypeOrmModule.forFeature([SecurityEvent, AnonymizationLog]),
     HttpModule,
   ],

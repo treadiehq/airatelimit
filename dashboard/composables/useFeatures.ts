@@ -24,6 +24,7 @@ export interface DashboardFeatures {
   showCustomBranding: boolean
   showWebhooks: boolean
   showDataExport: boolean
+  showSponsoredUsage: boolean  // Show sponsored usage feature
 
   // === Marketing/Upsell ===
   showEnterpriseUpsell: boolean  // Show upgrade CTA for self-hosted
@@ -71,6 +72,7 @@ export const useFeatures = () => {
       showCustomBranding: m !== 'self-hosted',
       showWebhooks: m !== 'self-hosted',
       showDataExport: m !== 'self-hosted',
+      showSponsoredUsage: m !== 'self-hosted',
 
       // === Marketing/Upsell ===
       // Show upgrade prompts only to self-hosted users

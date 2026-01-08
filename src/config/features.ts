@@ -27,6 +27,10 @@ export interface FeatureFlags {
   webhooks: boolean;
   dataExport: boolean;
   prioritySupport: boolean;
+  
+  // === Sponsored Usage (cloud + enterprise) ===
+  // Allows sponsors to donate API usage to recipients
+  sponsoredUsage: boolean;
 
   // === Core Features (always available) ===
   rateLimiting: boolean;
@@ -78,6 +82,8 @@ export function getFeatureFlags(): FeatureFlags {
         webhooks: true,
         dataExport: true,
         prioritySupport: true,
+        // Sponsored Usage - enabled
+        sponsoredUsage: true,
       };
 
     case 'enterprise':
@@ -99,6 +105,8 @@ export function getFeatureFlags(): FeatureFlags {
         webhooks: true,
         dataExport: true,
         prioritySupport: true,
+        // Sponsored Usage - enabled
+        sponsoredUsage: true,
       };
 
     case 'self-hosted':
@@ -121,6 +129,8 @@ export function getFeatureFlags(): FeatureFlags {
         webhooks: false,
         dataExport: false,
         prioritySupport: false,
+        // Sponsored Usage - disabled
+        sponsoredUsage: false,
       };
   }
 }

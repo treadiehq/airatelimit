@@ -2,13 +2,40 @@
   <div class="min-h-screen bg-black">
     <nav class="bg-black border-b border-gray-500/20">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-10 items-center">
+        <div class="flex justify-between h-12 items-center relative">
           <div class="flex items-center space-x-4">
             <NuxtLink to="/projects" class="text-base font-medium text-white">
               <img src="/logo.png" alt="AI Rate Limiting" class="w-6 h-6">
             </NuxtLink>
             <span class="text-sm text-gray-500/50">|</span>
             <div class="text-sm text-white font-medium">{{ organization?.name || 'Loading...' }}</div>
+          </div>
+          
+          <!-- Center Tabs -->
+          <div class="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-3">
+            <NuxtLink
+              to="/projects"
+              :class="[
+                'text-xs font-medium px-3 py-1.5 border rounded-lg border-transparent transition-colors',
+                $route.path.startsWith('/projects') || $route.path === '/'
+                  ? 'text-white !border-gray-500/10 bg-gray-500/15'
+                  : 'text-gray-500 hover:text-white hover:bg-gray-500/15 hover:!border-gray-500/10'
+              ]"
+            >
+              Projects
+            </NuxtLink>
+            <NuxtLink
+              v-if="features.showSponsoredUsage"
+              to="/sponsorships"
+              :class="[
+                'text-xs font-medium px-3 py-1.5 border rounded-lg border-transparent transition-colors',
+                $route.path.startsWith('/sponsorships')
+                  ? 'text-white !border-gray-500/10 bg-gray-500/15'
+                  : 'text-gray-500 hover:text-white hover:bg-gray-500/15 hover:!border-gray-500/10'
+              ]"
+            >
+              Sponsorship
+            </NuxtLink>
           </div>
           
           <div class="flex items-center space-x-4">

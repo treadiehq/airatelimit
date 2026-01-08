@@ -10,6 +10,8 @@ import {
   HttpCode,
   BadRequestException,
   UseGuards,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -26,8 +28,10 @@ import { PricingService } from '../pricing/pricing.service';
 import { validateProxyHeaders } from './dto/proxy-headers.dto';
 import { PromptsService } from '../prompts/prompts.service';
 import { UsageLimitService } from '../common/services/usage-limit.service';
-import { isCloudMode } from '../config/features';
+import { isCloudMode, isFeatureEnabled } from '../config/features';
 import { LicenseGuard } from '../common/guards/license.guard';
+import { SponsorshipService } from '../sponsorship/sponsorship.service';
+import { PoolService } from '../sponsorship/pool.service';
 
 // ====================================
 // SECURITY CONSTANTS
@@ -64,11 +68,466 @@ export class TransparentProxyController {
     private readonly flowExecutorService: FlowExecutorService,
     private readonly promptsService: PromptsService,
     private readonly usageLimitService: UsageLimitService,
+    @Inject(forwardRef(() => SponsorshipService))
+    private readonly sponsorshipService: SponsorshipService,
+    @Inject(forwardRef(() => PoolService))
+    private readonly poolService: PoolService,
     @InjectRepository(SecurityEvent)
     private readonly securityEventRepository: Repository<SecurityEvent>,
     @InjectRepository(AnonymizationLog)
     private readonly anonymizationLogRepository: Repository<AnonymizationLog>,
   ) {}
+
+  /**
+   * Check if token is a sponsored token (spt_ prefix)
+   */
+  private isSponsoredToken(authorization: string | undefined): boolean {
+    if (!authorization) return false;
+    const token = authorization.replace('Bearer ', '');
+    return token.startsWith('spt_');
+  }
+
+  /**
+   * Check if token is a pool token (spp_ prefix)
+   */
+  private isPoolToken(authorization: string | undefined): boolean {
+    if (!authorization) return false;
+    const token = authorization.replace('Bearer ', '');
+    return token.startsWith('spp_');
+  }
+
+  /**
+   * Check if token is any sponsored/pool token
+   */
+  private isSponsoredOrPoolToken(authorization: string | undefined): boolean {
+    return this.isSponsoredToken(authorization) || this.isPoolToken(authorization);
+  }
+
+  /**
+   * Handle request using sponsored token flow
+   * Returns the sponsor's API key authorization if valid
+   */
+  private async handleSponsoredTokenAuth(
+    authorization: string,
+    model: string,
+    estimatedTokens: number,
+    recipientOrgId?: string,
+  ): Promise<{
+    allowed: boolean;
+    resolvedAuthorization?: string;
+    sponsorshipId?: string;
+    sponsoredTokenId?: string;
+    provider?: string;
+    error?: { status: number; body: any };
+  }> {
+    // Check if sponsored usage feature is enabled
+    if (!isFeatureEnabled('sponsoredUsage')) {
+      return {
+        allowed: false,
+        error: {
+          status: HttpStatus.FORBIDDEN,
+          body: {
+            error: {
+              message: 'Sponsored usage is not available in this deployment',
+              type: 'feature_not_available',
+              code: 'sponsored_usage_disabled',
+            },
+          },
+        },
+      };
+    }
+
+    const token = authorization.replace('Bearer ', '');
+    const validation = await this.sponsorshipService.validateSponsoredToken(
+      token,
+      recipientOrgId,
+    );
+
+    if (!validation.allowed) {
+      return {
+        allowed: false,
+        error: {
+          status: HttpStatus.UNAUTHORIZED,
+          body: {
+            error: {
+              message: validation.reason || 'Invalid sponsored token',
+              type: 'sponsorship_error',
+              code: 'invalid_sponsored_token',
+            },
+          },
+        },
+      };
+    }
+
+    const sponsorship = validation.sponsorship;
+
+    // Check if model is allowed
+    if (!this.sponsorshipService.checkModelAllowed(sponsorship, model)) {
+      return {
+        allowed: false,
+        error: {
+          status: HttpStatus.FORBIDDEN,
+          body: {
+            error: {
+              message: `Model "${model}" is not allowed by this sponsorship. Allowed: ${sponsorship.allowedModels?.join(', ') || 'none'}`,
+              type: 'model_not_allowed',
+              code: 'sponsorship_model_restricted',
+            },
+          },
+        },
+      };
+    }
+
+    // Check request size limit
+    if (!this.sponsorshipService.checkRequestSize(sponsorship, estimatedTokens)) {
+      return {
+        allowed: false,
+        error: {
+          status: HttpStatus.BAD_REQUEST,
+          body: {
+            error: {
+              message: `Request too large. Max ${sponsorship.maxTokensPerRequest} tokens allowed.`,
+              type: 'request_too_large',
+              code: 'sponsorship_size_limit',
+            },
+          },
+        },
+      };
+    }
+
+    // All checks passed
+    return {
+      allowed: true,
+      resolvedAuthorization: `Bearer ${validation.decryptedApiKey}`,
+      sponsorshipId: sponsorship.id,
+      provider: sponsorship.sponsorKey?.provider,
+    };
+  }
+
+  /**
+   * Handle request using pool token flow (spp_xxx)
+   * Routes to a sponsor based on pool routing strategy
+   */
+  private async handlePoolTokenAuth(
+    authorization: string,
+    model: string,
+    estimatedTokens: number,
+  ): Promise<{
+    allowed: boolean;
+    resolvedAuthorization?: string;
+    sponsorshipId?: string;
+    provider?: string;
+    error?: { status: number; body: any };
+  }> {
+    // Check if sponsored usage feature is enabled
+    if (!isFeatureEnabled('sponsoredUsage')) {
+      return {
+        allowed: false,
+        error: {
+          status: HttpStatus.FORBIDDEN,
+          body: {
+            error: {
+              message: 'Sponsored usage is not available in this deployment',
+              type: 'feature_not_available',
+              code: 'sponsored_usage_disabled',
+            },
+          },
+        },
+      };
+    }
+
+    const token = authorization.replace('Bearer ', '');
+    const routeResult = await this.poolService.validateAndRoute(
+      token,
+      model,
+      estimatedTokens,
+    );
+
+    if (!routeResult.success) {
+      return {
+        allowed: false,
+        error: {
+          status: HttpStatus.UNAUTHORIZED,
+          body: {
+            error: {
+              message: routeResult.error || 'Pool routing failed',
+              type: 'pool_error',
+              code: 'pool_routing_failed',
+            },
+          },
+        },
+      };
+    }
+
+    // All checks passed - route selected a sponsor
+    return {
+      allowed: true,
+      resolvedAuthorization: `Bearer ${routeResult.decryptedApiKey}`,
+      sponsorshipId: routeResult.sponsorship?.id,
+      provider: routeResult.sponsorKey?.provider,
+    };
+  }
+
+  /**
+   * Handle a request using a sponsored token (standalone flow without project)
+   */
+  private async handleSponsoredRequest(
+    authorization: string,
+    body: any,
+    model: string,
+    isStreaming: boolean,
+    responseFormat: 'openai' | 'gemini' | 'anthropic',
+    res: Response,
+    startTime: number,
+  ): Promise<void> {
+    // Estimate input tokens for validation
+    const estimatedInputTokens = this.estimateInputTokens(body);
+
+    // Validate sponsored token or pool token and get authorization
+    let authResult: {
+      allowed: boolean;
+      resolvedAuthorization?: string;
+      sponsorshipId?: string;
+      provider?: string;
+      error?: { status: number; body: any };
+    };
+
+    if (this.isPoolToken(authorization)) {
+      // Pool token - use pool routing
+      authResult = await this.handlePoolTokenAuth(
+        authorization,
+        model,
+        estimatedInputTokens,
+      );
+    } else {
+      // Sponsored token - use direct sponsorship
+      authResult = await this.handleSponsoredTokenAuth(
+        authorization,
+        model,
+        estimatedInputTokens,
+      );
+    }
+
+    if (!authResult.allowed) {
+      res.status(authResult.error.status).json(authResult.error.body);
+      return;
+    }
+
+    // Get provider URL based on the sponsor key's provider
+    const provider = authResult.provider || this.transparentProxyService.detectProvider(model);
+    const providerUrl = this.transparentProxyService.getProviderUrl(provider as any);
+
+    console.log('Sponsored request:', {
+      sponsorshipId: authResult.sponsorshipId,
+      provider,
+      model,
+      streaming: isStreaming,
+      estimatedTokens: estimatedInputTokens,
+    });
+
+    try {
+      if (isStreaming) {
+        // Handle streaming response for sponsored token
+        await this.handleSponsoredStreamingRequest(
+          res,
+          authResult.resolvedAuthorization,
+          providerUrl,
+          body,
+          authResult.sponsorshipId,
+          model,
+          provider,
+          responseFormat,
+          startTime,
+        );
+      } else {
+        // Handle non-streaming response
+        const providerResponse = await this.transparentProxyService.forwardRequest(
+          authResult.resolvedAuthorization,
+          providerUrl,
+          body,
+        );
+
+        // Calculate cost and log usage
+        const inputTokens = providerResponse.usage?.prompt_tokens || 0;
+        const outputTokens = providerResponse.usage?.completion_tokens || 0;
+        const cost = this.pricingService.calculateCost(model, inputTokens, outputTokens);
+
+        // Log usage to sponsorship
+        const usageResult = await this.sponsorshipService.logUsage({
+          sponsorshipId: authResult.sponsorshipId,
+          model,
+          provider,
+          inputTokens,
+          outputTokens,
+          costUsd: cost,
+          isStreaming: false,
+          statusCode: 200,
+        });
+
+        if (!usageResult.success) {
+          // Budget exceeded during request - shouldn't happen but handle gracefully
+          console.warn('Sponsorship budget exceeded during request:', {
+            sponsorshipId: authResult.sponsorshipId,
+            reason: usageResult.reason,
+          });
+        }
+
+        console.log('Sponsored request completed:', {
+          sponsorshipId: authResult.sponsorshipId,
+          model,
+          inputTokens,
+          outputTokens,
+          costUsd: cost.toFixed(6),
+          latency: Date.now() - startTime,
+        });
+
+        // Return response
+        if (responseFormat === 'gemini') {
+          res.json(this.transformOpenAIToGemini(providerResponse));
+        } else if (responseFormat === 'anthropic') {
+          res.json(this.transformOpenAIToAnthropic(providerResponse));
+        } else {
+          res.json(providerResponse);
+        }
+      }
+    } catch (error) {
+      console.error('Sponsored request error:', {
+        sponsorshipId: authResult.sponsorshipId,
+        model,
+        error: error.message,
+        latency: Date.now() - startTime,
+      });
+
+      if (error.response?.data) {
+        res.status(error.response.status || 500).json(error.response.data);
+        return;
+      }
+
+      res.status(500).json({
+        error: {
+          message: error.message || 'Internal server error',
+          type: 'proxy_error',
+          code: 'internal_error',
+        },
+      });
+    }
+  }
+
+  /**
+   * Handle streaming response for sponsored token
+   */
+  private async handleSponsoredStreamingRequest(
+    res: Response,
+    authorization: string,
+    providerUrl: string,
+    body: any,
+    sponsorshipId: string,
+    model: string,
+    provider: string,
+    responseFormat: 'openai' | 'gemini' | 'anthropic',
+    startTime: number,
+  ): Promise<void> {
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    let inputTokens = 0;
+    let outputTokens = 0;
+    let streamEnded = false;
+    let totalStreamedChars = 0;
+
+    const timeout = setTimeout(() => {
+      if (!streamEnded) {
+        console.warn('Sponsored streaming timeout:', { sponsorshipId, model });
+        res.write(`data: ${JSON.stringify({ error: 'Stream timeout exceeded' })}\n\n`);
+        res.end();
+        streamEnded = true;
+      }
+    }, STREAMING_TIMEOUT_MS);
+
+    try {
+      for await (const chunk of this.transparentProxyService.forwardStreamingRequest(
+        authorization,
+        providerUrl,
+        body,
+      )) {
+        if (streamEnded) break;
+
+        // Track tokens
+        if (chunk.usage) {
+          inputTokens = chunk.usage.prompt_tokens || inputTokens;
+          outputTokens = chunk.usage.completion_tokens || outputTokens;
+        }
+
+        const deltaContent = chunk.choices?.[0]?.delta?.content;
+        if (deltaContent && typeof deltaContent === 'string') {
+          totalStreamedChars += deltaContent.length;
+        }
+
+        // Forward chunk
+        let outputChunk = chunk;
+        if (responseFormat === 'gemini') {
+          outputChunk = this.transformStreamChunkToGemini(chunk);
+        } else if (responseFormat === 'anthropic') {
+          outputChunk = this.transformStreamChunkToAnthropic(chunk);
+          if (!outputChunk) continue;
+        }
+        res.write(`data: ${JSON.stringify(outputChunk)}\n\n`);
+      }
+
+      if (!streamEnded) {
+        res.write('data: [DONE]\n\n');
+        res.end();
+        streamEnded = true;
+      }
+
+      // Estimate tokens if not provided
+      let finalInputTokens = inputTokens;
+      let finalOutputTokens = outputTokens;
+
+      if (inputTokens === 0 && outputTokens === 0 && totalStreamedChars > 0) {
+        finalOutputTokens = Math.ceil(totalStreamedChars / 4);
+        finalInputTokens = Math.ceil(this.estimateInputChars(body) / 4);
+      }
+
+      const totalTokens = finalInputTokens + finalOutputTokens;
+      if (totalTokens > 0) {
+        const cost = this.pricingService.calculateCost(model, finalInputTokens, finalOutputTokens);
+
+        await this.sponsorshipService.logUsage({
+          sponsorshipId,
+          model,
+          provider,
+          inputTokens: finalInputTokens,
+          outputTokens: finalOutputTokens,
+          costUsd: cost,
+          isStreaming: true,
+          statusCode: 200,
+        });
+
+        console.log('Sponsored streaming completed:', {
+          sponsorshipId,
+          model,
+          inputTokens: finalInputTokens,
+          outputTokens: finalOutputTokens,
+          costUsd: cost.toFixed(6),
+          latency: Date.now() - startTime,
+        });
+      }
+    } catch (error) {
+      console.error('Sponsored streaming error:', { sponsorshipId, error: error.message });
+      if (!streamEnded) {
+        const errorMessage = error.response?.data?.error?.message || error.message || 'Streaming failed';
+        res.write(`data: ${JSON.stringify({ error: { message: errorMessage, type: 'provider_error' } })}\n\n`);
+        res.end();
+        streamEnded = true;
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
   /**
    * OpenAI-compatible chat completions endpoint
@@ -139,6 +598,23 @@ export class TransparentProxyController {
     const originalModel = model; // Keep track of original for logging
     const isStreaming = workingBody.stream === true;
     const sessionId = session || '';
+
+    // ====================================
+    // SPONSORED TOKEN FLOW
+    // Handle requests with sponsored tokens (spt_xxx) or pool tokens (spp_xxx) - standalone usage
+    // ====================================
+    if (this.isSponsoredOrPoolToken(authorization) && !projectKey) {
+      await this.handleSponsoredRequest(
+        authorization,
+        workingBody,
+        model,
+        isStreaming,
+        responseFormat,
+        res,
+        startTime,
+      );
+      return;
+    }
 
     try {
       // Get project configuration
@@ -226,26 +702,135 @@ export class TransparentProxyController {
       }
 
       // ====================================
-      // RESOLVE API KEY: Stored keys or pass-through
+      // RESOLVE API KEY: Stored keys, sponsored tokens, or pass-through
       // ====================================
       // Detect provider from model to look up stored key (may be re-detected after smart routing)
       let provider = this.transparentProxyService.detectProvider(model);
       let resolvedAuthorization = authorization;
+      let sponsorshipContext: { sponsorshipId: string; tokenProvider: string } | null = null;
 
       if (!authorization) {
         // Check if project has stored provider keys
         const storedConfig = project.providerKeys?.[provider];
         if (storedConfig?.apiKey) {
-          resolvedAuthorization = `Bearer ${storedConfig.apiKey}`;
-          console.log('Using stored API key for provider:', {
-            projectId: project.id,
-            provider,
-          });
+          const storedKey = storedConfig.apiKey;
+          
+          // Check if the stored key is actually a sponsored token
+          if (storedKey.startsWith('spt_') && isFeatureEnabled('sponsoredUsage')) {
+            // Validate the sponsored token and get the real API key
+            const estimatedInputTokens = this.estimateInputTokens(workingBody);
+            const sponsoredAuth = await this.handleSponsoredTokenAuth(
+              `Bearer ${storedKey}`,
+              model,
+              estimatedInputTokens,
+              project.organizationId, // Auto-link recipient org
+            );
+            
+            if (!sponsoredAuth.allowed) {
+              res.status(sponsoredAuth.error.status).json(sponsoredAuth.error.body);
+              return;
+            }
+            
+            resolvedAuthorization = sponsoredAuth.resolvedAuthorization;
+            sponsorshipContext = {
+              sponsorshipId: sponsoredAuth.sponsorshipId,
+              tokenProvider: sponsoredAuth.provider,
+            };
+            
+            console.log('Using sponsored token from project config:', {
+              projectId: project.id,
+              sponsorshipId: sponsoredAuth.sponsorshipId,
+              provider: sponsoredAuth.provider,
+            });
+          } else if (storedKey.startsWith('spp_') && isFeatureEnabled('sponsoredUsage')) {
+            // Validate the pool token and get a routed sponsor's API key
+            const estimatedInputTokens = this.estimateInputTokens(workingBody);
+            const poolAuth = await this.handlePoolTokenAuth(
+              `Bearer ${storedKey}`,
+              model,
+              estimatedInputTokens,
+            );
+            
+            if (!poolAuth.allowed) {
+              res.status(poolAuth.error.status).json(poolAuth.error.body);
+              return;
+            }
+            
+            resolvedAuthorization = poolAuth.resolvedAuthorization;
+            sponsorshipContext = {
+              sponsorshipId: poolAuth.sponsorshipId,
+              tokenProvider: poolAuth.provider,
+            };
+            
+            console.log('Using pool token from project config:', {
+              projectId: project.id,
+              sponsorshipId: poolAuth.sponsorshipId,
+              provider: poolAuth.provider,
+            });
+          } else {
+            // Regular API key
+            resolvedAuthorization = `Bearer ${storedKey}`;
+            console.log('Using stored API key for provider:', {
+              projectId: project.id,
+              provider,
+            });
+          }
         } else {
           throw new UnauthorizedException(
             `Missing Authorization header. Either pass your ${provider} API key in the Authorization header, or configure it in the dashboard under Provider Keys.`,
           );
         }
+      } else if (this.isSponsoredToken(authorization) && isFeatureEnabled('sponsoredUsage')) {
+        // Authorization header contains a sponsored token
+        const estimatedInputTokens = this.estimateInputTokens(workingBody);
+        const sponsoredAuth = await this.handleSponsoredTokenAuth(
+          authorization,
+          model,
+          estimatedInputTokens,
+          project.organizationId, // Auto-link recipient org
+        );
+        
+        if (!sponsoredAuth.allowed) {
+          res.status(sponsoredAuth.error.status).json(sponsoredAuth.error.body);
+          return;
+        }
+        
+        resolvedAuthorization = sponsoredAuth.resolvedAuthorization;
+        sponsorshipContext = {
+          sponsorshipId: sponsoredAuth.sponsorshipId,
+          tokenProvider: sponsoredAuth.provider,
+        };
+        
+        console.log('Using sponsored token from Authorization header:', {
+          projectId: project.id,
+          sponsorshipId: sponsoredAuth.sponsorshipId,
+          provider: sponsoredAuth.provider,
+        });
+      } else if (this.isPoolToken(authorization) && isFeatureEnabled('sponsoredUsage')) {
+        // Authorization header contains a pool token
+        const estimatedInputTokens = this.estimateInputTokens(workingBody);
+        const poolAuth = await this.handlePoolTokenAuth(
+          authorization,
+          model,
+          estimatedInputTokens,
+        );
+        
+        if (!poolAuth.allowed) {
+          res.status(poolAuth.error.status).json(poolAuth.error.body);
+          return;
+        }
+        
+        resolvedAuthorization = poolAuth.resolvedAuthorization;
+        sponsorshipContext = {
+          sponsorshipId: poolAuth.sponsorshipId,
+          tokenProvider: poolAuth.provider,
+        };
+        
+        console.log('Using pool token from Authorization header:', {
+          projectId: project.id,
+          sponsorshipId: poolAuth.sponsorshipId,
+          provider: poolAuth.provider,
+        });
       }
 
       // ====================================
@@ -547,6 +1132,22 @@ export class TransparentProxyController {
             outputTokens,
             cost,
           });
+          
+          // Also track to sponsorship if using a sponsored token
+          if (sponsorshipContext) {
+            await this.sponsorshipService.logUsage({
+              sponsorshipId: sponsorshipContext.sponsorshipId,
+              organizationId: project.organizationId,
+              projectId: project.id,
+              model,
+              provider: sponsorshipContext.tokenProvider || provider,
+              inputTokens,
+              outputTokens,
+              costUsd: cost,
+              isStreaming: false,
+              statusCode: 200,
+            });
+          }
         }
 
         console.log('Transparent proxy completed:', {
@@ -557,6 +1158,7 @@ export class TransparentProxyController {
           costUsd: cost.toFixed(6),
           latency: Date.now() - startTime,
           responseFormat,
+          sponsorshipId: sponsorshipContext?.sponsorshipId,
         });
 
         // Return response, transforming to native format if needed
