@@ -72,6 +72,19 @@
                   </span>
                 </NuxtLink>
                 
+                <!-- Sponsor link (cloud Pro+ or enterprise mode) -->
+                <NuxtLink
+                  v-if="features.showSponsorship && hasSponsorshipFeature"
+                  to="/sponsor"
+                  @click="showDropdown = false"
+                  class="w-full text-left px-4 py-2 text-xs text-gray-400 hover:bg-gray-500/10 hover:text-white flex items-center space-x-2"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  <span>Sponsor</span>
+                </NuxtLink>
+                
                 <!-- Team link (cloud + enterprise mode) -->
                 <NuxtLink
                   v-if="features.showTeamManagement"
@@ -220,6 +233,16 @@ const userInitials = computed(() => {
   const email = user.value.email
   const name = email.split('@')[0]
   return name.substring(0, 2).toUpperCase()
+})
+
+// Check if sponsorship feature is available based on plan
+// Available for: Enterprise mode (always), Cloud mode (Pro/Enterprise plans only)
+const hasSponsorshipFeature = computed(() => {
+  // Enterprise mode - always has sponsorship
+  if (isEnterprise.value) return true
+  // Cloud mode - check plan
+  const plan = currentPlan.value?.toLowerCase()
+  return plan === 'pro' || plan === 'enterprise'
 })
 
 // Plan display

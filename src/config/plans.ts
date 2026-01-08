@@ -23,6 +23,7 @@ export interface PlanLimits {
   securityConfig: boolean;
   publicEndpoints: boolean;  // Frontend-safe public API endpoints with origin restriction
   teamManagement: boolean;   // Invite and manage team members
+  sponsorship: boolean;      // Token donations and key pooling
   selfHosting: boolean;
   dedicatedSupport: boolean;
   auditLogs: boolean;
@@ -45,6 +46,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     securityConfig: false,
     publicEndpoints: false,
     teamManagement: false,
+    sponsorship: true,  // Available on all plans
     selfHosting: false,
     dedicatedSupport: false,
     auditLogs: false,
@@ -65,6 +67,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     securityConfig: false,
     publicEndpoints: false,
     teamManagement: false,
+    sponsorship: true,  // Available on all plans
     selfHosting: false,
     dedicatedSupport: false,
     auditLogs: false,
@@ -85,6 +88,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     securityConfig: true,
     publicEndpoints: true,
     teamManagement: true,
+    sponsorship: true,  // Available on all plans
     selfHosting: false,
     dedicatedSupport: false,
     auditLogs: false,
@@ -105,6 +109,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     securityConfig: true,
     publicEndpoints: true,
     teamManagement: true,
+    sponsorship: true,  // Available on all plans
     selfHosting: true,
     dedicatedSupport: true,
     auditLogs: true,
@@ -158,6 +163,7 @@ export const FEATURE_NAMES: Record<keyof PlanLimits, string> = {
   securityConfig: 'Security Configuration',
   publicEndpoints: 'Public Endpoints',
   teamManagement: 'Team Management',
+  sponsorship: 'Sponsorship & Key Pooling',
   selfHosting: 'Self-Hosting License',
   dedicatedSupport: 'Dedicated Support',
   auditLogs: 'Audit Logs',
@@ -181,6 +187,7 @@ export const FEATURE_MIN_PLAN: Record<keyof PlanLimits, PlanType> = {
   securityConfig: 'pro',
   publicEndpoints: 'pro',
   teamManagement: 'pro',
+  sponsorship: 'trial',
   selfHosting: 'enterprise',
   dedicatedSupport: 'enterprise',
   auditLogs: 'enterprise',

@@ -6,6 +6,7 @@ import {
   SetMetadata,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { getPlanLimits, PlanLimits, FEATURE_NAMES, FEATURE_MIN_PLAN } from '../../config/plans';
 import { getDeploymentMode } from '../../config/features';
 
@@ -42,7 +43,10 @@ export const RequirePlanFeature = (feature: keyof PlanLimits) =>
  */
 @Injectable()
 export class PlanGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private reflector: Reflector,
+    private configService: ConfigService,
+  ) {}
 
   canActivate(context: ExecutionContext): boolean {
     const requiredFeature = this.reflector.getAllAndOverride<keyof PlanLimits>(
@@ -82,8 +86,9 @@ export class PlanGuard implements CanActivate {
       throw new ForbiddenException('Authentication required');
     }
 
-    // Get user's organization plan
-    const plan = user.organization?.plan || 'trial';
+    // Check for test override first (development only)
+    const testPlan = this.configService.get<string>('TEST_PLAN_OVERRIDE');
+    const plan = testPlan || user.organization?.plan || 'trial';
     const limits = getPlanLimits(plan);
 
     // Check if the plan has the required feature

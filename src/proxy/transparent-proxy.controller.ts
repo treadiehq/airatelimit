@@ -26,6 +26,8 @@ import { PricingService } from '../pricing/pricing.service';
 import { validateProxyHeaders } from './dto/proxy-headers.dto';
 import { PromptsService } from '../prompts/prompts.service';
 import { UsageLimitService } from '../common/services/usage-limit.service';
+import { KeyPoolService } from '../sponsorship/key-pool.service';
+import { SponsorshipService } from '../sponsorship/sponsorship.service';
 import { isCloudMode } from '../config/features';
 import { LicenseGuard } from '../common/guards/license.guard';
 
@@ -64,6 +66,8 @@ export class TransparentProxyController {
     private readonly flowExecutorService: FlowExecutorService,
     private readonly promptsService: PromptsService,
     private readonly usageLimitService: UsageLimitService,
+    private readonly keyPoolService: KeyPoolService,
+    private readonly sponsorshipService: SponsorshipService,
     @InjectRepository(SecurityEvent)
     private readonly securityEventRepository: Repository<SecurityEvent>,
     @InjectRepository(AnonymizationLog)
@@ -226,14 +230,15 @@ export class TransparentProxyController {
       }
 
       // ====================================
-      // RESOLVE API KEY: Stored keys or pass-through
+      // RESOLVE API KEY: Stored keys, key pool, or pass-through
       // ====================================
       // Detect provider from model to look up stored key (may be re-detected after smart routing)
       let provider = this.transparentProxyService.detectProvider(model);
       let resolvedAuthorization = authorization;
+      let pooledKeyEntry: { id: string } | null = null; // Track if using pooled key for usage attribution
 
       if (!authorization) {
-        // Check if project has stored provider keys
+        // Priority 1: Check if project has stored provider keys
         const storedConfig = project.providerKeys?.[provider];
         if (storedConfig?.apiKey) {
           resolvedAuthorization = `Bearer ${storedConfig.apiKey}`;
@@ -241,7 +246,36 @@ export class TransparentProxyController {
             projectId: project.id,
             provider,
           });
-        } else {
+        } 
+        // Priority 2: Check for key pool (sponsored keys / load-balanced pool)
+        else if ((project as any).keyPoolEnabled) {
+          const poolResult = await this.keyPoolService.selectKey(
+            project.id,
+            provider,
+            {
+              model,
+              identity,
+              strategy: (project as any).keyPoolStrategy || 'weighted-random',
+            },
+          );
+
+          if (poolResult) {
+            resolvedAuthorization = `Bearer ${poolResult.decryptedApiKey}`;
+            pooledKeyEntry = { id: poolResult.entry.id };
+            console.log('Using pooled API key:', {
+              projectId: project.id,
+              provider,
+              keyPoolEntryId: poolResult.entry.id,
+              contributorId: poolResult.entry.contributorId,
+            });
+          } else {
+            throw new UnauthorizedException(
+              `No available API keys in pool for ${provider}. Either pass your API key in the Authorization header, configure a key in the dashboard, or wait for sponsors to contribute keys.`,
+            );
+          }
+        }
+        // No key available
+        else {
           throw new UnauthorizedException(
             `Missing Authorization header. Either pass your ${provider} API key in the Authorization header, or configure it in the dashboard under Provider Keys.`,
           );
@@ -277,11 +311,29 @@ export class TransparentProxyController {
             const storedConfig = project.providerKeys?.[newProvider];
             if (storedConfig?.apiKey) {
               resolvedAuthorization = `Bearer ${storedConfig.apiKey}`;
+              pooledKeyEntry = null; // Using stored key now
               console.log('Switched to stored API key for new provider:', {
                 projectId: project.id,
                 provider: newProvider,
               });
-            } else {
+            } 
+            // Try key pool for new provider
+            else if ((project as any).keyPoolEnabled) {
+              const poolResult = await this.keyPoolService.selectKey(
+                project.id,
+                newProvider,
+                { model: routedModel, identity, strategy: (project as any).keyPoolStrategy || 'weighted-random' },
+              );
+              if (poolResult) {
+                resolvedAuthorization = `Bearer ${poolResult.decryptedApiKey}`;
+                pooledKeyEntry = { id: poolResult.entry.id };
+              } else {
+                throw new UnauthorizedException(
+                  `Smart routing changed model to ${routedModel} (${newProvider}), but no API key is available. Configure it in the dashboard or wait for sponsors.`,
+                );
+              }
+            }
+            else {
               throw new UnauthorizedException(
                 `Smart routing changed model to ${routedModel} (${newProvider}), but no API key is configured for ${newProvider}. Configure it in the dashboard under Provider Keys.`,
               );
@@ -516,6 +568,7 @@ export class TransparentProxyController {
           model,
           periodStart,
           responseFormat,
+          pooledKeyEntry,
         );
       } else {
         // Handle regular response
@@ -547,6 +600,15 @@ export class TransparentProxyController {
             outputTokens,
             cost,
           });
+
+          // Track usage for pooled key (for sponsor attribution)
+          if (pooledKeyEntry) {
+            await this.keyPoolService.recordUsage(
+              pooledKeyEntry.id,
+              actualTokens,
+              Math.round(cost * 100), // Convert to cents
+            );
+          }
         }
 
         console.log('Transparent proxy completed:', {
@@ -557,6 +619,7 @@ export class TransparentProxyController {
           costUsd: cost.toFixed(6),
           latency: Date.now() - startTime,
           responseFormat,
+          pooledKey: pooledKeyEntry?.id || null,
         });
 
         // Return response, transforming to native format if needed
@@ -1296,6 +1359,7 @@ export class TransparentProxyController {
     model: string,
     periodStart: Date,
     responseFormat: 'openai' | 'gemini' | 'anthropic' = 'openai',
+    pooledKeyEntry: { id: string } | null = null,
   ) {
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
@@ -1407,6 +1471,15 @@ export class TransparentProxyController {
           outputTokens: finalOutputTokens,
           cost,
         });
+
+        // Track usage for pooled key (for sponsor attribution)
+        if (pooledKeyEntry) {
+          await this.keyPoolService.recordUsage(
+            pooledKeyEntry.id,
+            totalTokens,
+            Math.round(cost * 100), // Convert to cents
+          );
+        }
       }
     } catch (error) {
       console.error('Transparent proxy stream error:', {

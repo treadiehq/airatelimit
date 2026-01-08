@@ -302,6 +302,24 @@ export class Project {
   @Column({ type: 'jsonb', nullable: true })
   allowedOrigins: string[];
 
+  // ====================================
+  // KEY POOL / SPONSORSHIP CONFIGURATION
+  // ====================================
+  // Allows multiple API keys to be pooled and load-balanced
+  // Sponsors can contribute their keys to the pool
+
+  // Enable key pooling (allows using contributed API keys)
+  @Column({ default: false })
+  keyPoolEnabled: boolean;
+
+  // Load balancing strategy for pooled keys
+  @Column({
+    type: 'enum',
+    enum: ['weighted-random', 'round-robin', 'least-used', 'priority'],
+    default: 'weighted-random',
+  })
+  keyPoolStrategy: 'weighted-random' | 'round-robin' | 'least-used' | 'priority';
+
   @CreateDateColumn()
   createdAt: Date;
 

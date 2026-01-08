@@ -10,6 +10,7 @@ import { PricingModule } from '../pricing/pricing.module';
 import { AnonymizationModule } from '../anonymization/anonymization.module';
 import { FlowModule } from '../flow/flow.module';
 import { PromptsModule } from '../prompts/prompts.module';
+import { SponsorshipModule } from '../sponsorship/sponsorship.module';
 import { SecurityEvent } from '../security/security-event.entity';
 import { AnonymizationLog } from '../anonymization/anonymization-log.entity';
 
@@ -22,6 +23,7 @@ import { AnonymizationLog } from '../anonymization/anonymization-log.entity';
     AnonymizationModule,
     FlowModule,
     PromptsModule,
+    SponsorshipModule,
     TypeOrmModule.forFeature([SecurityEvent, AnonymizationLog]),
     HttpModule,
   ],

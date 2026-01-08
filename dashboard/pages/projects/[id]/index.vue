@@ -605,6 +605,8 @@ const editForm = ref({
   // Public endpoints configuration
   publicModeEnabled: false,
   allowedOrigins: [] as string[],
+  // Key pool
+  keyPoolEnabled: false,
 })
 
 const updating = ref(false)
@@ -687,6 +689,9 @@ const loadProject = async () => {
     // Load public endpoints configuration
     editForm.value.publicModeEnabled = project.value.publicModeEnabled || false
     editForm.value.allowedOrigins = project.value.allowedOrigins || []
+    
+    // Load key pool configuration
+    editForm.value.keyPoolEnabled = project.value.keyPoolEnabled || false
     
     // Extract limit message from JSON
     if (project.value.limitExceededResponse) {

@@ -6,6 +6,7 @@ import {
   IsIn,
   IsArray,
   IsBoolean,
+  IsEnum,
   ValidateIf,
 } from 'class-validator';
 
@@ -210,4 +211,15 @@ export class UpdateProjectDto {
   @IsArray()
   @IsString({ each: true })
   allowedOrigins?: string[];
+
+  // Key pool / sponsorship configuration
+  // Enables load balancing across contributed API keys
+  @IsOptional()
+  @IsBoolean()
+  keyPoolEnabled?: boolean;
+
+  // Load balancing strategy for pooled keys
+  @IsOptional()
+  @IsEnum(['weighted-random', 'round-robin', 'least-used', 'priority'])
+  keyPoolStrategy?: 'weighted-random' | 'round-robin' | 'least-used' | 'priority';
 }

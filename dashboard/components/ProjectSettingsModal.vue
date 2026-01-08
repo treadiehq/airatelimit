@@ -119,6 +119,14 @@
                       <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
                     </svg>
                   </button>
+                  <button
+                    v-if="hasSponsorship"
+                    @click="configTab = 'keypool'"
+                    :class="configTab === 'keypool' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
+                    class="whitespace-nowrap py-3 px-6 border-b-2 font-medium text-sm inline-flex items-center gap-1.5"
+                  >
+                    Key Pool
+                  </button>
                 </nav>
               </div>
 
@@ -244,6 +252,14 @@
                   description="Call the AI API directly from your frontend without exposing API keys. Requests are validated against allowed origins for security."
                 />
               </div>
+
+              <KeyPoolTab
+                v-if="hasSponsorship"
+                v-show="configTab === 'keypool'"
+                :project-id="project?.id"
+                :key-pool-enabled="editForm.keyPoolEnabled ?? false"
+                @toggle-key-pool="handleKeyPoolToggle"
+              />
             </div>
           </div>
         </div>
@@ -263,6 +279,7 @@ import ApiAccessTab from './settings/ApiAccessTab.vue'
 import ProviderKeysTab from './settings/ProviderKeysTab.vue'
 import RoutingConfig from './settings/RoutingConfig.vue'
 import PublicEndpointsTab from './settings/PublicEndpointsTab.vue'
+import KeyPoolTab from './settings/KeyPoolTab.vue'
 
 const props = defineProps<{
   isOpen: boolean
@@ -280,6 +297,7 @@ const hasSecurity = computed(() => hasFeature('securityConfig'))
 const hasRouting = computed(() => hasFeature('smartRouting'))
 const hasPrompts = computed(() => hasFeature('promptsConfig'))
 const hasPublicEndpoints = computed(() => hasFeature('publicEndpoints'))
+const hasSponsorship = computed(() => hasFeature('sponsorship'))
 
 // Track changes for diff view
 const changes = computed(() => {
@@ -359,6 +377,11 @@ const handleProviderKeysUpdate = (providerKeys: Record<string, { apiKey: string;
 
 const handleRoutingSaved = () => {
   emit('routing-saved')
+}
+
+const handleKeyPoolToggle = (enabled: boolean) => {
+  // Just update the form - user will save when ready
+  props.editForm.keyPoolEnabled = enabled
 }
 
 // Reset tab when modal closes

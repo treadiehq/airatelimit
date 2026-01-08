@@ -18,6 +18,7 @@ export interface PlanLimits {
   securityConfig: boolean;
   publicEndpoints: boolean;
   teamManagement: boolean;
+  sponsorship: boolean;
   selfHosting: boolean;
   dedicatedSupport: boolean;
   auditLogs: boolean;
@@ -48,6 +49,7 @@ const DEFAULT_LIMITS: PlanLimits = {
   securityConfig: false,
   publicEndpoints: false,
   teamManagement: false,
+  sponsorship: false,
   selfHosting: false,
   dedicatedSupport: false,
   auditLogs: false,
@@ -69,6 +71,7 @@ export const FEATURE_NAMES: Record<keyof PlanLimits, string> = {
   securityConfig: 'Security Configuration',
   publicEndpoints: 'Public Endpoints',
   teamManagement: 'Team Management',
+  sponsorship: 'Sponsorship & Key Pooling',
   selfHosting: 'Self-Hosting License',
   dedicatedSupport: 'Dedicated Support',
   auditLogs: 'Audit Logs',
@@ -90,6 +93,7 @@ export const FEATURE_MIN_PLAN: Record<keyof PlanLimits, string> = {
   securityConfig: 'pro',
   publicEndpoints: 'pro',
   teamManagement: 'pro',
+  sponsorship: 'pro',
   selfHosting: 'enterprise',
   dedicatedSupport: 'enterprise',
   auditLogs: 'enterprise',
@@ -128,6 +132,7 @@ export function usePlan() {
         securityConfig: true,
         publicEndpoints: true,
         teamManagement: true,
+        sponsorship: true,
         selfHosting: true,
         dedicatedSupport: true,
         auditLogs: true,
@@ -153,6 +158,7 @@ export function usePlan() {
         securityConfig: true,
         publicEndpoints: true,
         teamManagement: false,  // Requires cloud or enterprise
+        sponsorship: false,     // Requires cloud or enterprise
         // Enterprise features - NOT available (require license)
         selfHosting: false,
         dedicatedSupport: false,

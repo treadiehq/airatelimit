@@ -21,6 +21,7 @@ export interface FeatureFlags {
   // saml: boolean;
   auditLogs: boolean;
   teamManagement: boolean;
+  sponsorship: boolean;  // Token donations and key pooling
   // advancedAnalytics: boolean;
   customBranding: boolean;
   apiRateLimitOverrides: boolean;
@@ -72,6 +73,7 @@ export function getFeatureFlags(): FeatureFlags {
         // saml: true,
         auditLogs: true,
         teamManagement: true,
+        sponsorship: true,  // Enabled but requires Pro/Enterprise plan
         // advancedAnalytics: true,
         customBranding: true,
         apiRateLimitOverrides: true,
@@ -93,6 +95,7 @@ export function getFeatureFlags(): FeatureFlags {
         // saml: true,
         auditLogs: true,
         teamManagement: true,
+        sponsorship: true,  // Always enabled for enterprise
         // advancedAnalytics: true,
         customBranding: true,
         apiRateLimitOverrides: true,
@@ -115,6 +118,7 @@ export function getFeatureFlags(): FeatureFlags {
         // saml: false,
         auditLogs: false,
         teamManagement: false,
+        sponsorship: false,  // Not available in self-hosted
         // advancedAnalytics: false,
         customBranding: false,
         apiRateLimitOverrides: false,

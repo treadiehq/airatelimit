@@ -204,4 +204,93 @@ https://airatelimit.com`;
     console.log(`🔗 Invite Link: ${inviteLink}`);
     console.log('='.repeat(80) + '\n');
   }
+
+  /**
+   * Send contribution management link to anonymous contributors
+   */
+  async sendContributionManagementLink(
+    email: string,
+    projectName: string,
+    managementLink: string,
+  ): Promise<void> {
+    if (this.resend) {
+      await this.sendManagementLinkViaResend(email, projectName, managementLink);
+    } else {
+      this.logManagementLinkToConsole(email, projectName, managementLink);
+    }
+  }
+
+  private async sendManagementLinkViaResend(
+    email: string,
+    projectName: string,
+    managementLink: string,
+  ): Promise<void> {
+    try {
+      const fromEmail =
+        this.configService.get<string>('emailFrom') ||
+        'AI Ratelimit <noreply@airatelimit.com>';
+
+      const textContent = `Your API Key Contribution to ${projectName}
+
+Thank you for contributing your API key to ${projectName}!
+
+Use the link below to manage your contribution, view usage stats, or revoke your key at any time:
+
+${managementLink}
+
+IMPORTANT: Save this link! It's your only way to manage or revoke your contribution.
+
+What you can do with this link:
+• View usage statistics (tokens, requests, cost)
+• Pause or resume your contribution
+• Update your monthly token limit
+• Permanently revoke your key
+
+Your API key is encrypted at rest and cannot be viewed by anyone, including the project owner.
+
+—
+AI Ratelimit
+https://airatelimit.com`;
+
+      const { data, error } = await this.resend.emails.send({
+        from: fromEmail,
+        to: email,
+        subject: `Your API Key Contribution to ${projectName}`,
+        text: textContent,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      this.logger.log(
+        `Contribution management link sent to ${email} for ${projectName} (id: ${data?.id})`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to send management link email via Resend: ${error.message}`);
+      // Don't throw - this is a nice-to-have, not critical
+    }
+  }
+
+  private logManagementLinkToConsole(
+    email: string,
+    projectName: string,
+    managementLink: string,
+  ): void {
+    this.logger.log('\n' + '='.repeat(80));
+    this.logger.log('🔑 CONTRIBUTION MANAGEMENT LINK');
+    this.logger.log('='.repeat(80));
+    this.logger.log(`📧 Email: ${email}`);
+    this.logger.log(`📦 Project: ${projectName}`);
+    this.logger.log(`🔗 Management Link: ${managementLink}`);
+    this.logger.log('='.repeat(80) + '\n');
+
+    console.log('\n' + '='.repeat(80));
+    console.log('🔑 CONTRIBUTION MANAGEMENT LINK');
+    console.log('='.repeat(80));
+    console.log(`📧 Email: ${email}`);
+    console.log(`📦 Project: ${projectName}`);
+    console.log(`🔗 Management Link: ${managementLink}`);
+    console.log('='.repeat(80) + '\n');
+  }
 }

@@ -75,7 +75,12 @@ export class ProjectAuthGuard implements CanActivate {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
 
-      request.user = payload;
+      // Transform payload to match expected structure (sub → userId)
+      request.user = {
+        userId: payload.sub,
+        email: payload.email,
+        organizationId: payload.organizationId,
+      };
       request.authType = 'jwt';
 
       return true;

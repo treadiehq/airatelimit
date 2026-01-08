@@ -20,6 +20,7 @@ export interface DashboardFeatures {
   // showSAML: boolean
   showAuditLogs: boolean
   showTeamManagement: boolean  // Show team management UI (cloud: Pro+ only, enterprise: always)
+  showSponsorship: boolean     // Show sponsorship UI (cloud: Pro+ only, enterprise: always)
   // showAdvancedAnalytics: boolean
   showCustomBranding: boolean
   showWebhooks: boolean
@@ -67,6 +68,7 @@ export const useFeatures = () => {
       showSAML: m !== 'self-hosted',
       showAuditLogs: m !== 'self-hosted',
       showTeamManagement: m !== 'self-hosted',
+      showSponsorship: m !== 'self-hosted',  // Cloud (Pro+) and Enterprise only
       showAdvancedAnalytics: m !== 'self-hosted',
       showCustomBranding: m !== 'self-hosted',
       showWebhooks: m !== 'self-hosted',

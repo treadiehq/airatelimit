@@ -80,6 +80,7 @@ export class FeatureGuard implements CanActivate {
       // saml: 'SAML Authentication',
       auditLogs: 'Audit Logs',
       teamManagement: 'Team Management',
+      sponsorship: 'Sponsorship & Key Pooling',
       // advancedAnalytics: 'Advanced Analytics',
       customBranding: 'Custom Branding',
       apiRateLimitOverrides: 'API Rate Limit Overrides',
