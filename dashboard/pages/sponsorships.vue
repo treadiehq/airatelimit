@@ -203,8 +203,8 @@ const loadReceivedUsage = async (id: string) => {
 
 const getBudgetColor = (percent: number) => {
   if (percent >= 90) return 'bg-red-400'
-  if (percent >= 70) return 'bg-yellow-400'
-  return 'bg-green-400'
+  if (percent >= 70) return 'bg-yellow-300'
+  return 'bg-green-300'
 }
 
 // =====================================================
