@@ -3,7 +3,7 @@
 Per-tenant AI rate limiting for Node.js.
 
 ```bash
-npm install @airatelimit/limiter
+npm install @ai-ratelimit/limiter
 ```
 
 ## The Problem
@@ -13,7 +13,7 @@ You have one OpenAI API key. You have many customers. One bad actor burns throug
 ## The Solution
 
 ```typescript
-import { createLimiter, MemoryStorage } from '@airatelimit/limiter';
+import { createLimiter, MemoryStorage } from '@ai-ratelimit/limiter';
 
 const limiter = createLimiter({
   storage: new MemoryStorage(),
@@ -42,7 +42,7 @@ await limiter.reportUsage({
 ## Storage Backends
 
 ```typescript
-import { MemoryStorage, RedisStorage, PostgresStorage } from '@airatelimit/limiter';
+import { MemoryStorage, RedisStorage, PostgresStorage } from '@ai-ratelimit/limiter';
 
 // Development (no deps)
 new MemoryStorage()
