@@ -7,6 +7,7 @@ export type ProviderType =
   | 'anthropic'
   | 'google'
   | 'xai'
+  | 'openrouter'
   | 'unknown';
 
 /**
@@ -162,6 +163,7 @@ export class TransparentProxyService {
     google:
       'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
     xai: 'https://api.x.ai/v1/chat/completions',
+    openrouter: 'https://openrouter.ai/api/v1/chat/completions',
     unknown: 'https://api.openai.com/v1/chat/completions', // Default to OpenAI-compatible
   };
 

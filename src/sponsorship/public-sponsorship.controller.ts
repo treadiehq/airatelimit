@@ -265,7 +265,7 @@ export class PublicSponsorshipController {
    */
   private validateApiKeyFormat(
     apiKey: string,
-    provider: 'openai' | 'anthropic' | 'google' | 'xai',
+    provider: 'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter',
   ): { valid: boolean; error?: string } {
     const trimmedKey = apiKey.trim();
     
@@ -277,7 +277,8 @@ export class PublicSponsorshipController {
     switch (provider) {
       case 'openai':
         // OpenAI keys: sk-... or sk-proj-... (newer format)
-        if (!trimmedKey.startsWith('sk-')) {
+        // Note: Must not match OpenRouter's sk-or- prefix
+        if (!trimmedKey.startsWith('sk-') || trimmedKey.startsWith('sk-or-')) {
           return { 
             valid: false, 
             error: 'OpenAI API keys should start with "sk-"' 
@@ -311,6 +312,16 @@ export class PublicSponsorshipController {
           return { 
             valid: false, 
             error: 'xAI API keys should start with "xai-"' 
+          };
+        }
+        break;
+
+      case 'openrouter':
+        // OpenRouter keys: sk-or-...
+        if (!trimmedKey.startsWith('sk-or-')) {
+          return { 
+            valid: false, 
+            error: 'OpenRouter API keys should start with "sk-or-"' 
           };
         }
         break;

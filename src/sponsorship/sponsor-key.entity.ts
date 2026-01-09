@@ -12,7 +12,7 @@ import {
 import { Organization } from '../organizations/organization.entity';
 import { Sponsorship } from './sponsorship.entity';
 
-export type SponsorKeyProvider = 'openai' | 'anthropic' | 'google' | 'xai';
+export type SponsorKeyProvider = 'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter';
 
 /**
  * Sponsor Key Entity

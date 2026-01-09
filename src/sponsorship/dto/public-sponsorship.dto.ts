@@ -24,8 +24,8 @@ export class CreatePublicSponsorshipDto {
   // Provider for the API key
   @IsString()
   @IsNotEmpty()
-  @IsIn(['openai', 'anthropic', 'google', 'xai'])
-  provider: 'openai' | 'anthropic' | 'google' | 'xai';
+  @IsIn(['openai', 'anthropic', 'google', 'xai', 'openrouter'])
+  provider: 'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter';
 
   // Sponsor's email (required for anonymous sponsors, optional if logged in)
   @IsEmail()

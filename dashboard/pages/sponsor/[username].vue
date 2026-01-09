@@ -24,7 +24,7 @@ const error = ref('')
 
 // Form fields
 const apiKey = ref('')
-const provider = ref<'openai' | 'anthropic' | 'google' | 'xai'>('openai')
+const provider = ref<'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter'>('openai')
 const sponsorEmail = ref('')
 const spendCapUsd = ref<number | null>(10)
 const customAmount = ref('')
@@ -48,6 +48,7 @@ const providers = [
   { value: 'anthropic', label: 'Anthropic', placeholder: 'sk-ant-...' },
   { value: 'google', label: 'Google AI', placeholder: 'AIza...' },
   { value: 'xai', label: 'xAI', placeholder: 'xai-...' },
+  { value: 'openrouter', label: 'OpenRouter', placeholder: 'sk-or-...' },
 ]
 
 const selectedProvider = computed(() => providers.find(p => p.value === provider.value))
@@ -109,7 +110,8 @@ function validateApiKey(): { valid: boolean; error?: string } {
   
   switch (provider.value) {
     case 'openai':
-      if (!key.startsWith('sk-')) {
+      // OpenAI keys start with sk- but NOT sk-or- (that's OpenRouter)
+      if (!key.startsWith('sk-') || key.startsWith('sk-or-')) {
         return { valid: false, error: 'OpenAI keys should start with "sk-"' }
       }
       break
@@ -126,6 +128,11 @@ function validateApiKey(): { valid: boolean; error?: string } {
     case 'xai':
       if (!key.startsWith('xai-')) {
         return { valid: false, error: 'xAI keys should start with "xai-"' }
+      }
+      break
+    case 'openrouter':
+      if (!key.startsWith('sk-or-')) {
+        return { valid: false, error: 'OpenRouter keys should start with "sk-or-"' }
       }
       break
   }
