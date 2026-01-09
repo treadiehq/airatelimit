@@ -24,11 +24,17 @@ export class AdminService {
     const TRIAL_DAYS = 7;
     const now = new Date();
 
-    // Get user counts for each organization
+    // Get user counts and owner info for each organization
     const orgsWithStats = await Promise.all(
       organizations.map(async (org) => {
         const userCount = await this.userRepository.count({
           where: { organizationId: org.id },
+        });
+
+        // Get owner (first user in org, ordered by creation date)
+        const owner = await this.userRepository.findOne({
+          where: { organizationId: org.id },
+          order: { createdAt: 'ASC' },
         });
 
         // Normalize plan to valid values (handle legacy 'free' or null values)
@@ -78,6 +84,7 @@ export class AdminService {
           daysRemaining,
           expiresAt: expiresAt?.toISOString() || null,
           userCount,
+          ownerEmail: owner?.email || null,
           createdAt: org.createdAt,
         };
       }),

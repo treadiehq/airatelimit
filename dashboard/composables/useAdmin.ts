@@ -8,6 +8,7 @@ export interface OrganizationInfo {
   daysRemaining: number | null
   expiresAt: string | null
   userCount: number
+  ownerEmail: string | null
   createdAt: string
 }
 

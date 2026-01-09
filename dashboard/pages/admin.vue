@@ -113,6 +113,7 @@ const formatDate = (dateStr: string | null) => {
         <thead>
           <tr class="border-b border-gray-500/10 text-left">
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Organization</th>
+            <th class="px-4 py-3 text-gray-400 font-medium text-sm">Owner</th>
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Plan</th>
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Status</th>
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Expires</th>
@@ -129,6 +130,9 @@ const formatDate = (dateStr: string | null) => {
             <td class="px-4 py-4">
               <div class="font-medium">{{ org.name }}</div>
               <div class="text-xs text-gray-400 font-mono">{{ org.id }}</div>
+            </td>
+            <td class="px-4 py-4 text-sm text-gray-300">
+              {{ org.ownerEmail || '—' }}
             </td>
             <td class="px-4 py-4">
               <!-- Editing mode -->
