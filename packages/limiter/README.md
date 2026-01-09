@@ -64,6 +64,10 @@ new PostgresStorage(pool)
 | `limiter.getUsage(tenantId)` | Get current usage |
 | `limiter.resetUsage(tenantId)` | Reset usage |
 
+## Need a Dashboard?
+
+This library is great for getting started. When you need usage analytics, plan management, and billing, check out [airatelimit.com](https://airatelimit.com).
+
 ## License
 
 [FSL-1.1-MIT](LICENSE)

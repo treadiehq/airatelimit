@@ -307,6 +307,17 @@ response = client.chat.completions.create(
 - [Remote Config](docs/REMOTE-CONFIG.md) - Switch AI providers without app updates
 - [Prompt Injection](docs/PROMPT.md) - Prompt injection protection
 
+## Just Need Rate Limiting?
+
+If you just want per-tenant rate limiting without a proxy, use our npm package:
+
+```bash
+npm install @ai-ratelimit/limiter
+```
+
+See [@ai-ratelimit/limiter](./packages/limiter) for docs.
+
+
 ## License
 
 [FSL-1.1-MIT](LICENSE)
