@@ -1,6 +1,10 @@
 // Core
 export { createLimiter } from './limiter';
 
+// Simple API
+export { protect, createProtect } from './protect';
+export type { ProtectOptions } from './protect';
+
 // Storage backends
 export { MemoryStorage } from './storage/memory';
 export { RedisStorage } from './storage/redis';

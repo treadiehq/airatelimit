@@ -13,30 +13,49 @@ You have one OpenAI API key. You have many customers. One bad actor burns throug
 ## The Solution
 
 ```typescript
-import { createLimiter, MemoryStorage } from '@ai-ratelimit/limiter';
+import { protect } from '@ai-ratelimit/limiter';
+
+app.use('/api/ai', protect({
+  tenant: (req) => req.user.id,
+  limit: '100/day'
+}));
+```
+
+That's it. Your AI endpoints are now protected from abuse.
+
+## Options
+
+```typescript
+protect({
+  // Required: identify the tenant
+  tenant: (req) => req.user.id,
+  
+  // Optional: rate limit (default: "100/day")
+  limit: '1000/day',  // or '60/minute', '500/hour', '10000/month'
+  
+  // Optional: monthly token quota
+  tokens: 100000,  // 100k tokens/month
+})
+```
+
+## Need More Control?
+
+For multi-plan support, Redis storage, or custom hooks, use the full API:
+
+```typescript
+import { createLimiter, RedisStorage } from '@ai-ratelimit/limiter';
+import Redis from 'ioredis';
 
 const limiter = createLimiter({
-  storage: new MemoryStorage(),
+  storage: new RedisStorage(new Redis()),
   plans: {
-    free: {
-      rateLimit: { capacity: 20, refillRate: 1 },
-      quota: { maxTokens: 100_000 },
-    },
+    free: { rateLimit: { capacity: 20, refillRate: 1 }, quota: { maxTokens: 100_000 } },
+    pro: { rateLimit: { capacity: 100, refillRate: 5 }, quota: { maxTokens: 2_000_000 } },
   },
-  getPlan: (tenantId) => 'free',
+  getPlan: (tenantId) => db.getTenant(tenantId).plan,
 });
 
-// Middleware
-app.use('/api/ai', limiter.middleware({
-  getTenantId: (req) => req.user.orgId,
-}));
-
-// Report usage after AI call
-await limiter.reportUsage({
-  tenantId: 'org_123',
-  inputTokens: response.usage.prompt_tokens,
-  outputTokens: response.usage.completion_tokens,
-});
+app.use('/api/ai', limiter.middleware({ getTenantId: (req) => req.user.orgId }));
 ```
 
 ## Storage Backends
@@ -44,29 +63,14 @@ await limiter.reportUsage({
 ```typescript
 import { MemoryStorage, RedisStorage, PostgresStorage } from '@ai-ratelimit/limiter';
 
-// Development (no deps)
-new MemoryStorage()
-
-// Production (npm i ioredis)
-new RedisStorage(new Redis())
-
-// PostgreSQL (npm i pg)
-new PostgresStorage(pool)
+new MemoryStorage()           // Default, no deps, dev/single-server
+new RedisStorage(redis)       // Production, multi-server (npm i ioredis)
+new PostgresStorage(pool)     // When you have Postgres (npm i pg)
 ```
-
-## API
-
-| Method | Description |
-|--------|-------------|
-| `limiter.middleware(opts)` | Express middleware |
-| `limiter.enforce({ tenantId })` | Manual check |
-| `limiter.reportUsage({ tenantId, inputTokens, outputTokens })` | Record usage |
-| `limiter.getUsage(tenantId)` | Get current usage |
-| `limiter.resetUsage(tenantId)` | Reset usage |
 
 ## Need a Dashboard?
 
-This library is great for getting started. When you need usage analytics, plan management, and billing, check out [airatelimit.com](https://airatelimit.com).
+When you need usage analytics, plan management, and billing, check out [airatelimit.com](https://airatelimit.com).
 
 ## License
 
