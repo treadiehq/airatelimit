@@ -67,7 +67,7 @@ export class UsersService {
   ): Promise<User> {
     await this.usersRepository.update(userId, {
       linkedGitHubId: github.githubId,
-      linkedGitHubUsername: github.githubUsername,
+      linkedGitHubUsername: github.githubUsername.toLowerCase(), // Store lowercase for consistent matching
       linkedGitHubAt: new Date(),
     });
     return this.findById(userId);

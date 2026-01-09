@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull } from 'typeorm';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 
@@ -204,7 +204,7 @@ export class SponsorshipService {
       description: dto.description,
       spendCapUsd: dto.spendCapUsd,
       spendCapTokens: dto.spendCapTokens,
-      recipientEmail: dto.recipientEmail,
+      recipientEmail: dto.recipientEmail?.toLowerCase(),
       targetGitHubUsername: dto.targetGitHubUsername?.toLowerCase(),
       allowedModels: dto.allowedModels,
       maxTokensPerRequest: dto.maxTokensPerRequest,
@@ -878,7 +878,7 @@ export class SponsorshipService {
     return this.sponsorshipRepository.find({
       where: {
         targetGitHubUsername: githubUsername.toLowerCase(),
-        recipientOrgId: null as any, // Not yet claimed
+        recipientOrgId: IsNull(),
         status: 'active',
       },
       relations: ['sponsorOrg', 'sponsorKey'],
@@ -916,13 +916,56 @@ export class SponsorshipService {
   }
 
   /**
+   * Claim a single sponsorship by GitHub username verification
+   */
+  async claimSponsorshipByGitHub(
+    sponsorshipId: string,
+    githubUsername: string,
+    recipientOrgId: string,
+  ): Promise<Sponsorship> {
+    const sponsorship = await this.sponsorshipRepository.findOne({
+      where: { id: sponsorshipId },
+    });
+
+    if (!sponsorship) {
+      throw new NotFoundException('Sponsorship not found');
+    }
+
+    // Verify this sponsorship requires GitHub and targets this user
+    if (!sponsorship.targetGitHubUsername) {
+      throw new BadRequestException('This sponsorship does not require GitHub verification');
+    }
+
+    if (sponsorship.targetGitHubUsername.toLowerCase() !== githubUsername.toLowerCase()) {
+      throw new ForbiddenException(
+        `This sponsorship is for GitHub user @${sponsorship.targetGitHubUsername}, not @${githubUsername}`,
+      );
+    }
+
+    // Check if already claimed
+    if (sponsorship.recipientOrgId && sponsorship.recipientOrgId !== recipientOrgId) {
+      throw new ForbiddenException('Sponsorship already claimed by another organization');
+    }
+
+    // Claim it
+    sponsorship.recipientOrgId = recipientOrgId;
+    await this.sponsorshipRepository.save(sponsorship);
+
+    this.logger.log(
+      `GitHub-claimed sponsorship ${sponsorshipId} for @${githubUsername} → org ${recipientOrgId}`,
+    );
+
+    return sponsorship;
+  }
+
+  /**
    * Get count of pending sponsorships for a GitHub username
    */
   async countPendingSponsorshipsByGitHub(githubUsername: string): Promise<number> {
     return this.sponsorshipRepository.count({
       where: {
         targetGitHubUsername: githubUsername.toLowerCase(),
-        recipientOrgId: null as any,
+        recipientOrgId: IsNull(),
         status: 'active',
       },
     });
@@ -936,7 +979,7 @@ export class SponsorshipService {
     return this.sponsorshipRepository.find({
       where: {
         recipientEmail: email.toLowerCase(),
-        recipientOrgId: null as any, // Not yet claimed
+        recipientOrgId: IsNull(),
         status: 'active',
       },
       relations: ['sponsorOrg', 'sponsorKey'],
@@ -960,14 +1003,18 @@ export class SponsorshipService {
       throw new NotFoundException('Sponsorship not found');
     }
 
-    // Verify email matches
-    if (sponsorship.recipientEmail?.toLowerCase() !== email.toLowerCase()) {
-      throw new ForbiddenException('Email does not match sponsorship recipient');
-    }
-
     // If GitHub is required, don't allow email-only claim
     if (sponsorship.targetGitHubUsername) {
       throw new BadRequestException('This sponsorship requires GitHub verification to claim');
+    }
+
+    // Verify email matches (only if recipientEmail is set)
+    if (!sponsorship.recipientEmail) {
+      throw new ForbiddenException('This sponsorship has no email recipient set');
+    }
+    
+    if (sponsorship.recipientEmail.toLowerCase() !== email.toLowerCase()) {
+      throw new ForbiddenException('Email does not match sponsorship recipient');
     }
 
     if (sponsorship.recipientOrgId) {

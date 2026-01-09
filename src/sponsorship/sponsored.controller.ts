@@ -83,98 +83,8 @@ export class SponsoredController {
     return results;
   }
 
-  /**
-   * Get details of a specific sponsorship I'm receiving
-   */
-  @Get(':id')
-  async getSponsorship(@Request() req, @Param('id') id: string) {
-    const s = await this.sponsorshipService.getSponsorship(
-      id,
-      req.user.organizationId,
-      'recipient',
-    );
-
-    // Get this org's specific spend
-    const mySpend = await this.sponsorshipService.getOrgSpend(
-      id,
-      req.user.organizationId,
-    );
-
-    return {
-      id: s.id,
-      name: s.name,
-      description: s.description,
-      status: s.status,
-      provider: s.sponsorKey?.provider,
-
-      // My org's spend
-      mySpentUsd: mySpend.spentUsd,
-      mySpentTokens: mySpend.spentTokens,
-
-      // Total spend (for budget context)
-      totalSpentUsd: Number(s.spentUsd),
-      totalSpentTokens: Number(s.spentTokens),
-
-      // Budget remaining (overall)
-      remainingBudgetUsd: s.spendCapUsd
-        ? Math.max(0, Number(s.spendCapUsd) - Number(s.spentUsd))
-        : null,
-      remainingBudgetTokens: s.spendCapTokens
-        ? Math.max(0, Number(s.spendCapTokens) - Number(s.spentTokens))
-        : null,
-      budgetUsedPercent: s.spendCapUsd
-        ? (Number(s.spentUsd) / Number(s.spendCapUsd)) * 100
-        : s.spendCapTokens
-          ? (Number(s.spentTokens) / Number(s.spendCapTokens)) * 100
-          : 0,
-
-      // Constraints
-      allowedModels: s.allowedModels,
-      maxTokensPerRequest: s.maxTokensPerRequest,
-      maxRequestsPerMinute: s.maxRequestsPerMinute,
-      maxRequestsPerDay: s.maxRequestsPerDay,
-      expiresAt: s.expiresAt,
-
-      // Sponsor info
-      sponsorName: s.sponsorOrg?.name,
-
-      createdAt: s.createdAt,
-    };
-  }
-
-  /**
-   * Get my usage summary for a sponsorship (only shows this org's usage)
-   */
-  @Get(':id/usage')
-  async getUsageSummary(@Request() req, @Param('id') id: string) {
-    return this.sponsorshipService.getUsageSummary(id, req.user.organizationId, 'recipient');
-  }
-
-  /**
-   * Get my usage history for a sponsorship (only shows this org's usage)
-   */
-  @Get(':id/usage/history')
-  async getUsageHistory(@Request() req, @Param('id') id: string) {
-    const usage = await this.sponsorshipService.getUsageHistory(
-      id,
-      req.user.organizationId,
-      30, // Last 30 days
-      'recipient',
-    );
-
-    return usage.map((u) => ({
-      id: u.id,
-      model: u.model,
-      inputTokens: u.inputTokens,
-      outputTokens: u.outputTokens,
-      totalTokens: u.totalTokens,
-      costUsd: Number(u.costUsd),
-      timestamp: u.timestamp,
-    }));
-  }
-
   // =====================================================
-  // PENDING SPONSORSHIPS & CLAIMING
+  // PENDING SPONSORSHIPS & CLAIMING (MUST BE BEFORE :id ROUTES)
   // =====================================================
 
   /**
@@ -266,6 +176,100 @@ export class SponsoredController {
     };
   }
 
+  // =====================================================
+  // SPONSORSHIP DETAILS (PARAMETERIZED ROUTES AFTER STATIC)
+  // =====================================================
+
+  /**
+   * Get details of a specific sponsorship I'm receiving
+   */
+  @Get(':id')
+  async getSponsorship(@Request() req, @Param('id') id: string) {
+    const s = await this.sponsorshipService.getSponsorship(
+      id,
+      req.user.organizationId,
+      'recipient',
+    );
+
+    // Get this org's specific spend
+    const mySpend = await this.sponsorshipService.getOrgSpend(
+      id,
+      req.user.organizationId,
+    );
+
+    return {
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      status: s.status,
+      provider: s.sponsorKey?.provider,
+
+      // My org's spend
+      mySpentUsd: mySpend.spentUsd,
+      mySpentTokens: mySpend.spentTokens,
+
+      // Total spend (for budget context)
+      totalSpentUsd: Number(s.spentUsd),
+      totalSpentTokens: Number(s.spentTokens),
+
+      // Budget remaining (overall)
+      remainingBudgetUsd: s.spendCapUsd
+        ? Math.max(0, Number(s.spendCapUsd) - Number(s.spentUsd))
+        : null,
+      remainingBudgetTokens: s.spendCapTokens
+        ? Math.max(0, Number(s.spendCapTokens) - Number(s.spentTokens))
+        : null,
+      budgetUsedPercent: s.spendCapUsd
+        ? (Number(s.spentUsd) / Number(s.spendCapUsd)) * 100
+        : s.spendCapTokens
+          ? (Number(s.spentTokens) / Number(s.spendCapTokens)) * 100
+          : 0,
+
+      // Constraints
+      allowedModels: s.allowedModels,
+      maxTokensPerRequest: s.maxTokensPerRequest,
+      maxRequestsPerMinute: s.maxRequestsPerMinute,
+      maxRequestsPerDay: s.maxRequestsPerDay,
+      expiresAt: s.expiresAt,
+
+      // Sponsor info
+      sponsorName: s.sponsorOrg?.name,
+
+      createdAt: s.createdAt,
+    };
+  }
+
+  /**
+   * Get my usage summary for a sponsorship (only shows this org's usage)
+   */
+  @Get(':id/usage')
+  async getUsageSummary(@Request() req, @Param('id') id: string) {
+    return this.sponsorshipService.getUsageSummary(id, req.user.organizationId, 'recipient');
+  }
+
+  /**
+   * Get my usage history for a sponsorship (only shows this org's usage)
+   */
+  @Get(':id/usage/history')
+  async getUsageHistory(@Request() req, @Param('id') id: string) {
+    const usage = await this.sponsorshipService.getUsageHistory(
+      id,
+      req.user.organizationId,
+      30, // Last 30 days
+      'recipient',
+    );
+
+    return usage.map((u) => ({
+      id: u.id,
+      model: u.model,
+      inputTokens: u.inputTokens,
+      outputTokens: u.outputTokens,
+      totalTokens: u.totalTokens,
+      costUsd: Number(u.costUsd),
+      timestamp: u.timestamp,
+    }));
+  }
+
   /**
    * Claim a specific pending sponsorship
    */
@@ -289,7 +293,7 @@ export class SponsoredController {
       };
     } catch (error) {
       // If it requires GitHub, check if user has linked GitHub
-      if (error.message?.includes('GitHub verification')) {
+      if (error.message?.includes('GitHub verification') || error.message?.includes('no email recipient')) {
         if (!user?.linkedGitHubUsername) {
           return {
             success: false,
@@ -299,8 +303,9 @@ export class SponsoredController {
         }
         
         // Try to claim via GitHub
-        const claimed = await this.sponsorshipService.claimSponsorship(
+        const claimed = await this.sponsorshipService.claimSponsorshipByGitHub(
           id,
+          user.linkedGitHubUsername,
           req.user.organizationId,
         );
         return {
