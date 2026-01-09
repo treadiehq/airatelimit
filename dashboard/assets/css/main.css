@@ -63,6 +63,10 @@ body.modal-open {
 	border-radius: 4px;
 }
 
+.rot {
+  transform: rotate(-90deg) translateX(-10rem);
+}
+
 @media screen and (-webkit-min-device-pixel-ratio: 0) and (max-device-width: 1024px) {
 	select,
 	textarea,

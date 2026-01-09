@@ -438,20 +438,26 @@ export const useSponsorship = () => {
   // Backwards compatible alias
   const fetchPendingGitHubSponsorships = fetchPendingSponsorships
 
-  const claimSponsorship = async (sponsorshipId: string) => {
+  const claimSponsorship = async (sponsorshipId: string, options?: { silent?: boolean }) => {
     try {
       const data = await api(`/sponsored/claim/${sponsorshipId}`, { method: 'POST' })
       if (data.success) {
-        toast.success(`Claimed sponsorship: ${data.sponsorship.name}`)
-        // Refresh data
-        await fetchReceivedSponsorships()
-        await fetchPendingSponsorships()
+        if (!options?.silent) {
+          toast.success(`Claimed sponsorship: ${data.sponsorship.name}`)
+        }
+        // Refresh data (skip if silent - batch mode handles refresh)
+        if (!options?.silent) {
+          await fetchReceivedSponsorships()
+          await fetchPendingSponsorships()
+        }
       } else if (data.requiresGitHub) {
         toast.error('Please link your GitHub account first')
       }
       return data
     } catch (error: any) {
-      toast.error(error.message || 'Failed to claim sponsorship')
+      if (!options?.silent) {
+        toast.error(error.message || 'Failed to claim sponsorship')
+      }
       throw error
     }
   }
@@ -462,15 +468,19 @@ export const useSponsorship = () => {
     
     for (const s of pending) {
       try {
-        const result = await claimSponsorship(s.id)
+        // Use silent mode to avoid individual toasts
+        const result = await claimSponsorship(s.id, { silent: true })
         if (result.success) claimedCount++
       } catch {
         // Continue with others
       }
     }
     
+    // Show single summary toast and refresh data once
     if (claimedCount > 0) {
       toast.success(`Claimed ${claimedCount} sponsorship(s)!`)
+      await fetchReceivedSponsorships()
+      await fetchPendingSponsorships()
     }
     
     return claimedCount

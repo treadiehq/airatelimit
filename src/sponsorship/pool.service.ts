@@ -662,7 +662,7 @@ export class PoolService {
         activeSponsors++;
       }
 
-      const provider = s.sponsorKey?.provider || 'unknown';
+      const provider = s.sponsorKey?.provider || s.providerDirect || 'unknown';
       if (!byProvider[provider]) {
         byProvider[provider] = { count: 0, budgetUsd: 0, spentUsd: 0 };
       }

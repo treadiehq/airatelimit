@@ -48,7 +48,7 @@ export class SponsoredController {
           name: s.name,
           description: s.description,
           status: s.status,
-          provider: s.sponsorKey?.provider,
+          provider: s.sponsorKey?.provider || s.providerDirect,
 
           // My org's spend
           mySpentUsd: mySpend.spentUsd,
@@ -89,13 +89,21 @@ export class SponsoredController {
 
   /**
    * Get all pending sponsorships for the current user
-   * Checks both GitHub username and email
+   * Checks:
+   * 1. Sponsorships directly linked to this org (from badge)
+   * 2. Sponsorships by email
+   * 3. Sponsorships by GitHub username (if linked)
    */
   @Get('pending')
   async getPendingSponsorships(@Request() req) {
     const user = await this.usersService.findById(req.user.userId);
     
-    // Find pending by email
+    // Find pending sponsorships already linked to this org (from badge flow)
+    const pendingForOrg = await this.sponsorshipService.listPendingSponsorshipsForOrg(
+      req.user.organizationId,
+    );
+    
+    // Find pending by email (legacy flow)
     const pendingByEmail = await this.sponsorshipService.findPendingSponsorshipsByEmail(
       user.email,
     );
@@ -108,16 +116,16 @@ export class SponsoredController {
       );
     }
 
-    // Combine and dedupe (a sponsorship could match both email and GitHub)
+    // Combine and dedupe (a sponsorship could match multiple criteria)
     const allPendingMap = new Map<string, any>();
     
-    for (const s of [...pendingByEmail, ...pendingByGitHub]) {
+    for (const s of [...pendingForOrg, ...pendingByEmail, ...pendingByGitHub]) {
       if (!allPendingMap.has(s.id)) {
         allPendingMap.set(s.id, {
           id: s.id,
           name: s.name,
           description: s.description,
-          provider: s.sponsorKey?.provider,
+          provider: s.sponsorKey?.provider || s.providerDirect,
           spendCapUsd: s.spendCapUsd ? Number(s.spendCapUsd) : null,
           spendCapTokens: s.spendCapTokens ? Number(s.spendCapTokens) : null,
           sponsorName: s.sponsorOrg?.name,
@@ -125,8 +133,8 @@ export class SponsoredController {
           recipientEmail: s.recipientEmail,
           expiresAt: s.expiresAt,
           createdAt: s.createdAt,
-          // Can claim directly if no GitHub requirement
-          canClaimDirectly: !s.targetGitHubUsername,
+          // Can accept directly if already linked to org or no GitHub requirement
+          canClaimDirectly: s.recipientOrgId === req.user.organizationId || !s.targetGitHubUsername,
         });
       }
     }
@@ -166,7 +174,7 @@ export class SponsoredController {
         id: s.id,
         name: s.name,
         description: s.description,
-        provider: s.sponsorKey?.provider,
+        provider: s.sponsorKey?.provider || s.providerDirect,
         spendCapUsd: s.spendCapUsd ? Number(s.spendCapUsd) : null,
         spendCapTokens: s.spendCapTokens ? Number(s.spendCapTokens) : null,
         sponsorName: s.sponsorOrg?.name,
@@ -202,7 +210,7 @@ export class SponsoredController {
       name: s.name,
       description: s.description,
       status: s.status,
-      provider: s.sponsorKey?.provider,
+      provider: s.sponsorKey?.provider || s.providerDirect,
 
       // My org's spend
       mySpentUsd: mySpend.spentUsd,
@@ -271,13 +279,34 @@ export class SponsoredController {
   }
 
   /**
-   * Claim a specific pending sponsorship
+   * Claim/accept a specific pending sponsorship
    */
   @Post('claim/:id')
   async claimSponsorship(@Request() req, @Param('id') id: string) {
     const user = await this.usersService.findById(req.user.userId);
     
-    // First check if this is an email-only sponsorship (no GitHub required)
+    // First try to accept if it's already linked to this org (from badge flow)
+    try {
+      const { sponsorship, token } = await this.sponsorshipService.acceptPendingSponsorship(
+        id,
+        req.user.organizationId,
+      );
+      return {
+        success: true,
+        sponsorship: {
+          id: sponsorship.id,
+          name: sponsorship.name,
+        },
+        token,
+      };
+    } catch (error) {
+      // Not a pre-linked sponsorship, try other methods
+      if (!error.message?.includes('not found')) {
+        throw error;
+      }
+    }
+    
+    // Try email-only sponsorship (no GitHub required)
     try {
       const claimed = await this.sponsorshipService.claimSponsorshipByEmail(
         id,
@@ -345,7 +374,7 @@ export class SponsoredController {
       claimed: claimed.map((s) => ({
         id: s.id,
         name: s.name,
-        provider: s.sponsorKey?.provider,
+        provider: s.sponsorKey?.provider || s.providerDirect,
         spendCapUsd: s.spendCapUsd ? Number(s.spendCapUsd) : null,
       })),
     };

@@ -379,7 +379,7 @@ export class PoolController {
             id: s.id,
             name: s.name,
             status: s.status,
-            provider: s.sponsorKey?.provider,
+            provider: s.sponsorKey?.provider || s.providerDirect,
             sponsorName: s.sponsorOrg?.name,
             spendCapUsd: Number(s.spendCapUsd),
             spentUsd: Number(s.spentUsd),

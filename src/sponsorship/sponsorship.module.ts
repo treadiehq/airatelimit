@@ -15,8 +15,10 @@ import { SponsorshipController } from './sponsorship.controller';
 import { SponsoredController } from './sponsored.controller';
 import { PoolService } from './pool.service';
 import { PoolController } from './pool.controller';
+import { PublicSponsorshipController } from './public-sponsorship.controller';
 
 import { CommonModule } from '../common/common.module';
+import { User } from '../users/user.entity';
 import { UsersModule } from '../users/users.module';
 import { EmailModule } from '../email/email.module';
 
@@ -38,13 +40,14 @@ import { EmailModule } from '../email/email.module';
       SponsorshipPool,
       SponsorshipPoolMember,
       PoolToken,
+      User,
     ]),
     HttpModule,
     CommonModule,
     UsersModule,
     EmailModule,
   ],
-  controllers: [SponsorshipController, SponsoredController, PoolController],
+  controllers: [SponsorshipController, SponsoredController, PoolController, PublicSponsorshipController],
   providers: [SponsorshipService, PoolService],
   exports: [SponsorshipService, PoolService],
 })

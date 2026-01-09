@@ -319,4 +319,112 @@ https://airatelimit.com`;
     console.log(`🔗 Claim Link: ${params.claimLink}`);
     console.log('='.repeat(80) + '\n');
   }
+
+  // =====================================================
+  // SPONSORSHIP MANAGEMENT (for anonymous sponsors)
+  // =====================================================
+
+  async sendSponsorshipManagementEmail(params: {
+    sponsorEmail: string;
+    recipientUsername: string;
+    sponsorshipName: string;
+    spendCapUsd?: number;
+    provider: string;
+    manageLink: string;
+  }): Promise<void> {
+    if (this.resend) {
+      await this.sendManagementViaResend(params);
+    } else {
+      this.logManagementToConsole(params);
+    }
+  }
+
+  private async sendManagementViaResend(params: {
+    sponsorEmail: string;
+    recipientUsername: string;
+    sponsorshipName: string;
+    spendCapUsd?: number;
+    provider: string;
+    manageLink: string;
+  }): Promise<void> {
+    try {
+      const fromEmail =
+        this.configService.get<string>('emailFrom') ||
+        'AI Ratelimit <noreply@airatelimit.com>';
+
+      const budgetText = params.spendCapUsd 
+        ? `$${params.spendCapUsd.toFixed(2)}`
+        : 'unlimited';
+
+      const textContent = `Thank you for sponsoring @${params.recipientUsername}!
+
+Your sponsorship has been created:
+
+Sponsorship: ${params.sponsorshipName}
+Budget: ${budgetText} (${params.provider})
+Recipient: @${params.recipientUsername}
+
+To manage or revoke this sponsorship, use this link:
+${params.manageLink}
+
+Save this email - you'll need this link to manage your sponsorship.
+
+If you want more control over your sponsorships, create an AI Ratelimit account with this email address and your sponsorships will be linked automatically.
+
+—
+AI Ratelimit
+https://airatelimit.com`;
+
+      const { data, error } = await this.resend.emails.send({
+        from: fromEmail,
+        to: params.sponsorEmail,
+        subject: `🎁 Your sponsorship for @${params.recipientUsername} is active`,
+        text: textContent,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      this.logger.log(
+        `Sponsorship management email sent to ${params.sponsorEmail} (id: ${data?.id})`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to send management email via Resend: ${error.message}`);
+      // Don't throw - email failure shouldn't break sponsorship creation
+    }
+  }
+
+  private logManagementToConsole(params: {
+    sponsorEmail: string;
+    recipientUsername: string;
+    sponsorshipName: string;
+    spendCapUsd?: number;
+    provider: string;
+    manageLink: string;
+  }): void {
+    const budgetText = params.spendCapUsd 
+      ? `$${params.spendCapUsd.toFixed(2)}`
+      : 'unlimited';
+
+    this.logger.log('\n' + '='.repeat(80));
+    this.logger.log('📧 SPONSORSHIP MANAGEMENT EMAIL');
+    this.logger.log('='.repeat(80));
+    this.logger.log(`📧 To: ${params.sponsorEmail}`);
+    this.logger.log(`👤 Recipient: @${params.recipientUsername}`);
+    this.logger.log(`📝 Sponsorship: ${params.sponsorshipName}`);
+    this.logger.log(`💰 Budget: ${budgetText} (${params.provider})`);
+    this.logger.log(`🔗 Manage Link: ${params.manageLink}`);
+    this.logger.log('='.repeat(80) + '\n');
+
+    console.log('\n' + '='.repeat(80));
+    console.log('📧 SPONSORSHIP MANAGEMENT EMAIL');
+    console.log('='.repeat(80));
+    console.log(`📧 To: ${params.sponsorEmail}`);
+    console.log(`👤 Recipient: @${params.recipientUsername}`);
+    console.log(`📝 Sponsorship: ${params.sponsorshipName}`);
+    console.log(`💰 Budget: ${budgetText} (${params.provider})`);
+    console.log(`🔗 Manage Link: ${params.manageLink}`);
+    console.log('='.repeat(80) + '\n');
+  }
 }

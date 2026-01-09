@@ -263,9 +263,10 @@ export class SponsorshipService {
    * A recipient is determined by:
    * 1. recipientOrgId is set to this org, OR
    * 2. This org has usage records against the sponsorship
+   * Only returns ACTIVE sponsorships (pending must be accepted first)
    */
   async listSponsorshipsAsRecipient(organizationId: string): Promise<Sponsorship[]> {
-    // Find sponsorships where this org has usage
+    // Find active sponsorships where this org is recipient
     const sponsorshipsWithUsage = await this.sponsorshipRepository
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.sponsorKey', 'sponsorKey')
@@ -279,6 +280,53 @@ export class SponsorshipService {
       .getMany();
 
     return sponsorshipsWithUsage;
+  }
+
+  /**
+   * List pending sponsorships targeted at this organization
+   * These need to be accepted before becoming active
+   */
+  async listPendingSponsorshipsForOrg(organizationId: string): Promise<Sponsorship[]> {
+    return this.sponsorshipRepository
+      .createQueryBuilder('s')
+      .leftJoinAndSelect('s.sponsorKey', 'sponsorKey')
+      .leftJoinAndSelect('s.sponsorOrg', 'sponsorOrg')
+      .where('s.status = :status', { status: 'pending' })
+      .andWhere('s."recipientOrgId" = :orgId', { orgId: organizationId })
+      .orderBy('s."createdAt"', 'DESC')
+      .getMany();
+  }
+
+  /**
+   * Accept a pending sponsorship that's already linked to an org
+   * (from the badge flow where recipientOrgId is set during creation)
+   */
+  async acceptPendingSponsorship(
+    sponsorshipId: string,
+    organizationId: string,
+  ): Promise<{ sponsorship: Sponsorship; token: string }> {
+    const sponsorship = await this.sponsorshipRepository.findOne({
+      where: { 
+        id: sponsorshipId,
+        recipientOrgId: organizationId,
+        status: 'pending',
+      },
+    });
+
+    if (!sponsorship) {
+      throw new NotFoundException('Pending sponsorship not found or does not belong to your organization');
+    }
+
+    // Activate the sponsorship
+    sponsorship.status = 'active';
+    await this.sponsorshipRepository.save(sponsorship);
+
+    // Generate a sponsored token for the recipient
+    const tokenResult = await this.generateSponsoredToken(sponsorship.id);
+
+    this.logger.log(`Accepted sponsorship ${sponsorshipId} for org ${organizationId}`);
+
+    return { sponsorship, token: tokenResult.token };
   }
 
   /**
@@ -879,7 +927,7 @@ export class SponsorshipService {
       where: {
         targetGitHubUsername: githubUsername.toLowerCase(),
         recipientOrgId: IsNull(),
-        status: 'active',
+        status: 'pending',
       },
       relations: ['sponsorOrg', 'sponsorKey'],
       order: { createdAt: 'DESC' },
@@ -905,7 +953,12 @@ export class SponsorshipService {
     const claimed: Sponsorship[] = [];
     for (const sponsorship of pending) {
       sponsorship.recipientOrgId = recipientOrgId;
+      sponsorship.status = 'active';
       await this.sponsorshipRepository.save(sponsorship);
+      
+      // Generate a sponsored token for the recipient
+      await this.generateSponsoredToken(sponsorship.id);
+      
       claimed.push(sponsorship);
       this.logger.log(
         `GitHub-claimed sponsorship ${sponsorship.id} for @${githubUsername} → org ${recipientOrgId}`,
@@ -949,7 +1002,11 @@ export class SponsorshipService {
 
     // Claim it
     sponsorship.recipientOrgId = recipientOrgId;
+    sponsorship.status = 'active';
     await this.sponsorshipRepository.save(sponsorship);
+    
+    // Generate a sponsored token for the recipient
+    await this.generateSponsoredToken(sponsorship.id);
 
     this.logger.log(
       `GitHub-claimed sponsorship ${sponsorshipId} for @${githubUsername} → org ${recipientOrgId}`,
@@ -966,7 +1023,7 @@ export class SponsorshipService {
       where: {
         targetGitHubUsername: githubUsername.toLowerCase(),
         recipientOrgId: IsNull(),
-        status: 'active',
+        status: 'pending',
       },
     });
   }
@@ -980,7 +1037,7 @@ export class SponsorshipService {
       where: {
         recipientEmail: email.toLowerCase(),
         recipientOrgId: IsNull(),
-        status: 'active',
+        status: 'pending',
       },
       relations: ['sponsorOrg', 'sponsorKey'],
       order: { createdAt: 'DESC' },
@@ -1022,7 +1079,11 @@ export class SponsorshipService {
     }
 
     sponsorship.recipientOrgId = recipientOrgId;
+    sponsorship.status = 'active';
     await this.sponsorshipRepository.save(sponsorship);
+    
+    // Generate a sponsored token for the recipient
+    await this.generateSponsoredToken(sponsorship.id);
 
     this.logger.log(`Email-claimed sponsorship ${sponsorshipId} for ${email} → org ${recipientOrgId}`);
 

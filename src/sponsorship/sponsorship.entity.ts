@@ -14,7 +14,7 @@ import { SponsorKey } from './sponsor-key.entity';
 import { SponsoredToken } from './sponsored-token.entity';
 import { SponsorshipUsage } from './sponsorship-usage.entity';
 
-export type SponsorshipStatus = 'active' | 'paused' | 'revoked' | 'exhausted' | 'expired';
+export type SponsorshipStatus = 'pending' | 'active' | 'paused' | 'revoked' | 'exhausted' | 'expired';
 export type BillingPeriod = 'one_time' | 'monthly';
 
 /**
@@ -28,22 +28,29 @@ export class Sponsorship {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // Sponsor info
-  @ManyToOne(() => SponsorKey, (key) => key.sponsorships, { onDelete: 'RESTRICT' })
+  // Sponsor info (nullable for anonymous/public sponsorships)
+  @ManyToOne(() => SponsorKey, (key) => key.sponsorships, { onDelete: 'RESTRICT', nullable: true })
   @JoinColumn({ name: 'sponsorKeyId' })
   sponsorKey: SponsorKey;
 
-  @Column()
+  @Column({ nullable: true })
   @Index()
   sponsorKeyId: string;
 
-  @ManyToOne(() => Organization, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Organization, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'sponsorOrgId' })
   sponsorOrg: Organization;
 
-  @Column()
+  @Column({ nullable: true })
   @Index()
   sponsorOrgId: string;
+
+  // Direct API key storage for anonymous sponsorships (when no SponsorKey)
+  @Column({ type: 'text', nullable: true })
+  encryptedApiKeyDirect: string;
+
+  @Column({ nullable: true })
+  providerDirect: string; // 'openai' | 'anthropic' | 'google' | 'xai'
 
   // Recipient info (nullable until claimed)
   @ManyToOne(() => Organization, { nullable: true, onDelete: 'SET NULL' })
@@ -62,6 +69,17 @@ export class Sponsorship {
   @Column({ nullable: true })
   @Index()
   targetGitHubUsername: string;
+
+  // Anonymous sponsor info (for public badge sponsorships)
+  @Column({ nullable: true })
+  @Index()
+  sponsorEmail: string; // Email of the sponsor (for anonymous/public sponsorships)
+
+  @Column({ nullable: true })
+  managementTokenHash: string; // Hashed token for magic link management
+
+  @Column({ nullable: true })
+  managementTokenExpiresAt: Date; // Never expires for now, but future-proofing
 
   // Display name and description
   @Column()

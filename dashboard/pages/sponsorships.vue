@@ -38,6 +38,7 @@ const showDeleteKeyConfirm = ref(false)
 const keyToDelete = ref<{ id: string; name: string } | null>(null)
 const showRevokeSponsorshipConfirm = ref(false)
 const sponsorshipToRevoke = ref<{ id: string; name: string } | null>(null)
+const showUnlinkGitHubConfirm = ref(false)
 const newToken = ref('')
 
 const newKey = ref({
@@ -69,6 +70,24 @@ const loadingReceivedUsage = ref(false)
 // GitHub verification state
 const githubConfigured = ref(false)
 const claimingGitHub = ref(false)
+
+// Badge generator state
+const showBadgeModal = ref(false)
+const badgeUrl = computed(() => {
+  const username = sponsorship.githubLinkStatus.value?.githubUsername
+  if (!username) return ''
+  // Use current origin in browser, fallback for SSR
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://airatelimit.com'
+  return `${origin}/sponsor/${username}`
+})
+
+// Logo SVG as base64 (white version for dark badge background)
+const logoBase64 = 'PHN2ZyB3aWR0aD0iMzc5IiBoZWlnaHQ9IjI5NSIgdmlld0JveD0iMCAwIDM3OSAyOTUiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xODkuMzkzIDMxLjUxNDNDMjE0LjkwOCAzMS41MTQzIDI0MC4xNSAzMi42NjkzIDI2NS4wNzcgMzQuOTE2M0MyNjguMzQxIDM1LjIwNjcgMjcxLjQwNyAzNi42MTExIDI3My43NTggMzguODkzOUMyNzYuMTEgNDEuMTc2NyAyNzcuNjA1IDQ0LjE5ODkgMjc3Ljk5MiA0Ny40NTMzQzI4MC41OTYgNjkuMjUxMyAyODIuMzYgOTEuMzAxMyAyODMuMjQyIDExMy42MDNMMjQ3Ljc3MyA3OC4xMTMzQzI0NC44MDEgNzUuMjQ1NyAyNDAuODIyIDczLjY2IDIzNi42OTIgNzMuNjk3OEMyMzIuNTYzIDczLjczNTYgMjI4LjYxMyA3NS4zOTM5IDIyNS42OTQgNzguMzE1NUMyMjIuNzc1IDgxLjIzNyAyMjEuMTIxIDg1LjE4ODEgMjIxLjA4NyA4OS4zMTc4QzIyMS4wNTMgOTMuNDQ3NCAyMjIuNjQyIDk3LjQyNTEgMjI1LjUxMyAxMDAuMzk0TDI4OC40OTIgMTYzLjM5NEMyOTEuNDQ1IDE2Ni4zNDQgMjk1LjQ0OCAxNjggMjk5LjYyMiAxNjhDMzAzLjc5NiAxNjggMzA3Ljc5OSAxNjYuMzQ0IDMxMC43NTIgMTYzLjM5NEwzNzMuNzczIDEwMC4zOTRDMzc1LjMyIDk4Ljk1MjQgMzc2LjU2MSA5Ny4yMTM1IDM3Ny40MjIgOTUuMjgxNkMzNzguMjgzIDkzLjM0OTYgMzc4Ljc0NiA5MS4yNjQgMzc4Ljc4MyA4OS4xNDkyQzM3OC44MjEgODcuMDM0NSAzNzguNDMyIDg0LjkzMzkgMzc3LjYzOSA4Mi45NzI3QzM3Ni44NDcgODEuMDExNiAzNzUuNjY4IDc5LjIzMDEgMzc0LjE3MyA3Ny43MzQ1QzM3Mi42NzcgNzYuMjM4OSAzNzAuODk2IDc1LjA1OTggMzY4LjkzNCA3NC4yNjc3QzM2Ni45NzMgNzMuNDc1NiAzNjQuODczIDczLjA4NjUgMzYyLjc1OCA3My4xMjM5QzM2MC42NDMgNzMuMTYxMiAzNTguNTU4IDczLjYyNCAzNTYuNjI2IDc0LjQ4NDlDMzU0LjY5NCA3NS4zNDU3IDM1Mi45NTUgNzYuNTg2OSAzNTEuNTEzIDc4LjEzNDNMMzE0LjgwNSAxMTQuODIxQzMxMy45MzIgOTEuMDUzMyAzMTIuMDgzIDY3LjMzMTMgMzA5LjI2MSA0My43MTUzQzMwOC4wMTcgMzMuMjkwNyAzMDMuMjI4IDIzLjYxMDMgMjk1LjY5NiAxNi4yOTY1QzI4OC4xNjQgOC45ODI2NSAyNzguMzQ4IDQuNDc5NzQgMjY3Ljg5MSAzLjU0MjM2QzIxNS42NTggLTEuMTgwNzkgMTYzLjEwNiAtMS4xODA3OSAxMTAuODc0IDMuNTQyMzZDMTAwLjQyMSA0LjQ4NDMxIDkwLjYwOTEgOC45ODkyNSA4My4wODE2IDE2LjMwMjdDNzUuNTU0IDIzLjYxNjEgNzAuNzY3OSAzMy4yOTM5IDY5LjUyNDkgNDMuNzE1M0M2OC4xODM1IDU0Ljk2MjIgNjcuMDYzMiA2Ni4yMzQ0IDY2LjE2NDkgNzcuNTI1M0M2NS45NjQ0IDc5LjYwNTEgNjYuMTc5OCA4MS43MDQxIDY2Ljc5ODUgODMuNjk5OUM2Ny40MTcyIDg1LjY5NTcgNjguNDI2OSA4Ny41NDg1IDY5Ljc2ODcgODkuMTUwMkM3MS4xMTA1IDkwLjc1MiA3Mi43NTc2IDkyLjA3MDcgNzQuNjE0MSA5My4wMjk3Qzc2LjQ3MDUgOTMuOTg4NiA3OC40OTkzIDk0LjU2ODYgODAuNTgyMSA5NC43MzU3QzgyLjY2NDkgOTQuOTAyOSA4NC43NjAxIDk0LjY1NCA4Ni43NDU4IDk0LjAwMzRDODguNzMxNSA5My4zNTI5IDkwLjU2NzggOTIuMzEzOCA5Mi4xNDc5IDkwLjk0NjVDOTMuNzI4IDg5LjU3OTMgOTUuMDIwMyA4Ny45MTEzIDk1Ljk0OTQgODYuMDM5OEM5Ni44Nzg2IDg0LjE2ODIgOTcuNDI2IDgyLjEzMDUgOTcuNTU5OSA4MC4wNDUzQzk4LjQyMDkgNjkuMTI1MyA5OS41MTI5IDU4LjI0NzMgMTAwLjc5NCA0Ny40NTMzQzEwMS4xODEgNDQuMTk4OSAxMDIuNjc2IDQxLjE3NjcgMTA1LjAyNyAzOC44OTM5QzEwNy4zNzkgMzYuNjExMSAxMTAuNDQ0IDM1LjIwNjcgMTEzLjcwOSAzNC45MTYzQzEzOC44NzMgMzIuNjQ1IDE2NC4xMjcgMzEuNTA5OCAxODkuMzkzIDMxLjUxNDNaTTkwLjI5MzkgMTMwLjYzNEM4Ny4zNDA3IDEyNy42ODUgODMuMzM3NiAxMjYuMDI4IDc5LjE2MzkgMTI2LjAyOEM3NC45OTAxIDEyNi4wMjggNzAuOTg3IDEyNy42ODUgNjguMDMzOSAxMzAuNjM0TDUuMDEyODggMTkzLjYzNEMzLjQ2NTQ1IDE5NS4wNzYgMi4yMjQzIDE5Ni44MTUgMS4zNjM0NyAxOTguNzQ3QzAuNTAyNjQyIDIwMC42NzkgMC4wMzk3NjM2IDIwMi43NjQgMC4wMDI0NTExNCAyMDQuODc5Qy0wLjAzNDg2MTMgMjA2Ljk5NCAwLjM1NDE1NyAyMDkuMDk1IDEuMTQ2MyAyMTEuMDU2QzEuOTM4NDQgMjEzLjAxNyAzLjExNzQ3IDIxNC43OTggNC42MTMwNyAyMTYuMjk0QzYuMTA4NjYgMjE3Ljc4OSA3Ljg5MDE3IDIxOC45NjkgOS44NTEzMyAyMTkuNzYxQzExLjgxMjUgMjIwLjU1MyAxMy45MTMxIDIyMC45NDIgMTYuMDI3OCAyMjAuOTA1QzE4LjE0MjYgMjIwLjg2NyAyMC4yMjgyIDIyMC40MDQgMjIuMTYwMiAyMTkuNTQ0QzI0LjA5MjIgMjE4LjY4MyAyNS44MzEgMjE3LjQ0MiAyNy4yNzI5IDIxNS44OTRMNjMuOTgwOSAxNzkuMjA3QzY0Ljg2MjkgMjAzLjE2OCA2Ni43MTA5IDIyNi44NzcgNjkuNTI0OSAyNTAuMzEzQzcwLjc2ODggMjYwLjczOCA3NS41NTc5IDI3MC40MTggODMuMDg5NyAyNzcuNzMyQzkwLjYyMTUgMjg1LjA0NiAxMDAuNDM4IDI4OS41NDkgMTEwLjg5NSAyOTAuNDg2QzE2My4xMjcgMjk1LjIwNyAyMTUuNjc5IDI5NS4yMDcgMjY3LjkxMiAyOTAuNDg2QzI3OC4zNjUgMjg5LjU0NCAyODguMTc3IDI4NS4wMzkgMjk1LjcwNCAyNzcuNzI2QzMwMy4yMzIgMjcwLjQxMiAzMDguMDE4IDI2MC43MzQgMzA5LjI2MSAyNTAuMzEzQzMxMC42MDUgMjM5LjA5OSAzMTEuNzE4IDIyNy44MjIgMzEyLjYyMSAyMTYuNTAzQzMxMi44MjEgMjE0LjQyMyAzMTIuNjA2IDIxMi4zMjQgMzExLjk4NyAyMTAuMzI4QzMxMS4zNjggMjA4LjMzMyAzMTAuMzU5IDIwNi40OCAzMDkuMDE3IDIwNC44NzhDMzA3LjY3NSAyMDMuMjc2IDMwNi4wMjggMjAxLjk1OCAzMDQuMTcyIDIwMC45OTlDMzAyLjMxNSAyMDAuMDQgMzAwLjI4NiAxOTkuNDYgMjk4LjIwNCAxOTkuMjkzQzI5Ni4xMjEgMTk5LjEyNSAyOTQuMDI2IDE5OS4zNzQgMjkyLjA0IDIwMC4wMjVDMjkwLjA1NCAyMDAuNjc1IDI4OC4yMTggMjAxLjcxNSAyODYuNjM4IDIwMy4wODJDMjg1LjA1OCAyMDQuNDQ5IDI4My43NjUgMjA2LjExNyAyODIuODM2IDIwNy45ODlDMjgxLjkwNyAyMDkuODYgMjgxLjM2IDIxMS44OTggMjgxLjIyNiAyMTMuOTgzQzI4MC4zNjUgMjI0LjkwMyAyNzkuMjczIDIzNS43NiAyNzcuOTkyIDI0Ni41NzVDMjc3LjYwNSAyNDkuODMgMjc2LjExIDI1Mi44NTIgMjczLjc1OCAyNTUuMTM1QzI3MS40MDcgMjU3LjQxNyAyNjguMzQxIDI1OC44MjIgMjY1LjA3NyAyNTkuMTEyQzIxNC43MjQgMjYzLjY2NiAxNjQuMDYyIDI2My42NjYgMTEzLjcwOSAyNTkuMTEyQzExMC40NDQgMjU4LjgyMiAxMDcuMzc5IDI1Ny40MTcgMTA1LjAyNyAyNTUuMTM1QzEwMi42NzYgMjUyLjg1MiAxMDEuMTgxIDI0OS44MyAxMDAuNzk0IDI0Ni41NzVDOTguMTY4NiAyMjQuNjAzIDk2LjQxNzIgMjAyLjUzNiA5NS41NDM5IDE4MC40MjVMMTMxLjAxMyAyMTUuOTE1QzEzMy45ODUgMjE4Ljc4MyAxMzcuOTY0IDIyMC4zNjggMTQyLjA5NCAyMjAuMzMxQzE0Ni4yMjMgMjIwLjI5MyAxNTAuMTczIDIxOC42MzQgMTUzLjA5MiAyMTUuNzEzQzE1Ni4wMSAyMTIuNzkxIDE1Ny42NjUgMjA4Ljg0IDE1Ny42OTkgMjA0LjcxMUMxNTcuNzMzIDIwMC41ODEgMTU2LjE0MyAxOTYuNjAzIDE1My4yNzMgMTkzLjYzNEw5MC4yOTM5IDEzMC42MzRaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPgo='
+
+// Shields.io badge image URL (black two-part badge)
+const badgeImageUrl = computed(() => {
+  return `https://img.shields.io/badge/AI_Ratelimit-Sponsor_me-black?style=for-the-badge&logo=data:image/svg%2bxml;base64,${logoBase64}&logoColor=white`
+})
 
 // =====================================================
 // POOLS TAB STATE
@@ -185,7 +204,6 @@ const handleCreateSponsorship = async () => {
 
 const copyToken = (token: string) => {
   copy(token)
-  useToast().success('Token copied to clipboard')
 }
 
 const handleRevoke = (s: { id: string; name: string }) => {
@@ -293,10 +311,19 @@ const handleClaimOne = async (sponsorshipId: string) => {
   }
 }
 
-const handleUnlinkGitHub = async () => {
-  if (confirm('Are you sure you want to unlink your GitHub account?')) {
-    await sponsorship.unlinkGitHub()
-    await sponsorship.fetchPendingGitHubSponsorships()
+const handleUnlinkGitHub = () => {
+  showUnlinkGitHubConfirm.value = true
+}
+
+const confirmUnlinkGitHub = async () => {
+  showUnlinkGitHubConfirm.value = false
+  await sponsorship.unlinkGitHub()
+  await sponsorship.fetchPendingGitHubSponsorships()
+}
+
+const copyBadgeUrl = () => {
+  if (badgeUrl.value) {
+    copy(badgeUrl.value)
   }
 }
 
@@ -603,7 +630,7 @@ const getStatusClasses = (status: string) => {
                   <span :class="['text-[10px] px-1.5 py-0.5 rounded border', getStatusClasses(s.status)]">
                     {{ s.status }}
                   </span>
-                  <span class="text-[10px] text-gray-500 bg-gray-500/10 px-1.5 py-0.5 rounded">{{ s.provider }}</span>
+                  <span v-if="s.provider" class="text-[10px] text-gray-500 bg-gray-500/10 px-1.5 py-0.5 rounded uppercase">{{ s.provider }}</span>
                   <span class="text-[10px] text-gray-500 bg-gray-500/10 px-1.5 py-0.5 rounded">{{ s.billingPeriod === 'monthly' ? 'Monthly' : 'One-time' }}</span>
                 </div>
                 <p v-if="s.description" class="text-xs text-gray-400 mt-1">{{ s.description }}</p>
@@ -809,6 +836,38 @@ const getStatusClasses = (status: string) => {
           >
             Unlink
           </button>
+        </div>
+      </div>
+
+      <!-- Your Sponsor Badge (only show if GitHub is linked) -->
+      <div v-if="sponsorship.githubLinkStatus.value?.linked" class="mb-6">
+        <div class="bg-blue-300/10 border border-blue-300/10 rounded-lg p-4">
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <h4 class="text-sm font-medium text-white flex items-center gap-2">
+                <svg class="w-4 h-4 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                Your Sponsor Badge
+              </h4>
+              <p class="text-xs text-gray-400 mt-1">Share this link to let anyone sponsor your AI usage</p>
+            </div>
+            <button
+              @click="showBadgeModal = true"
+              class="px-3 py-1.5 bg-blue-300/10 hover:bg-blue-300/20 text-blue-300 border border-blue-300/20 rounded-lg text-xs font-medium transition-colors"
+            >
+              Get Badge
+            </button>
+          </div>
+          <div class="flex items-center gap-2 bg-black/40 rounded-lg px-3 py-2">
+            <code class="text-xs text-gray-300 flex-1 truncate">{{ badgeUrl }}</code>
+            <button
+              @click="copyBadgeUrl"
+              class="text-xs text-blue-300 hover:text-blue-400 whitespace-nowrap"
+            >
+              Copy
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1652,5 +1711,107 @@ const getStatusClasses = (status: string) => {
         </div>
       </div>
     </Teleport>
+
+    <!-- Sponsor Badge Modal -->
+    <Teleport to="body">
+      <div v-if="showBadgeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" @click.self="showBadgeModal = false">
+        <div class="bg-black rounded-xl p-6 w-full max-w-lg border border-gray-500/20">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-white">Your Sponsor Badge</h3>
+            <button @click="showBadgeModal = false" class="text-gray-400 hover:text-white">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <p class="text-xs text-gray-400 mb-4">
+            Add this badge to your README, website, or anywhere else to let people sponsor your AI usage.
+          </p>
+
+          <!-- Preview -->
+          <div class="bg-gray-500/10 rounded-lg p-6 mb-4 flex items-center justify-center">
+            <a :href="badgeUrl" target="_blank">
+              <img 
+                :src="badgeImageUrl" 
+                alt="Sponsor me on AI Ratelimit"
+                class="h-7"
+              />
+            </a>
+          </div>
+          
+          <p class="text-[10px] text-gray-500 mb-4 text-center">
+            This is how the badge will look. Copy the code below to add it to your README or website.
+          </p>
+
+          <!-- Embed Options -->
+          <div class="space-y-4">
+            <!-- Markdown -->
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-2">Markdown (for GitHub READMEs)</label>
+              <div class="relative">
+                <code class="block bg-gray-500/10 rounded-lg p-3 text-xs text-gray-300 font-mono overflow-x-auto">[![Sponsor me on AI Ratelimit]({{ badgeImageUrl }})]({{ badgeUrl }})</code>
+                <button 
+                  @click="copy(`[![Sponsor me on AI Ratelimit](${badgeImageUrl})](${badgeUrl})`)"
+                  class="absolute top-2 right-2 p-1.5 bg-gray-500/10 hover:bg-gray-500/20 rounded text-gray-400"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- HTML -->
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-2">HTML (for websites)</label>
+              <div class="relative">
+                <code class="block bg-gray-500/10 rounded-lg p-3 text-xs text-gray-300 font-mono overflow-x-auto whitespace-pre-wrap">&lt;a href="{{ badgeUrl }}"&gt;
+  &lt;img src="{{ badgeImageUrl }}" alt="Sponsor me on AI Ratelimit"&gt;
+&lt;/a&gt;</code>
+                <button 
+                  @click="copy(`<a href=&quot;${badgeUrl}&quot;>\n  <img src=&quot;${badgeImageUrl}&quot; alt=&quot;Sponsor me on AI Ratelimit&quot;>\n</a>`)"
+                  class="absolute top-2 right-2 p-1.5 bg-gray-500/10 hover:bg-gray-500/20 rounded text-gray-400"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Direct Link -->
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-2">Direct Link</label>
+              <div class="relative">
+                <code class="block bg-gray-500/10 rounded-lg p-3 text-xs text-gray-300 font-mono overflow-x-auto">{{ badgeUrl }}</code>
+                <button 
+                  @click="copy(badgeUrl)"
+                  class="absolute top-2 right-2 p-1.5 bg-gray-500/10 hover:bg-gray-500/20 rounded text-gray-400"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button @click="showBadgeModal = false" class="w-full mt-6 px-4 py-2 bg-gray-500/10 border border-gray-500/10 hover:bg-gray-500/20 text-white rounded-lg text-sm font-medium transition-colors">Done</button>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Unlink GitHub Confirm Dialog -->
+    <ConfirmDialog
+      :is-open="showUnlinkGitHubConfirm"
+      title="Unlink GitHub Account"
+      message="Are you sure you want to unlink your GitHub account? You won't be able to receive sponsorships targeted to your GitHub username until you link it again."
+      confirm-text="Unlink"
+      cancel-text="Cancel"
+      variant="danger"
+      @confirm="confirmUnlinkGitHub"
+      @cancel="showUnlinkGitHubConfirm = false"
+    />
   </div>
 </template>

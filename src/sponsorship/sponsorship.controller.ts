@@ -338,8 +338,8 @@ export class SponsorshipController {
       maxRequestsPerDay: s.maxRequestsPerDay,
       expiresAt: s.expiresAt,
 
-      // Provider info (from sponsor key)
-      provider: s.sponsorKey?.provider,
+      // Provider info (from sponsor key or direct)
+      provider: s.sponsorKey?.provider || s.providerDirect,
 
       // Recipient info
       recipientOrgId: s.recipientOrgId,
