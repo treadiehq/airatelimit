@@ -1,5 +1,5 @@
 {
-  "name": "@airatelimit/limiter",
+  "name": "@ai-ratelimit/limiter",
   "version": "0.1.0",
   "description": "Per-tenant AI rate limiting for Node.js.",
   "main": "dist/index.js",
