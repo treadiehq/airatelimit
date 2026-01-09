@@ -68,7 +68,7 @@ describe('createLimiter', () => {
       const result = await limiter.enforce({ tenantId: 'tenant_1' });
       
       expect(result.allowed).toBe(false);
-      if (!result.allowed) {
+      if (result.allowed === false) {
         expect(result.error).toBe('rate_limit_exceeded');
         expect(result.retryAfterMs).toBeGreaterThan(0);
       }
@@ -91,7 +91,7 @@ describe('createLimiter', () => {
       const result = await limiter.enforce({ tenantId: 'tenant_1' });
       
       expect(result.allowed).toBe(false);
-      if (!result.allowed) {
+      if (result.allowed === false) {
         expect(result.error).toBe('quota_exceeded');
       }
     });
