@@ -1,6 +1,6 @@
 # AI Ratelimit
 
-Add usage limits to your AI mobile app in 5 minutes. Track usage per user, set limits per model, create pricing tiers—all without storing prompts or API keys.
+Add usage limits to your AI mobile app in 5 minutes. Track usage per user, set limits per model, create pricing tiers, all without storing prompts or API keys.
 
 ```
 Your App → AI Ratelimit → OpenAI / Anthropic / Google / Any AI

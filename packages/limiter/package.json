@@ -1,6 +1,6 @@
 {
   "name": "@ai-ratelimit/limiter",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Per-tenant AI rate limiting for Node.js.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -32,7 +32,7 @@
   "license": "FSL-1.1-MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/treadie/ai-ratelimit/packages/limiter"
+    "url": "https://github.com/treadiehq/airatelimit/tree/main/packages/limiter"
   },
   "homepage": "https://airatelimit.com",
   "peerDependencies": {
