@@ -57,8 +57,25 @@ export default defineNuxtConfig({
     },
   },
 
-  // Use static generation for deployment
-  ssr: false,
+  // Enable SSR for better SEO on public pages
+  ssr: true,
+
+  // Route rules: SSR for public pages, SPA for authenticated pages
+  routeRules: {
+    // Public pages that need SEO - render server-side
+    '/sponsor/**': { ssr: true },
+    '/manage-sponsorship/**': { ssr: true },
+    // All other pages - client-side only (faster, no SSR overhead)
+    '/': { ssr: false },
+    '/login': { ssr: false },
+    '/signup': { ssr: false },
+    '/projects/**': { ssr: false },
+    '/sponsorships': { ssr: false },
+    '/team': { ssr: false },
+    '/billing': { ssr: false },
+    '/admin': { ssr: false },
+    '/auth/**': { ssr: false },
+  },
 
   // Server config for Railway deployment
   nitro: {

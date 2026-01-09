@@ -16,6 +16,37 @@ const toast = useToast()
 
 const username = computed(() => route.params.username as string)
 
+// SEO Meta Tags
+const pageTitle = computed(() => `Sponsor @${username.value} | AI Ratelimit`)
+const pageDescription = computed(() => `Share your AI API credits with @${username.value}. Sponsor their AI usage with OpenAI, Anthropic, Google AI, xAI, or OpenRouter.`)
+const ogImageUrl = computed(() => {
+  // Use the API base URL for OG image (backend serves it)
+  const apiBaseUrl = config.public.apiBaseUrl || 'http://localhost:3000/api'
+  // Remove /api suffix to get base URL
+  const apiBase = apiBaseUrl.replace(/\/api$/, '')
+  return `${apiBase}/api/og/sponsor/${username.value}`
+})
+
+useSeoMeta({
+  title: pageTitle,
+  description: pageDescription,
+  ogTitle: pageTitle,
+  ogDescription: pageDescription,
+  ogImage: ogImageUrl,
+  ogType: 'website',
+  twitterCard: 'summary_large_image',
+  twitterTitle: pageTitle,
+  twitterDescription: pageDescription,
+  twitterImage: ogImageUrl,
+})
+
+useHead({
+  htmlAttrs: { lang: 'en' },
+  link: [
+    { rel: 'canonical', href: computed(() => `https://airatelimit.com/sponsor/${username.value}`) }
+  ]
+})
+
 // Form state
 const isLoading = ref(false)
 const isSubmitting = ref(false)
