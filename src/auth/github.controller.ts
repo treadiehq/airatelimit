@@ -36,7 +36,10 @@ export class GitHubController {
     this.clientId = this.configService.get<string>('GITHUB_CLIENT_ID') || '';
     this.clientSecret = this.configService.get<string>('GITHUB_CLIENT_SECRET') || '';
     this.dashboardUrl = this.configService.get<string>('CORS_ORIGIN') || 'http://localhost:3001';
+    this.backendUrl = this.configService.get<string>('PUBLIC_URL') || 'http://localhost:3000';
   }
+
+  private readonly backendUrl: string;
 
   /**
    * Initiate GitHub OAuth flow
@@ -76,7 +79,7 @@ export class GitHubController {
 
     const params = new URLSearchParams({
       client_id: this.clientId,
-      redirect_uri: `${this.configService.get('CORS_ORIGIN')?.replace('3001', '3000') || 'http://localhost:3000'}/api/auth/github/callback`,
+      redirect_uri: `${this.backendUrl}/api/auth/github/callback`,
       scope: 'read:user user:email',
       state,
     });
