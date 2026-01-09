@@ -6,10 +6,12 @@ import {
   UseGuards,
   Request,
   BadRequestException,
+  UnauthorizedException,
   Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { AuthService } from './auth.service';
 
@@ -29,6 +31,7 @@ export class GitHubController {
   constructor(
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
   ) {
     this.clientId = this.configService.get<string>('GITHUB_CLIENT_ID') || '';
     this.clientSecret = this.configService.get<string>('GITHUB_CLIENT_SECRET') || '';
@@ -37,18 +40,37 @@ export class GitHubController {
 
   /**
    * Initiate GitHub OAuth flow
-   * User must be logged in - this links their GitHub to their existing account
+   * User must be logged in - accepts JWT token from query parameter (for browser redirect)
    */
   @Get('connect')
-  @UseGuards(JwtAuthGuard)
-  async initiateGitHubConnect(@Request() req, @Res() res: Response) {
+  async initiateGitHubConnect(
+    @Query('token') token: string,
+    @Res() res: Response,
+  ) {
     if (!this.clientId) {
       throw new BadRequestException('GitHub OAuth is not configured');
     }
 
+    if (!token) {
+      throw new UnauthorizedException('Token is required');
+    }
+
+    // Verify the JWT token
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(token);
+    } catch (error) {
+      throw new UnauthorizedException('Invalid or expired token');
+    }
+
+    const userId = payload.sub;
+    if (!userId) {
+      throw new UnauthorizedException('Invalid token payload');
+    }
+
     // Store user ID in state for the callback
     const state = Buffer.from(JSON.stringify({
-      userId: req.user.userId,
+      userId,
       timestamp: Date.now(),
     })).toString('base64');
 

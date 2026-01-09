@@ -36,6 +36,8 @@ const showCreateSponsorshipModal = ref(false)
 const showTokenModal = ref(false)
 const showDeleteKeyConfirm = ref(false)
 const keyToDelete = ref<{ id: string; name: string } | null>(null)
+const showRevokeSponsorshipConfirm = ref(false)
+const sponsorshipToRevoke = ref<{ id: string; name: string } | null>(null)
 const newToken = ref('')
 
 const newKey = ref({
@@ -186,10 +188,22 @@ const copyToken = (token: string) => {
   useToast().success('Token copied to clipboard')
 }
 
-const handleRevoke = async (id: string) => {
-  if (confirm('Are you sure you want to revoke this sponsorship? This cannot be undone.')) {
-    await sponsorship.revokeSponsorship(id)
+const handleRevoke = (s: { id: string; name: string }) => {
+  sponsorshipToRevoke.value = s
+  showRevokeSponsorshipConfirm.value = true
+}
+
+const confirmRevokeSponsorship = async () => {
+  if (sponsorshipToRevoke.value) {
+    await sponsorship.revokeSponsorship(sponsorshipToRevoke.value.id)
   }
+  showRevokeSponsorshipConfirm.value = false
+  sponsorshipToRevoke.value = null
+}
+
+const cancelRevokeSponsorship = () => {
+  showRevokeSponsorshipConfirm.value = false
+  sponsorshipToRevoke.value = null
 }
 
 const handleRegenerate = async (id: string) => {
@@ -607,7 +621,7 @@ const getStatusClasses = (status: string) => {
                 </button>
                 <button
                   v-if="s.status === 'active'"
-                  @click="handleRevoke(s.id)"
+                  @click="handleRevoke({ id: s.id, name: s.name })"
                   class="text-xs text-red-400 hover:text-red-300 transition-colors"
                 >
                   Revoke
@@ -1257,6 +1271,37 @@ const getStatusClasses = (status: string) => {
             <button @click="cancelDeleteKey" class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
             <button @click="confirmDeleteKey" class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
               Delete Key
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Revoke Sponsorship Confirmation Modal -->
+    <Teleport to="body">
+      <div v-if="showRevokeSponsorshipConfirm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" @click.self="cancelRevokeSponsorship">
+        <div class="bg-black rounded-xl p-6 w-full max-w-md border border-gray-500/20">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
+              <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-white">Revoke Sponsorship</h3>
+              <p class="text-xs text-gray-400">This action cannot be undone.</p>
+            </div>
+          </div>
+          
+          <p class="text-sm text-gray-300 mb-6">
+            Are you sure you want to revoke <strong class="text-white">{{ sponsorshipToRevoke?.name }}</strong>? 
+            The recipient will no longer be able to use this sponsorship.
+          </p>
+
+          <div class="flex justify-end gap-3">
+            <button @click="cancelRevokeSponsorship" class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
+            <button @click="confirmRevokeSponsorship" class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
+              Revoke
             </button>
           </div>
         </div>

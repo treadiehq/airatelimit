@@ -493,7 +493,15 @@ export const useSponsorship = () => {
     // apiBaseUrl includes /api, so we need the base URL without /api
     const apiBaseUrl = useRuntimeConfig().public.apiBaseUrl as string
     const backendUrl = apiBaseUrl.replace(/\/api$/, '')
-    window.location.href = `${backendUrl}/api/auth/github/connect`
+    
+    // Include the JWT token in the URL since browser redirect doesn't include Authorization header
+    const token = localStorage.getItem('accessToken')
+    if (!token) {
+      toast.error('Please log in first')
+      return
+    }
+    
+    window.location.href = `${backendUrl}/api/auth/github/connect?token=${encodeURIComponent(token)}`
   }
 
   const unlinkGitHub = async () => {
