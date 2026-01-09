@@ -204,4 +204,119 @@ https://airatelimit.com`;
     console.log(`🔗 Invite Link: ${inviteLink}`);
     console.log('='.repeat(80) + '\n');
   }
+
+  // =====================================================
+  // SPONSORSHIP NOTIFICATIONS
+  // =====================================================
+
+  async sendSponsorshipNotification(params: {
+    recipientEmail: string;
+    sponsorName: string;
+    sponsorshipName: string;
+    targetGitHubUsername: string;
+    budgetUsd?: number;
+    provider: string;
+    claimLink: string;
+  }): Promise<void> {
+    if (this.resend) {
+      await this.sendSponsorshipViaResend(params);
+    } else {
+      this.logSponsorshipToConsole(params);
+    }
+  }
+
+  private async sendSponsorshipViaResend(params: {
+    recipientEmail: string;
+    sponsorName: string;
+    sponsorshipName: string;
+    targetGitHubUsername: string;
+    budgetUsd?: number;
+    provider: string;
+    claimLink: string;
+  }): Promise<void> {
+    try {
+      const fromEmail =
+        this.configService.get<string>('emailFrom') ||
+        'AI Ratelimit <noreply@airatelimit.com>';
+
+      const budgetText = params.budgetUsd 
+        ? `$${params.budgetUsd.toFixed(2)} in ${params.provider} API credits`
+        : `${params.provider} API credits`;
+
+      const textContent = `You've received a sponsorship!
+
+${params.sponsorName} has created a sponsorship for GitHub user @${params.targetGitHubUsername}.
+
+Sponsorship: ${params.sponsorshipName}
+Budget: ${budgetText}
+
+To claim this sponsorship:
+1. Sign in to AI Ratelimit
+2. Go to Sponsorship > Received
+3. Link your GitHub account (@${params.targetGitHubUsername})
+4. Click "Claim All" to activate
+
+Claim now: ${params.claimLink}
+
+If you're not @${params.targetGitHubUsername} on GitHub, you can safely ignore this email.
+
+—
+AI Ratelimit
+https://airatelimit.com`;
+
+      const { data, error } = await this.resend.emails.send({
+        from: fromEmail,
+        to: params.recipientEmail,
+        subject: `🎁 ${params.sponsorName} sent you ${budgetText}`,
+        text: textContent,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      this.logger.log(
+        `Sponsorship notification email sent to ${params.recipientEmail} for @${params.targetGitHubUsername} (id: ${data?.id})`,
+      );
+    } catch (error) {
+      this.logger.error(`Failed to send sponsorship notification via Resend: ${error.message}`);
+      // Don't throw - notification failure shouldn't break sponsorship creation
+    }
+  }
+
+  private logSponsorshipToConsole(params: {
+    recipientEmail: string;
+    sponsorName: string;
+    sponsorshipName: string;
+    targetGitHubUsername: string;
+    budgetUsd?: number;
+    provider: string;
+    claimLink: string;
+  }): void {
+    const budgetText = params.budgetUsd 
+      ? `$${params.budgetUsd.toFixed(2)}`
+      : 'unlimited';
+
+    this.logger.log('\n' + '='.repeat(80));
+    this.logger.log('🎁 SPONSORSHIP NOTIFICATION');
+    this.logger.log('='.repeat(80));
+    this.logger.log(`📧 Email: ${params.recipientEmail}`);
+    this.logger.log(`🏢 Sponsor: ${params.sponsorName}`);
+    this.logger.log(`📝 Sponsorship: ${params.sponsorshipName}`);
+    this.logger.log(`🐙 GitHub: @${params.targetGitHubUsername}`);
+    this.logger.log(`💰 Budget: ${budgetText} (${params.provider})`);
+    this.logger.log(`🔗 Claim Link: ${params.claimLink}`);
+    this.logger.log('='.repeat(80) + '\n');
+
+    console.log('\n' + '='.repeat(80));
+    console.log('🎁 SPONSORSHIP NOTIFICATION');
+    console.log('='.repeat(80));
+    console.log(`📧 Email: ${params.recipientEmail}`);
+    console.log(`🏢 Sponsor: ${params.sponsorName}`);
+    console.log(`📝 Sponsorship: ${params.sponsorshipName}`);
+    console.log(`🐙 GitHub: @${params.targetGitHubUsername}`);
+    console.log(`💰 Budget: ${budgetText} (${params.provider})`);
+    console.log(`🔗 Claim Link: ${params.claimLink}`);
+    console.log('='.repeat(80) + '\n');
+  }
 }

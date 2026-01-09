@@ -18,6 +18,7 @@ import { PoolController } from './pool.controller';
 
 import { CommonModule } from '../common/common.module';
 import { UsersModule } from '../users/users.module';
+import { EmailModule } from '../email/email.module';
 
 /**
  * Sponsorship Module
@@ -41,6 +42,7 @@ import { UsersModule } from '../users/users.module';
     HttpModule,
     CommonModule,
     UsersModule,
+    EmailModule,
   ],
   controllers: [SponsorshipController, SponsoredController, PoolController],
   providers: [SponsorshipService, PoolService],

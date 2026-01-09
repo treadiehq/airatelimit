@@ -19,6 +19,8 @@ import { SponsorshipPoolMember } from './sponsorship-pool-member.entity';
 import { PoolToken } from './pool-token.entity';
 
 import { CryptoService } from '../common/crypto.service';
+import { EmailService } from '../email/email.service';
+import { ConfigService } from '@nestjs/config';
 import { CreateSponsorKeyDto, UpdateSponsorKeyDto } from './dto/create-sponsor-key.dto';
 import {
   CreateSponsorshipDto,
@@ -76,6 +78,8 @@ export class SponsorshipService {
     @InjectRepository(PoolToken)
     private poolTokenRepository: Repository<PoolToken>,
     private cryptoService: CryptoService,
+    private emailService: EmailService,
+    private configService: ConfigService,
   ) {}
 
   // =====================================================
@@ -218,6 +222,27 @@ export class SponsorshipService {
     const tokenResult = await this.generateSponsoredToken(sponsorship.id);
 
     this.logger.log(`Sponsorship created: ${sponsorship.id} by org ${organizationId}`);
+
+    // Send email notification if targeting a GitHub user with an email
+    if (dto.targetGitHubUsername && dto.recipientEmail) {
+      const dashboardUrl = this.configService.get('CORS_ORIGIN') || 'http://localhost:3001';
+      
+      // Get sponsor org name for the email
+      const sponsorshipWithOrg = await this.sponsorshipRepository.findOne({
+        where: { id: sponsorship.id },
+        relations: ['sponsorOrg'],
+      });
+      
+      await this.emailService.sendSponsorshipNotification({
+        recipientEmail: dto.recipientEmail,
+        sponsorName: sponsorshipWithOrg?.sponsorOrg?.name || 'Someone',
+        sponsorshipName: dto.name,
+        targetGitHubUsername: dto.targetGitHubUsername,
+        budgetUsd: dto.spendCapUsd,
+        provider: sponsorKey.provider,
+        claimLink: `${dashboardUrl}/sponsorships?tab=received`,
+      });
+    }
 
     return { sponsorship, token: tokenResult.token };
   }

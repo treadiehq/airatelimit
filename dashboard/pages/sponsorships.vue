@@ -51,6 +51,7 @@ const newSponsorship = ref({
   spendCapUsd: 50,
   billingPeriod: 'one_time' as 'one_time' | 'monthly',
   targetGitHubUsername: '',
+  recipientEmail: '',
   allowedModels: [] as string[],
   maxTokensPerRequest: null as number | null,
   expiresAt: '',
@@ -153,6 +154,7 @@ const handleCreateSponsorship = async () => {
       spendCapUsd: newSponsorship.value.spendCapUsd,
       billingPeriod: newSponsorship.value.billingPeriod,
       targetGitHubUsername: newSponsorship.value.targetGitHubUsername || undefined,
+      recipientEmail: newSponsorship.value.recipientEmail || undefined,
       allowedModels: newSponsorship.value.allowedModels.length > 0 
         ? newSponsorship.value.allowedModels 
         : undefined,
@@ -171,6 +173,7 @@ const handleCreateSponsorship = async () => {
       spendCapUsd: 50,
       billingPeriod: 'one_time',
       targetGitHubUsername: '',
+      recipientEmail: '',
       allowedModels: [],
       maxTokensPerRequest: null,
       expiresAt: '',
@@ -668,12 +671,12 @@ const getStatusClasses = (status: string) => {
         <!-- Linked with pending sponsorships -->
         <div
           v-else-if="sponsorship.pendingGitHubSponsorships.value?.pending?.length > 0"
-          class="bg-green-500/10 border border-green-500/20 rounded-lg p-4"
+          class="bg-green-300/10 border border-green-300/10 rounded-lg p-4"
         >
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="w-10 h-10 rounded-full bg-green-300/10 flex items-center justify-center">
+                <svg class="w-5 h-5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
                 </svg>
               </div>
@@ -689,7 +692,7 @@ const getStatusClasses = (status: string) => {
             <button
               @click="handleClaimGitHub"
               :disabled="claimingGitHub"
-              class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors disabled:opacity-50"
+              class="flex items-center gap-2 px-4 py-2 bg-blue-300 text-black rounded-lg text-sm font-medium hover:bg-blue-400 transition-colors disabled:opacity-50"
             >
               <svg v-if="claimingGitHub" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -1083,6 +1086,30 @@ const getStatusClasses = (status: string) => {
               </div>
               <p class="text-[10px] text-gray-500 mt-1">
                 Recipient must verify their GitHub identity to claim this sponsorship
+              </p>
+            </div>
+
+            <!-- Recipient Email (shown when GitHub username is entered) -->
+            <div v-if="newSponsorship.targetGitHubUsername">
+              <label class="block text-xs text-gray-400 mb-1">
+                Recipient Email
+                <span class="text-gray-500">(optional, for notification)</span>
+              </label>
+              <div class="relative">
+                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <input
+                  v-model="newSponsorship.recipientEmail"
+                  type="email"
+                  placeholder="dev@example.com"
+                  class="w-full bg-gray-500/10 border border-gray-500/20 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-400"
+                />
+              </div>
+              <p class="text-[10px] text-gray-500 mt-1">
+                We'll email them instructions to claim the sponsorship
               </p>
             </div>
             
