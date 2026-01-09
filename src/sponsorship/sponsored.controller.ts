@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   UseGuards,
   Request,
@@ -8,6 +9,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { FeatureGuard, RequireFeature } from '../common/guards/feature.guard';
 import { SponsorshipService } from './sponsorship.service';
+import { UsersService } from '../users/users.service';
 
 /**
  * Sponsored Controller
@@ -19,7 +21,10 @@ import { SponsorshipService } from './sponsorship.service';
 @UseGuards(JwtAuthGuard, FeatureGuard)
 @RequireFeature('sponsoredUsage')
 export class SponsoredController {
-  constructor(private readonly sponsorshipService: SponsorshipService) {}
+  constructor(
+    private readonly sponsorshipService: SponsorshipService,
+    private readonly usersService: UsersService,
+  ) {}
 
   /**
    * List sponsorships available to me as a recipient
@@ -166,6 +171,77 @@ export class SponsoredController {
       costUsd: Number(u.costUsd),
       timestamp: u.timestamp,
     }));
+  }
+
+  // =====================================================
+  // GITHUB-BASED CLAIMING
+  // =====================================================
+
+  /**
+   * Get pending sponsorships for the current user's linked GitHub account
+   */
+  @Get('pending/github')
+  async getPendingGitHubSponsorships(@Request() req) {
+    const user = await this.usersService.findById(req.user.userId);
+    
+    if (!user?.linkedGitHubUsername) {
+      return {
+        linked: false,
+        githubUsername: null,
+        pending: [],
+      };
+    }
+
+    const pending = await this.sponsorshipService.findPendingSponsorshipsByGitHub(
+      user.linkedGitHubUsername,
+    );
+
+    return {
+      linked: true,
+      githubUsername: user.linkedGitHubUsername,
+      pending: pending.map((s) => ({
+        id: s.id,
+        name: s.name,
+        description: s.description,
+        provider: s.sponsorKey?.provider,
+        spendCapUsd: s.spendCapUsd ? Number(s.spendCapUsd) : null,
+        spendCapTokens: s.spendCapTokens ? Number(s.spendCapTokens) : null,
+        sponsorName: s.sponsorOrg?.name,
+        expiresAt: s.expiresAt,
+        createdAt: s.createdAt,
+      })),
+    };
+  }
+
+  /**
+   * Claim all pending GitHub sponsorships for the current user
+   */
+  @Post('claim/github')
+  async claimGitHubSponsorships(@Request() req) {
+    const user = await this.usersService.findById(req.user.userId);
+    
+    if (!user?.linkedGitHubUsername) {
+      return {
+        success: false,
+        error: 'No GitHub account linked. Please verify your GitHub identity first.',
+        claimed: [],
+      };
+    }
+
+    const claimed = await this.sponsorshipService.claimSponsorshipsByGitHub(
+      user.linkedGitHubUsername,
+      req.user.organizationId,
+    );
+
+    return {
+      success: true,
+      claimed: claimed.map((s) => ({
+        id: s.id,
+        name: s.name,
+        provider: s.sponsorKey?.provider,
+        spendCapUsd: s.spendCapUsd ? Number(s.spendCapUsd) : null,
+      })),
+    };
   }
 }
 

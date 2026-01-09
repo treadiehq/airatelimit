@@ -17,6 +17,7 @@ import { PoolService } from './pool.service';
 import { PoolController } from './pool.controller';
 
 import { CommonModule } from '../common/common.module';
+import { UsersModule } from '../users/users.module';
 
 /**
  * Sponsorship Module
@@ -39,6 +40,7 @@ import { CommonModule } from '../common/common.module';
     ]),
     HttpModule,
     CommonModule,
+    UsersModule,
   ],
   controllers: [SponsorshipController, SponsoredController, PoolController],
   providers: [SponsorshipService, PoolService],

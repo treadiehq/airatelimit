@@ -345,6 +345,7 @@ export class SponsorshipController {
       recipientOrgId: s.recipientOrgId,
       recipientOrgName: s.recipientOrg?.name,
       recipientEmail: s.recipientEmail,
+      targetGitHubUsername: s.targetGitHubUsername,
 
       // Timestamps
       createdAt: s.createdAt,

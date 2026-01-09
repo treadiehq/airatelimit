@@ -50,6 +50,7 @@ const newSponsorship = ref({
   description: '',
   spendCapUsd: 50,
   billingPeriod: 'one_time' as 'one_time' | 'monthly',
+  targetGitHubUsername: '',
   allowedModels: [] as string[],
   maxTokensPerRequest: null as number | null,
   expiresAt: '',
@@ -61,6 +62,10 @@ const newSponsorship = ref({
 const selectedReceivedId = ref<string | null>(null)
 const receivedUsageSummary = ref<any>(null)
 const loadingReceivedUsage = ref(false)
+
+// GitHub verification state
+const githubConfigured = ref(false)
+const claimingGitHub = ref(false)
 
 // =====================================================
 // POOLS TAB STATE
@@ -100,6 +105,28 @@ onMounted(async () => {
     sponsorship.fetchReceivedSponsorships(),
     sponsorship.fetchPools(),
   ])
+  
+  // Load GitHub status
+  githubConfigured.value = await sponsorship.checkGitHubConfigured()
+  if (githubConfigured.value) {
+    await sponsorship.fetchGitHubLinkStatus()
+    await sponsorship.fetchPendingGitHubSponsorships()
+  }
+  
+  // Check for GitHub callback params
+  const githubLinked = route.query.github_linked
+  const githubError = route.query.github_error
+  
+  if (githubLinked) {
+    useToast().success(`GitHub account @${githubLinked} linked successfully!`)
+    // Auto-claim pending sponsorships
+    await handleClaimGitHub()
+    // Clean up URL
+    router.replace({ query: { ...route.query, github_linked: undefined, github_error: undefined } })
+  } else if (githubError) {
+    useToast().error(`GitHub verification failed: ${githubError}`)
+    router.replace({ query: { ...route.query, github_linked: undefined, github_error: undefined } })
+  }
 })
 
 // =====================================================
@@ -125,6 +152,7 @@ const handleCreateSponsorship = async () => {
       description: newSponsorship.value.description || undefined,
       spendCapUsd: newSponsorship.value.spendCapUsd,
       billingPeriod: newSponsorship.value.billingPeriod,
+      targetGitHubUsername: newSponsorship.value.targetGitHubUsername || undefined,
       allowedModels: newSponsorship.value.allowedModels.length > 0 
         ? newSponsorship.value.allowedModels 
         : undefined,
@@ -142,6 +170,7 @@ const handleCreateSponsorship = async () => {
       description: '',
       spendCapUsd: 50,
       billingPeriod: 'one_time',
+      targetGitHubUsername: '',
       allowedModels: [],
       maxTokensPerRequest: null,
       expiresAt: '',
@@ -198,6 +227,36 @@ const loadReceivedUsage = async (id: string) => {
     console.error('Failed to load usage:', error)
   } finally {
     loadingReceivedUsage.value = false
+  }
+}
+
+// =====================================================
+// GITHUB VERIFICATION METHODS
+// =====================================================
+const handleVerifyGitHub = () => {
+  sponsorship.initiateGitHubConnect()
+}
+
+const handleClaimGitHub = async () => {
+  claimingGitHub.value = true
+  try {
+    const result = await sponsorship.claimGitHubSponsorships()
+    if (result.claimed?.length > 0) {
+      // Refresh data
+      await sponsorship.fetchReceivedSponsorships()
+      await sponsorship.fetchPendingGitHubSponsorships()
+    }
+  } catch (error) {
+    console.error('Failed to claim:', error)
+  } finally {
+    claimingGitHub.value = false
+  }
+}
+
+const handleUnlinkGitHub = async () => {
+  if (confirm('Are you sure you want to unlink your GitHub account?')) {
+    await sponsorship.unlinkGitHub()
+    await sponsorship.fetchPendingGitHubSponsorships()
   }
 }
 
@@ -575,6 +634,114 @@ const getStatusClasses = (status: string) => {
         </div>
       </div>
 
+      <!-- GitHub Verification Banner -->
+      <div v-if="githubConfigured" class="mb-6">
+        <!-- Not linked yet -->
+        <div
+          v-if="!sponsorship.githubLinkStatus.value?.linked"
+          class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-4"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-gray-500/10 flex items-center justify-center">
+                <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-sm font-medium text-white">Link GitHub Account</h4>
+                <p class="text-xs text-gray-400">Verify your GitHub identity to claim sponsorships targeted to you</p>
+              </div>
+            </div>
+            <button
+              @click="handleVerifyGitHub"
+              class="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors"
+            >
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+              </svg>
+              Verify GitHub
+            </button>
+          </div>
+        </div>
+
+        <!-- Linked with pending sponsorships -->
+        <div
+          v-else-if="sponsorship.pendingGitHubSponsorships.value?.pending?.length > 0"
+          class="bg-green-500/10 border border-green-500/20 rounded-lg p-4"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                </svg>
+              </div>
+              <div>
+                <h4 class="text-sm font-medium text-white">
+                  {{ sponsorship.pendingGitHubSponsorships.value.pending.length }} Pending Sponsorship(s)
+                </h4>
+                <p class="text-xs text-gray-400">
+                  Linked as <span class="text-green-300">@{{ sponsorship.githubLinkStatus.value.githubUsername }}</span>
+                </p>
+              </div>
+            </div>
+            <button
+              @click="handleClaimGitHub"
+              :disabled="claimingGitHub"
+              class="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors disabled:opacity-50"
+            >
+              <svg v-if="claimingGitHub" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+              Claim All
+            </button>
+          </div>
+          <!-- Pending list -->
+          <div class="mt-3 space-y-2">
+            <div
+              v-for="pending in sponsorship.pendingGitHubSponsorships.value.pending"
+              :key="pending.id"
+              class="flex items-center justify-between bg-black/30 rounded p-2"
+            >
+              <div>
+                <div class="text-xs text-white font-medium">{{ pending.name }}</div>
+                <div class="text-[10px] text-gray-500">
+                  From {{ pending.sponsorName || 'Anonymous' }} 
+                  <span v-if="pending.spendCapUsd">• ${{ pending.spendCapUsd.toFixed(2) }}</span>
+                </div>
+              </div>
+              <span class="text-[10px] text-gray-500 uppercase">{{ pending.provider }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Linked, no pending -->
+        <div
+          v-else-if="sponsorship.githubLinkStatus.value?.linked"
+          class="flex items-center justify-between bg-gray-500/5 border border-gray-500/10 rounded-lg px-4 py-3"
+        >
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span class="text-xs text-gray-400">
+              GitHub linked as <span class="text-green-300">@{{ sponsorship.githubLinkStatus.value.githubUsername }}</span>
+            </span>
+          </div>
+          <button
+            @click="handleUnlinkGitHub"
+            class="text-xs text-gray-500 hover:text-red-400 transition-colors"
+          >
+            Unlink
+          </button>
+        </div>
+      </div>
+
       <!-- Loading State -->
       <div v-if="sponsorship.loadingReceived.value" class="text-center py-12">
         <div class="text-gray-400 text-sm">Loading sponsorships...</div>
@@ -893,6 +1060,30 @@ const getStatusClasses = (status: string) => {
                   </svg>
                 </div>
               </div>
+            </div>
+
+            <!-- Target GitHub username (optional) -->
+            <div>
+              <label class="block text-xs text-gray-400 mb-1">
+                Target GitHub Username 
+                <span class="text-gray-500">(optional)</span>
+              </label>
+              <div class="relative">
+                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <input
+                  v-model="newSponsorship.targetGitHubUsername"
+                  type="text"
+                  placeholder="octocat"
+                  class="w-full bg-gray-500/10 border border-gray-500/20 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-400"
+                />
+              </div>
+              <p class="text-[10px] text-gray-500 mt-1">
+                Recipient must verify their GitHub identity to claim this sponsorship
+              </p>
             </div>
             
             <!-- <div>

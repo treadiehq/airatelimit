@@ -201,6 +201,7 @@ export class SponsorshipService {
       spendCapUsd: dto.spendCapUsd,
       spendCapTokens: dto.spendCapTokens,
       recipientEmail: dto.recipientEmail,
+      targetGitHubUsername: dto.targetGitHubUsername?.toLowerCase(),
       allowedModels: dto.allowedModels,
       maxTokensPerRequest: dto.maxTokensPerRequest,
       maxRequestsPerMinute: dto.maxRequestsPerMinute,
@@ -836,6 +837,70 @@ export class SponsorshipService {
     }
 
     return sponsorship.sponsorKey.provider;
+  }
+
+  // =====================================================
+  // GITHUB-BASED CLAIMING
+  // =====================================================
+
+  /**
+   * Find pending sponsorships targeted at a GitHub username
+   * These are sponsorships that haven't been claimed yet
+   */
+  async findPendingSponsorshipsByGitHub(
+    githubUsername: string,
+  ): Promise<Sponsorship[]> {
+    return this.sponsorshipRepository.find({
+      where: {
+        targetGitHubUsername: githubUsername.toLowerCase(),
+        recipientOrgId: null as any, // Not yet claimed
+        status: 'active',
+      },
+      relations: ['sponsorOrg', 'sponsorKey'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Claim sponsorships by GitHub username
+   * Called after a user verifies their GitHub identity
+   */
+  async claimSponsorshipsByGitHub(
+    githubUsername: string,
+    recipientOrgId: string,
+  ): Promise<Sponsorship[]> {
+    // Find all unclaimed sponsorships for this GitHub user
+    const pending = await this.findPendingSponsorshipsByGitHub(githubUsername);
+
+    if (pending.length === 0) {
+      return [];
+    }
+
+    // Claim all of them
+    const claimed: Sponsorship[] = [];
+    for (const sponsorship of pending) {
+      sponsorship.recipientOrgId = recipientOrgId;
+      await this.sponsorshipRepository.save(sponsorship);
+      claimed.push(sponsorship);
+      this.logger.log(
+        `GitHub-claimed sponsorship ${sponsorship.id} for @${githubUsername} → org ${recipientOrgId}`,
+      );
+    }
+
+    return claimed;
+  }
+
+  /**
+   * Get count of pending sponsorships for a GitHub username
+   */
+  async countPendingSponsorshipsByGitHub(githubUsername: string): Promise<number> {
+    return this.sponsorshipRepository.count({
+      where: {
+        targetGitHubUsername: githubUsername.toLowerCase(),
+        recipientOrgId: null as any,
+        status: 'active',
+      },
+    });
   }
 }
 

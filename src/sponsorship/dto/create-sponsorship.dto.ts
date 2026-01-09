@@ -44,6 +44,12 @@ export class CreateSponsorshipDto {
   @IsOptional()
   recipientEmail?: string;
 
+  // Optional: target GitHub username (recipient must verify to claim)
+  @IsString()
+  @IsOptional()
+  @MaxLength(39) // GitHub username max length
+  targetGitHubUsername?: string;
+
   // Usage constraints
   @IsArray()
   @IsOptional()

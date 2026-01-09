@@ -50,6 +50,7 @@ interface Sponsorship {
   recipientOrgId?: string
   recipientOrgName?: string
   recipientEmail?: string
+  targetGitHubUsername?: string
   
   // Sponsor info (for recipient view)
   sponsorName?: string
@@ -224,6 +225,7 @@ export const useSponsorship = () => {
     spendCapTokens?: number
     billingPeriod?: 'one_time' | 'monthly'
     recipientEmail?: string
+    targetGitHubUsername?: string
     allowedModels?: string[]
     maxTokensPerRequest?: number
     maxRequestsPerMinute?: number
@@ -359,6 +361,106 @@ export const useSponsorship = () => {
 
   const getReceivedUsageHistory = async (id: string): Promise<UsageRecord[]> => {
     return api(`/sponsored/${id}/usage/history`)
+  }
+
+  // =====================================================
+  // GITHUB-BASED CLAIMING
+  // =====================================================
+
+  interface PendingGitHubSponsorships {
+    linked: boolean
+    githubUsername: string | null
+    pending: Array<{
+      id: string
+      name: string
+      description?: string
+      provider?: string
+      spendCapUsd?: number
+      spendCapTokens?: number
+      sponsorName?: string
+      expiresAt?: string
+      createdAt: string
+    }>
+  }
+
+  interface GitHubLinkStatus {
+    linked: boolean
+    githubUsername: string | null
+    linkedAt: string | null
+  }
+
+  const githubLinkStatus = ref<GitHubLinkStatus | null>(null)
+  const pendingGitHubSponsorships = ref<PendingGitHubSponsorships | null>(null)
+  const loadingGitHub = ref(false)
+
+  const fetchGitHubLinkStatus = async () => {
+    try {
+      const data = await api('/auth/github/linked')
+      githubLinkStatus.value = data
+      return data
+    } catch (error: any) {
+      // If not configured, that's OK
+      githubLinkStatus.value = { linked: false, githubUsername: null, linkedAt: null }
+      return githubLinkStatus.value
+    }
+  }
+
+  const fetchPendingGitHubSponsorships = async () => {
+    loadingGitHub.value = true
+    try {
+      const data = await api('/sponsored/pending/github')
+      pendingGitHubSponsorships.value = data
+      return data
+    } catch (error: any) {
+      pendingGitHubSponsorships.value = { linked: false, githubUsername: null, pending: [] }
+      return pendingGitHubSponsorships.value
+    } finally {
+      loadingGitHub.value = false
+    }
+  }
+
+  const claimGitHubSponsorships = async () => {
+    try {
+      const data = await api('/sponsored/claim/github', { method: 'POST' })
+      if (data.success && data.claimed.length > 0) {
+        toast.success(`Claimed ${data.claimed.length} sponsorship(s)!`)
+        // Refresh received sponsorships
+        await fetchReceivedSponsorships()
+        // Clear pending
+        if (pendingGitHubSponsorships.value) {
+          pendingGitHubSponsorships.value.pending = []
+        }
+      }
+      return data
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to claim sponsorships')
+      throw error
+    }
+  }
+
+  const checkGitHubConfigured = async (): Promise<boolean> => {
+    try {
+      const data = await api('/auth/github/status')
+      return data.configured
+    } catch {
+      return false
+    }
+  }
+
+  const initiateGitHubConnect = () => {
+    // Redirect to backend OAuth endpoint
+    window.location.href = `${useRuntimeConfig().public.apiUrl}/auth/github/connect`
+  }
+
+  const unlinkGitHub = async () => {
+    try {
+      await api('/auth/github/unlink')
+      githubLinkStatus.value = { linked: false, githubUsername: null, linkedAt: null }
+      toast.success('GitHub account unlinked')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to unlink GitHub')
+      throw error
+    }
   }
 
   // =====================================================
@@ -626,5 +728,16 @@ export const useSponsorship = () => {
     listPoolTokens,
     revokePoolToken,
     getPoolStats,
+
+    // GitHub-based claiming
+    githubLinkStatus,
+    pendingGitHubSponsorships,
+    loadingGitHub,
+    fetchGitHubLinkStatus,
+    fetchPendingGitHubSponsorships,
+    claimGitHubSponsorships,
+    checkGitHubConfigured,
+    initiateGitHubConnect,
+    unlinkGitHub,
   }
 }

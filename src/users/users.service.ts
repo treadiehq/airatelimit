@@ -57,4 +57,39 @@ export class UsersService {
   async validatePassword(user: User, password: string): Promise<boolean> {
     return bcrypt.compare(password, user.passwordHash);
   }
+
+  /**
+   * Link GitHub account to user for verification purposes
+   */
+  async linkGitHubAccount(
+    userId: string,
+    github: { githubId: string; githubUsername: string },
+  ): Promise<User> {
+    await this.usersRepository.update(userId, {
+      linkedGitHubId: github.githubId,
+      linkedGitHubUsername: github.githubUsername,
+      linkedGitHubAt: new Date(),
+    });
+    return this.findById(userId);
+  }
+
+  /**
+   * Unlink GitHub account from user
+   */
+  async unlinkGitHubAccount(userId: string): Promise<void> {
+    await this.usersRepository.update(userId, {
+      linkedGitHubId: null,
+      linkedGitHubUsername: null,
+      linkedGitHubAt: null,
+    });
+  }
+
+  /**
+   * Find user by linked GitHub username
+   */
+  async findByGitHubUsername(username: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { linkedGitHubUsername: username },
+    });
+  }
 }

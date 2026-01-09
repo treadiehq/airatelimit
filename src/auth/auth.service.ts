@@ -282,4 +282,28 @@ export class AuthService {
       },
     };
   }
+
+  /**
+   * Get user by ID
+   */
+  async getUserById(userId: string) {
+    return this.usersService.findById(userId);
+  }
+
+  /**
+   * Link GitHub account to user (for verification, not login)
+   */
+  async linkGitHubAccount(
+    userId: string,
+    github: { githubId: string; githubUsername: string },
+  ) {
+    return this.usersService.linkGitHubAccount(userId, github);
+  }
+
+  /**
+   * Unlink GitHub account from user
+   */
+  async unlinkGitHubAccount(userId: string) {
+    return this.usersService.unlinkGitHubAccount(userId);
+  }
 }

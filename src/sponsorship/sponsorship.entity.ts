@@ -58,6 +58,11 @@ export class Sponsorship {
   @Column({ nullable: true })
   recipientEmail: string;
 
+  // Optional: target GitHub username for claiming
+  @Column({ nullable: true })
+  @Index()
+  targetGitHubUsername: string;
+
   // Display name and description
   @Column()
   name: string;

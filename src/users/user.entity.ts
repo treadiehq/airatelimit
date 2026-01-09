@@ -39,6 +39,17 @@ export class User {
   @OneToMany(() => Project, (project) => project.owner)
   projects: Project[];
 
+  // GitHub verification (for claiming sponsorships, not login)
+  @Column({ nullable: true })
+  @Index()
+  linkedGitHubUsername: string;
+
+  @Column({ nullable: true })
+  linkedGitHubId: string; // GitHub's permanent user ID
+
+  @Column({ nullable: true })
+  linkedGitHubAt: Date;
+
   @CreateDateColumn()
   createdAt: Date;
 
