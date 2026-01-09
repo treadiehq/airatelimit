@@ -927,5 +927,59 @@ export class SponsorshipService {
       },
     });
   }
+
+  /**
+   * Find pending sponsorships targeted at an email address
+   * These are sponsorships that haven't been claimed yet
+   */
+  async findPendingSponsorshipsByEmail(email: string): Promise<Sponsorship[]> {
+    return this.sponsorshipRepository.find({
+      where: {
+        recipientEmail: email.toLowerCase(),
+        recipientOrgId: null as any, // Not yet claimed
+        status: 'active',
+      },
+      relations: ['sponsorOrg', 'sponsorKey'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Claim a sponsorship by email (for email-targeted sponsorships without GitHub requirement)
+   */
+  async claimSponsorshipByEmail(
+    sponsorshipId: string,
+    email: string,
+    recipientOrgId: string,
+  ): Promise<Sponsorship> {
+    const sponsorship = await this.sponsorshipRepository.findOne({
+      where: { id: sponsorshipId },
+    });
+
+    if (!sponsorship) {
+      throw new NotFoundException('Sponsorship not found');
+    }
+
+    // Verify email matches
+    if (sponsorship.recipientEmail?.toLowerCase() !== email.toLowerCase()) {
+      throw new ForbiddenException('Email does not match sponsorship recipient');
+    }
+
+    // If GitHub is required, don't allow email-only claim
+    if (sponsorship.targetGitHubUsername) {
+      throw new BadRequestException('This sponsorship requires GitHub verification to claim');
+    }
+
+    if (sponsorship.recipientOrgId) {
+      throw new BadRequestException('Sponsorship already claimed');
+    }
+
+    sponsorship.recipientOrgId = recipientOrgId;
+    await this.sponsorshipRepository.save(sponsorship);
+
+    this.logger.log(`Email-claimed sponsorship ${sponsorshipId} for ${email} → org ${recipientOrgId}`);
+
+    return sponsorship;
+  }
 }
 

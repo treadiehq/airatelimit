@@ -174,11 +174,64 @@ export class SponsoredController {
   }
 
   // =====================================================
-  // GITHUB-BASED CLAIMING
+  // PENDING SPONSORSHIPS & CLAIMING
   // =====================================================
 
   /**
+   * Get all pending sponsorships for the current user
+   * Checks both GitHub username and email
+   */
+  @Get('pending')
+  async getPendingSponsorships(@Request() req) {
+    const user = await this.usersService.findById(req.user.userId);
+    
+    // Find pending by email
+    const pendingByEmail = await this.sponsorshipService.findPendingSponsorshipsByEmail(
+      user.email,
+    );
+    
+    // Find pending by GitHub (if linked)
+    let pendingByGitHub: any[] = [];
+    if (user?.linkedGitHubUsername) {
+      pendingByGitHub = await this.sponsorshipService.findPendingSponsorshipsByGitHub(
+        user.linkedGitHubUsername,
+      );
+    }
+
+    // Combine and dedupe (a sponsorship could match both email and GitHub)
+    const allPendingMap = new Map<string, any>();
+    
+    for (const s of [...pendingByEmail, ...pendingByGitHub]) {
+      if (!allPendingMap.has(s.id)) {
+        allPendingMap.set(s.id, {
+          id: s.id,
+          name: s.name,
+          description: s.description,
+          provider: s.sponsorKey?.provider,
+          spendCapUsd: s.spendCapUsd ? Number(s.spendCapUsd) : null,
+          spendCapTokens: s.spendCapTokens ? Number(s.spendCapTokens) : null,
+          sponsorName: s.sponsorOrg?.name,
+          targetGitHubUsername: s.targetGitHubUsername,
+          recipientEmail: s.recipientEmail,
+          expiresAt: s.expiresAt,
+          createdAt: s.createdAt,
+          // Can claim directly if no GitHub requirement
+          canClaimDirectly: !s.targetGitHubUsername,
+        });
+      }
+    }
+
+    return {
+      githubLinked: Boolean(user?.linkedGitHubUsername),
+      githubUsername: user?.linkedGitHubUsername || null,
+      email: user.email,
+      pending: Array.from(allPendingMap.values()),
+    };
+  }
+
+  /**
    * Get pending sponsorships for the current user's linked GitHub account
+   * @deprecated Use GET /pending instead
    */
   @Get('pending/github')
   async getPendingGitHubSponsorships(@Request() req) {
@@ -211,6 +264,55 @@ export class SponsoredController {
         createdAt: s.createdAt,
       })),
     };
+  }
+
+  /**
+   * Claim a specific pending sponsorship
+   */
+  @Post('claim/:id')
+  async claimSponsorship(@Request() req, @Param('id') id: string) {
+    const user = await this.usersService.findById(req.user.userId);
+    
+    // First check if this is an email-only sponsorship (no GitHub required)
+    try {
+      const claimed = await this.sponsorshipService.claimSponsorshipByEmail(
+        id,
+        user.email,
+        req.user.organizationId,
+      );
+      return {
+        success: true,
+        sponsorship: {
+          id: claimed.id,
+          name: claimed.name,
+        },
+      };
+    } catch (error) {
+      // If it requires GitHub, check if user has linked GitHub
+      if (error.message?.includes('GitHub verification')) {
+        if (!user?.linkedGitHubUsername) {
+          return {
+            success: false,
+            error: 'This sponsorship requires GitHub verification. Please link your GitHub account first.',
+            requiresGitHub: true,
+          };
+        }
+        
+        // Try to claim via GitHub
+        const claimed = await this.sponsorshipService.claimSponsorship(
+          id,
+          req.user.organizationId,
+        );
+        return {
+          success: true,
+          sponsorship: {
+            id: claimed.id,
+            name: claimed.name,
+          },
+        };
+      }
+      throw error;
+    }
   }
 
   /**

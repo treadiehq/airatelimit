@@ -364,23 +364,29 @@ export const useSponsorship = () => {
   }
 
   // =====================================================
-  // GITHUB-BASED CLAIMING
+  // PENDING SPONSORSHIPS & CLAIMING
   // =====================================================
 
-  interface PendingGitHubSponsorships {
-    linked: boolean
+  interface PendingSponsorship {
+    id: string
+    name: string
+    description?: string
+    provider?: string
+    spendCapUsd?: number
+    spendCapTokens?: number
+    sponsorName?: string
+    targetGitHubUsername?: string
+    recipientEmail?: string
+    expiresAt?: string
+    createdAt: string
+    canClaimDirectly: boolean
+  }
+
+  interface PendingSponsorshipsResponse {
+    githubLinked: boolean
     githubUsername: string | null
-    pending: Array<{
-      id: string
-      name: string
-      description?: string
-      provider?: string
-      spendCapUsd?: number
-      spendCapTokens?: number
-      sponsorName?: string
-      expiresAt?: string
-      createdAt: string
-    }>
+    email: string
+    pending: PendingSponsorship[]
   }
 
   interface GitHubLinkStatus {
@@ -390,8 +396,18 @@ export const useSponsorship = () => {
   }
 
   const githubLinkStatus = ref<GitHubLinkStatus | null>(null)
-  const pendingGitHubSponsorships = ref<PendingGitHubSponsorships | null>(null)
-  const loadingGitHub = ref(false)
+  const pendingSponsorships = ref<PendingSponsorshipsResponse | null>(null)
+  const loadingPending = ref(false)
+
+  // Keep for backwards compatibility
+  const pendingGitHubSponsorships = computed(() => {
+    if (!pendingSponsorships.value) return null
+    return {
+      linked: pendingSponsorships.value.githubLinked,
+      githubUsername: pendingSponsorships.value.githubUsername,
+      pending: pendingSponsorships.value.pending,
+    }
+  })
 
   const fetchGitHubLinkStatus = async () => {
     try {
@@ -405,38 +421,63 @@ export const useSponsorship = () => {
     }
   }
 
-  const fetchPendingGitHubSponsorships = async () => {
-    loadingGitHub.value = true
+  const fetchPendingSponsorships = async () => {
+    loadingPending.value = true
     try {
-      const data = await api('/sponsored/pending/github')
-      pendingGitHubSponsorships.value = data
+      const data = await api('/sponsored/pending')
+      pendingSponsorships.value = data
       return data
     } catch (error: any) {
-      pendingGitHubSponsorships.value = { linked: false, githubUsername: null, pending: [] }
-      return pendingGitHubSponsorships.value
+      pendingSponsorships.value = { githubLinked: false, githubUsername: null, email: '', pending: [] }
+      return pendingSponsorships.value
     } finally {
-      loadingGitHub.value = false
+      loadingPending.value = false
     }
   }
 
-  const claimGitHubSponsorships = async () => {
+  // Backwards compatible alias
+  const fetchPendingGitHubSponsorships = fetchPendingSponsorships
+
+  const claimSponsorship = async (sponsorshipId: string) => {
     try {
-      const data = await api('/sponsored/claim/github', { method: 'POST' })
-      if (data.success && data.claimed.length > 0) {
-        toast.success(`Claimed ${data.claimed.length} sponsorship(s)!`)
-        // Refresh received sponsorships
+      const data = await api(`/sponsored/claim/${sponsorshipId}`, { method: 'POST' })
+      if (data.success) {
+        toast.success(`Claimed sponsorship: ${data.sponsorship.name}`)
+        // Refresh data
         await fetchReceivedSponsorships()
-        // Clear pending
-        if (pendingGitHubSponsorships.value) {
-          pendingGitHubSponsorships.value.pending = []
-        }
+        await fetchPendingSponsorships()
+      } else if (data.requiresGitHub) {
+        toast.error('Please link your GitHub account first')
       }
       return data
     } catch (error: any) {
-      toast.error(error.message || 'Failed to claim sponsorships')
+      toast.error(error.message || 'Failed to claim sponsorship')
       throw error
     }
   }
+
+  const claimAllPendingSponsorships = async () => {
+    const pending = pendingSponsorships.value?.pending || []
+    let claimedCount = 0
+    
+    for (const s of pending) {
+      try {
+        const result = await claimSponsorship(s.id)
+        if (result.success) claimedCount++
+      } catch {
+        // Continue with others
+      }
+    }
+    
+    if (claimedCount > 0) {
+      toast.success(`Claimed ${claimedCount} sponsorship(s)!`)
+    }
+    
+    return claimedCount
+  }
+
+  // Keep for backwards compatibility
+  const claimGitHubSponsorships = claimAllPendingSponsorships
 
   const checkGitHubConfigured = async (): Promise<boolean> => {
     try {
@@ -449,7 +490,10 @@ export const useSponsorship = () => {
 
   const initiateGitHubConnect = () => {
     // Redirect to backend OAuth endpoint
-    window.location.href = `${useRuntimeConfig().public.apiUrl}/auth/github/connect`
+    // apiBaseUrl includes /api, so we need the base URL without /api
+    const apiBaseUrl = useRuntimeConfig().public.apiBaseUrl as string
+    const backendUrl = apiBaseUrl.replace(/\/api$/, '')
+    window.location.href = `${backendUrl}/api/auth/github/connect`
   }
 
   const unlinkGitHub = async () => {
@@ -729,13 +773,17 @@ export const useSponsorship = () => {
     revokePoolToken,
     getPoolStats,
 
-    // GitHub-based claiming
+    // Pending sponsorships & claiming
     githubLinkStatus,
-    pendingGitHubSponsorships,
-    loadingGitHub,
+    pendingSponsorships,
+    pendingGitHubSponsorships, // backwards compat
+    loadingPending,
     fetchGitHubLinkStatus,
-    fetchPendingGitHubSponsorships,
-    claimGitHubSponsorships,
+    fetchPendingSponsorships,
+    fetchPendingGitHubSponsorships, // backwards compat
+    claimSponsorship,
+    claimAllPendingSponsorships,
+    claimGitHubSponsorships, // backwards compat
     checkGitHubConfigured,
     initiateGitHubConnect,
     unlinkGitHub,
