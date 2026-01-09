@@ -243,30 +243,31 @@ export function createLimiter(options: LimiterOptions): Limiter {
           model,
         });
 
-        if (!result.allowed) {
+        if (result.allowed === false) {
+          const denied = result;
           const errorResponse: LimiterErrorResponse = {
-            error: result.error,
-            message: result.error === 'rate_limit_exceeded'
+            error: denied.error,
+            message: denied.error === 'rate_limit_exceeded'
               ? 'Too many requests. Please slow down.'
               : 'Monthly quota exceeded. Please upgrade your plan.',
-            tenantId: result.tenantId,
-            limit: result.limit,
-            retryAfterMs: result.retryAfterMs,
+            tenantId: denied.tenantId,
+            limit: denied.limit,
+            retryAfterMs: denied.retryAfterMs,
           };
 
           // Add current usage for quota errors
-          if (result.error === 'quota_exceeded') {
+          if (denied.error === 'quota_exceeded') {
             errorResponse.currentUsage = await getUsage(tenantId);
           }
 
           // Set standard rate limit headers
-          const statusCode = result.error === 'rate_limit_exceeded' ? 429 : 403;
+          const statusCode = denied.error === 'rate_limit_exceeded' ? 429 : 403;
           
-          if (result.retryAfterMs) {
-            res.setHeader('Retry-After', Math.ceil(result.retryAfterMs / 1000));
+          if (denied.retryAfterMs) {
+            res.setHeader('Retry-After', Math.ceil(denied.retryAfterMs / 1000));
           }
-          res.setHeader('X-RateLimit-Limit', result.limit.limit);
-          res.setHeader('X-RateLimit-Remaining', Math.max(0, result.limit.limit - result.limit.current));
+          res.setHeader('X-RateLimit-Limit', denied.limit.limit);
+          res.setHeader('X-RateLimit-Remaining', Math.max(0, denied.limit.limit - denied.limit.current));
 
           res.status(statusCode).json(errorResponse);
           return;
