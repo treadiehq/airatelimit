@@ -33,6 +33,9 @@ RUN npm run build
 # Clean up after build
 RUN rm -rf node_modules/.cache
 
+# Fix ownership for nodejs user
+RUN chown -R nodejs:nodejs /app/.output
+
 # ====================================
 # SECURITY: Switch to non-root user
 # ====================================
