@@ -459,6 +459,32 @@
       </div>
     </section>
 
+    <!-- Library Alternative -->
+    <section class="py-16 relative z-10">
+      <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-gray-500/5 border border-gray-500/10 rounded-xl p-8 text-center">
+          <div class="w-12 h-12 bg-emerald-300/10 rounded-lg flex items-center justify-center mx-auto mb-4">
+            <svg class="w-6 h-6 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-white mb-2">Already have a backend?</h3>
+          <p class="text-gray-400 text-sm mb-5 max-w-md mx-auto">For server-side Node.js apps, use our open-source limiter. No proxy, no signup required.</p>
+          <div class="bg-black/50 border border-gray-500/10 rounded-lg px-4 py-3 font-mono text-sm text-gray-300 inline-block mb-4">
+            npm install @ai-ratelimit/limiter
+          </div>
+          <div>
+            <a href="https://www.npmjs.com/package/@ai-ratelimit/limiter" target="_blank" class="text-emerald-300 text-sm hover:text-emerald-200 transition-colors inline-flex items-center gap-1">
+              View on npm
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                <path fill-rule="evenodd" d="M5.22 14.78a.75.75 0 001.06 0l7.22-7.22v5.69a.75.75 0 001.5 0v-7.5a.75.75 0 00-.75-.75h-7.5a.75.75 0 000 1.5h5.69l-7.22 7.22a.75.75 0 000 1.06z" clip-rule="evenodd" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Pricing -->
     <section id="pricing" class="py-20 relative z-10">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
