@@ -41,10 +41,11 @@ RUN chown -R nodejs:nodejs /app/.output
 # ====================================
 USER nodejs
 
-# Railway injects PORT at runtime, set defaults for local dev
-# Nitro reads NITRO_HOST and PORT env vars
-ENV HOST=0.0.0.0
+# Railway injects PORT at runtime
+# Nitro reads NITRO_HOST for host binding
+ENV NODE_ENV=production
 ENV NITRO_HOST=0.0.0.0
 
 # Run the Nuxt SSR server
-CMD ["node", ".output/server/index.mjs"]
+# Use shell form so PORT env var is properly expanded at runtime
+CMD sh -c "NITRO_PORT=\${PORT:-3000} node .output/server/index.mjs"
