@@ -80,15 +80,15 @@ export default defineNuxtConfig({
   // Server config for Railway deployment
   nitro: {
     preset: 'node-server',
-  },
-
-  // Make sure to use PORT env var and bind to 0.0.0.0 in production
-  $production: {
-    nitro: {
-      preset: 'node-server',
-      // Bind to all interfaces for Railway
-      host: '0.0.0.0',
-    },
+    // Explicitly serve static assets
+    serveStatic: true,
+    // Public assets configuration
+    publicAssets: [
+      {
+        dir: '../public',
+        baseURL: '/',
+      },
+    ],
   },
 })
 

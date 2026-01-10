@@ -36,6 +36,11 @@ RUN ls -la .output/public/_nuxt/ | head -5
 # Clean up after build
 RUN rm -rf node_modules/.cache
 
+# Fix Nitro's incorrect public assets path resolution
+# Nitro looks in .output/server/chunks/public but files are in .output/public
+RUN mkdir -p /app/.output/server/chunks && \
+    ln -s /app/.output/public /app/.output/server/chunks/public
+
 # Fix ownership for nodejs user
 RUN chown -R nodejs:nodejs /app/.output
 
