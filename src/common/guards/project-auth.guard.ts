@@ -7,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { ProjectsService } from '../../projects/projects.service';
+import { OrganizationsService } from '../../organizations/organizations.service';
 
 /**
  * Guard that accepts either:
@@ -22,6 +23,7 @@ export class ProjectAuthGuard implements CanActivate {
     private jwtService: JwtService,
     private configService: ConfigService,
     private projectsService: ProjectsService,
+    private organizationsService: OrganizationsService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -75,7 +77,17 @@ export class ProjectAuthGuard implements CanActivate {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
 
-      request.user = payload;
+      // Load organization with plan for PlanGuard
+      const organization = payload.organizationId
+        ? await this.organizationsService.findById(payload.organizationId)
+        : null;
+
+      request.user = {
+        userId: payload.sub,
+        email: payload.email,
+        organizationId: payload.organizationId,
+        organization: organization ? { id: organization.id, plan: organization.plan } : null,
+      };
       request.authType = 'jwt';
 
       return true;

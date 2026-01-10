@@ -6,6 +6,7 @@ import { IdentityLimit } from './identity-limit.entity';
 import { IdentityLimitsService } from './identity-limits.service';
 import { IdentityLimitsController } from './identity-limits.controller';
 import { ProjectsModule } from '../projects/projects.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
 import { UsageModule } from '../usage/usage.module';
 import { ProjectAuthGuard } from '../common/guards/project-auth.guard';
 
@@ -13,6 +14,7 @@ import { ProjectAuthGuard } from '../common/guards/project-auth.guard';
   imports: [
     TypeOrmModule.forFeature([IdentityLimit]),
     forwardRef(() => ProjectsModule),
+    OrganizationsModule,
     forwardRef(() => UsageModule),
     ConfigModule,
     JwtModule.registerAsync({

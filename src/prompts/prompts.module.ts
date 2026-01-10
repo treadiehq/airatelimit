@@ -6,12 +6,14 @@ import { Prompt } from './prompt.entity';
 import { PromptsService } from './prompts.service';
 import { PromptsController } from './prompts.controller';
 import { ProjectsModule } from '../projects/projects.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
 import { ProjectAuthGuard } from '../common/guards/project-auth.guard';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Prompt]),
     forwardRef(() => ProjectsModule),
+    OrganizationsModule,
     ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
