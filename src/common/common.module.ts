@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { CryptoService } from './crypto.service';
 import { RateLimitService } from './rate-limit.service';
 import { ProxyRateLimitMiddleware } from './proxy-rate-limit.middleware';
+import { IpValidationService } from './ip-validation.service';
 import { FeatureGuard } from './guards/feature.guard';
 import { PlanGuard } from './guards/plan.guard';
 import { ProjectFieldsGuard } from './guards/project-fields.guard';
@@ -23,6 +24,7 @@ import { Project } from '../projects/projects.entity';
     CryptoService,
     RateLimitService,
     ProxyRateLimitMiddleware,
+    IpValidationService,
     FeatureGuard,
     PlanGuard,
     ProjectFieldsGuard,
@@ -34,6 +36,7 @@ import { Project } from '../projects/projects.entity';
     CryptoService,
     RateLimitService,
     ProxyRateLimitMiddleware,
+    IpValidationService,
     FeatureGuard,
     PlanGuard,
     ProjectFieldsGuard,

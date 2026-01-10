@@ -17,6 +17,7 @@ export interface PlanLimits {
   smartRouting: boolean;
   securityConfig: boolean;
   publicEndpoints: boolean;
+  ipRestrictions: boolean;
   teamManagement: boolean;
   selfHosting: boolean;
   dedicatedSupport: boolean;
@@ -47,6 +48,7 @@ const DEFAULT_LIMITS: PlanLimits = {
   smartRouting: false,
   securityConfig: false,
   publicEndpoints: false,
+  ipRestrictions: false,
   teamManagement: false,
   selfHosting: false,
   dedicatedSupport: false,
@@ -68,6 +70,7 @@ export const FEATURE_NAMES: Record<keyof PlanLimits, string> = {
   smartRouting: 'Smart Routing',
   securityConfig: 'Security Configuration',
   publicEndpoints: 'Public Endpoints',
+  ipRestrictions: 'IP Restrictions',
   teamManagement: 'Team Management',
   selfHosting: 'Self-Hosting License',
   dedicatedSupport: 'Dedicated Support',
@@ -89,6 +92,7 @@ export const FEATURE_MIN_PLAN: Record<keyof PlanLimits, string> = {
   smartRouting: 'pro',
   securityConfig: 'pro',
   publicEndpoints: 'pro',
+  ipRestrictions: 'enterprise',
   teamManagement: 'pro',
   selfHosting: 'enterprise',
   dedicatedSupport: 'enterprise',
@@ -127,6 +131,7 @@ export function usePlan() {
         smartRouting: true,
         securityConfig: true,
         publicEndpoints: true,
+        ipRestrictions: true,
         teamManagement: true,
         selfHosting: true,
         dedicatedSupport: true,
@@ -154,6 +159,7 @@ export function usePlan() {
         publicEndpoints: true,
         teamManagement: false,  // Requires cloud or enterprise
         // Enterprise features - NOT available (require license)
+        ipRestrictions: false,  // Enterprise feature
         selfHosting: false,
         dedicatedSupport: false,
         auditLogs: false,

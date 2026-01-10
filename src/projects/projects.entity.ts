@@ -302,6 +302,19 @@ export class Project {
   @Column({ type: 'jsonb', nullable: true })
   allowedOrigins: string[];
 
+  // ====================================
+  // IP RESTRICTIONS CONFIGURATION
+  // ====================================
+  // Enterprise security feature: restrict API access to specific IP ranges
+
+  // Enable IP restrictions (blocks requests from IPs not in allowedIpRanges)
+  @Column({ default: false })
+  ipRestrictionsEnabled: boolean;
+
+  // Allowed IP addresses or CIDR ranges (e.g., ["10.0.0.0/8", "192.168.1.100", "2001:db8::/32"])
+  @Column({ type: 'jsonb', nullable: true })
+  allowedIpRanges: string[];
+
   @CreateDateColumn()
   createdAt: Date;
 

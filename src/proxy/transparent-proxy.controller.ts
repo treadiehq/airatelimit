@@ -4,16 +4,18 @@ import {
   Body,
   Headers,
   Res,
+  Req,
   UnauthorizedException,
   HttpException,
   HttpStatus,
   HttpCode,
   BadRequestException,
+  ForbiddenException,
   UseGuards,
   Inject,
   forwardRef,
 } from '@nestjs/common';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProjectsService } from '../projects/projects.service';
@@ -28,6 +30,7 @@ import { PricingService } from '../pricing/pricing.service';
 import { validateProxyHeaders } from './dto/proxy-headers.dto';
 import { PromptsService } from '../prompts/prompts.service';
 import { UsageLimitService } from '../common/services/usage-limit.service';
+import { IpValidationService } from '../common/ip-validation.service';
 import { isCloudMode, isFeatureEnabled } from '../config/features';
 import { LicenseGuard } from '../common/guards/license.guard';
 import { SponsorshipService } from '../sponsorship/sponsorship.service';
@@ -68,6 +71,7 @@ export class TransparentProxyController {
     private readonly flowExecutorService: FlowExecutorService,
     private readonly promptsService: PromptsService,
     private readonly usageLimitService: UsageLimitService,
+    private readonly ipValidationService: IpValidationService,
     @Inject(forwardRef(() => SponsorshipService))
     private readonly sponsorshipService: SponsorshipService,
     @Inject(forwardRef(() => PoolService))
@@ -544,6 +548,7 @@ export class TransparentProxyController {
     @Headers('origin') origin: string,
     @Headers('referer') referer: string,
     @Body() body: any,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
     // ====================================
@@ -619,6 +624,31 @@ export class TransparentProxyController {
     try {
       // Get project configuration
       const project = await this.projectsService.findByProjectKey(projectKey);
+
+      // ====================================
+      // IP RESTRICTIONS: Enterprise security feature
+      // Block requests from IPs not in allowed ranges
+      // ====================================
+      if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
+        const clientIp = this.getClientIp(req);
+        
+        if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
+          console.warn('IP restriction: Request blocked', {
+            projectId: project.id,
+            clientIp,
+            allowedRanges: project.allowedIpRanges,
+          });
+          throw new ForbiddenException({
+            error: 'ip_not_allowed',
+            message: 'Access denied. Your IP address is not in the allowed range.',
+          });
+        }
+        
+        console.log('IP restriction: Validated', {
+          projectId: project.id,
+          clientIp,
+        });
+      }
 
       // ====================================
       // PUBLIC MODE: Origin validation for frontend-safe endpoints
@@ -1212,6 +1242,7 @@ export class TransparentProxyController {
     @Headers('x-tier') tier: string,
     @Headers('x-session') session: string,
     @Body() body: any,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
     // ====================================
@@ -1239,6 +1270,23 @@ export class TransparentProxyController {
 
     try {
       const project = await this.projectsService.findByProjectKey(projectKey);
+
+      // ====================================
+      // IP RESTRICTIONS: Enterprise security feature
+      // ====================================
+      if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
+        const clientIp = this.getClientIp(req);
+        if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
+          console.warn('IP restriction: Request blocked (images)', {
+            projectId: project.id,
+            clientIp,
+          });
+          throw new ForbiddenException({
+            error: 'ip_not_allowed',
+            message: 'Access denied. Your IP address is not in the allowed range.',
+          });
+        }
+      }
 
       // ====================================
       // RESOLVE API KEY: Stored keys or pass-through
@@ -1450,6 +1498,7 @@ export class TransparentProxyController {
     @Headers('x-tier') tier: string,
     @Headers('x-session') session: string,
     @Body() body: any,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
     // ====================================
@@ -1476,6 +1525,23 @@ export class TransparentProxyController {
 
     try {
       const project = await this.projectsService.findByProjectKey(projectKey);
+
+      // ====================================
+      // IP RESTRICTIONS: Enterprise security feature
+      // ====================================
+      if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
+        const clientIp = this.getClientIp(req);
+        if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
+          console.warn('IP restriction: Request blocked (embeddings)', {
+            projectId: project.id,
+            clientIp,
+          });
+          throw new ForbiddenException({
+            error: 'ip_not_allowed',
+            message: 'Access denied. Your IP address is not in the allowed range.',
+          });
+        }
+      }
 
       // ====================================
       // RESOLVE API KEY: Stored keys or pass-through
@@ -1699,6 +1765,7 @@ export class TransparentProxyController {
     @Headers('x-tier') tier: string,
     @Headers('x-session') session: string,
     @Body() body: any,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
     // ====================================
@@ -1720,6 +1787,23 @@ export class TransparentProxyController {
 
     try {
       const project = await this.projectsService.findByProjectKey(projectKey);
+
+      // ====================================
+      // IP RESTRICTIONS: Enterprise security feature
+      // ====================================
+      if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
+        const clientIp = this.getClientIp(req);
+        if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
+          console.warn('IP restriction: Request blocked (audio)', {
+            projectId: project.id,
+            clientIp,
+          });
+          throw new ForbiddenException({
+            error: 'ip_not_allowed',
+            message: 'Access denied. Your IP address is not in the allowed range.',
+          });
+        }
+      }
 
       // ====================================
       // RESOLVE API KEY: Stored keys or pass-through
@@ -2698,6 +2782,38 @@ export class TransparentProxyController {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Extract client IP address from request
+   * Handles proxies (X-Forwarded-For) and direct connections
+   */
+  private getClientIp(req: Request): string {
+    // Check X-Forwarded-For header (set by proxies like nginx, cloudflare, etc.)
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor) {
+      // X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
+      // The first one is the original client
+      const ips = Array.isArray(forwardedFor) 
+        ? forwardedFor[0] 
+        : forwardedFor.split(',')[0];
+      return ips.trim();
+    }
+    
+    // Check X-Real-IP header (used by some proxies)
+    const realIp = req.headers['x-real-ip'];
+    if (realIp) {
+      return Array.isArray(realIp) ? realIp[0] : realIp;
+    }
+    
+    // Check CF-Connecting-IP header (Cloudflare)
+    const cfIp = req.headers['cf-connecting-ip'];
+    if (cfIp) {
+      return Array.isArray(cfIp) ? cfIp[0] : cfIp;
+    }
+    
+    // Fall back to socket remote address
+    return req.socket?.remoteAddress || req.ip || 'unknown';
   }
 
   /**

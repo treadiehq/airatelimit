@@ -1,4 +1,4 @@
-# Dashboard Dockerfile - Nuxt Static SPA
+# Dashboard Dockerfile - Nuxt SSR
 FROM node:20-slim
 
 # ====================================
@@ -12,9 +12,11 @@ WORKDIR /app
 # Build arguments - Railway passes env vars as build args automatically
 ARG NUXT_PUBLIC_API_BASE_URL
 ARG NUXT_PUBLIC_DEPLOYMENT_MODE=cloud
+ARG NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 ENV NUXT_PUBLIC_API_BASE_URL=$NUXT_PUBLIC_API_BASE_URL
 ENV NUXT_PUBLIC_DEPLOYMENT_MODE=$NUXT_PUBLIC_DEPLOYMENT_MODE
+ENV NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NUXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 
 # Copy dashboard package files
 COPY dashboard/package*.json ./
@@ -25,14 +27,11 @@ RUN npm ci && npm cache clean --force
 # Copy dashboard source code
 COPY --chown=nodejs:nodejs dashboard/ .
 
-# Build the static site with the API URL baked in
-RUN npm run generate
+# Build the SSR app
+RUN npm run build
 
 # Clean up after build
 RUN rm -rf node_modules/.cache
-
-# Install serve globally for the nodejs user
-RUN npm install -g serve && npm cache clean --force
 
 # ====================================
 # SECURITY: Switch to non-root user
@@ -41,7 +40,7 @@ USER nodejs
 
 # Railway provides PORT env var
 ENV PORT=3000
+ENV HOST=0.0.0.0
 
-# Serve the static files with SPA fallback (-s flag)
-CMD ["serve", ".output/public", "-s", "-l", "3000"]
-
+# Run the Nuxt SSR server
+CMD ["node", ".output/server/index.mjs"]

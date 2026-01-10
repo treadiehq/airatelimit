@@ -210,4 +210,16 @@ export class UpdateProjectDto {
   @IsArray()
   @IsString({ each: true })
   allowedOrigins?: string[];
+
+  // IP restrictions configuration
+  // Enterprise security: restrict API access to specific IP ranges
+  @IsOptional()
+  @IsBoolean()
+  ipRestrictionsEnabled?: boolean;
+
+  // Allowed IP addresses or CIDR ranges (e.g., ["10.0.0.0/8", "192.168.1.100"])
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  allowedIpRanges?: string[];
 }
