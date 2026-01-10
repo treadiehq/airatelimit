@@ -188,7 +188,7 @@ export class SponsorshipService {
   async createSponsorship(
     organizationId: string,
     dto: CreateSponsorshipDto,
-  ): Promise<{ sponsorship: Sponsorship; token: string }> {
+  ): Promise<{ sponsorship: Sponsorship; token: string | null }> {
     // Validate sponsor key belongs to org
     const sponsorKey = await this.getSponsorKey(dto.sponsorKeyId, organizationId);
 
@@ -197,6 +197,9 @@ export class SponsorshipService {
       throw new BadRequestException('At least one budget (USD or tokens) must be set');
     }
 
+    // If targeting by email or GitHub username (no immediate recipient), use pending status
+    const hasPendingRecipient = dto.recipientEmail || dto.targetGitHubUsername;
+    
     const sponsorship = this.sponsorshipRepository.create({
       sponsorKeyId: sponsorKey.id,
       sponsorOrgId: organizationId,
@@ -213,15 +216,19 @@ export class SponsorshipService {
       billingPeriod: dto.billingPeriod || 'one_time',
       currentPeriodStart: new Date(),
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
-      status: 'active',
+      // Pending if targeting someone who needs to accept, active otherwise
+      status: hasPendingRecipient ? 'pending' : 'active',
     });
 
     await this.sponsorshipRepository.save(sponsorship);
 
-    // Generate the sponsored token
-    const tokenResult = await this.generateSponsoredToken(sponsorship.id);
+    // Only generate token immediately if not pending (direct sponsorship)
+    let tokenResult: { token: string } | null = null;
+    if (!hasPendingRecipient) {
+      tokenResult = await this.generateSponsoredToken(sponsorship.id);
+    }
 
-    this.logger.log(`Sponsorship created: ${sponsorship.id} by org ${organizationId}`);
+    this.logger.log(`Sponsorship created: ${sponsorship.id} by org ${organizationId} (status: ${sponsorship.status})`);
 
     // Send email notification if targeting a GitHub user with an email
     if (dto.targetGitHubUsername && dto.recipientEmail) {
@@ -244,7 +251,7 @@ export class SponsorshipService {
       });
     }
 
-    return { sponsorship, token: tokenResult.token };
+    return { sponsorship, token: tokenResult?.token || null };
   }
 
   /**

@@ -134,7 +134,8 @@ export class SponsorshipController {
 
   /**
    * Create a new sponsorship
-   * Returns the sponsorship details AND the one-time visible token
+   * Returns the sponsorship details AND the one-time visible token (if immediately active)
+   * For pending sponsorships (email/GitHub targeted), token is generated when recipient accepts
    */
   @Post()
   async createSponsorship(
@@ -146,10 +147,17 @@ export class SponsorshipController {
       dto,
     );
 
+    const isPending = result.sponsorship.status === 'pending';
+
     return {
       sponsorship: this.formatSponsorship(result.sponsorship),
-      token: result.token, // Only shown once!
-      tokenWarning: 'This token will only be shown once. Store it securely.',
+      token: result.token, // Only shown if immediately active
+      tokenWarning: result.token 
+        ? 'This token will only be shown once. Store it securely.'
+        : null,
+      pendingMessage: isPending 
+        ? 'Sponsorship created. The recipient will need to accept it before they can use it.'
+        : null,
     };
   }
 
