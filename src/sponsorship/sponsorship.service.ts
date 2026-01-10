@@ -982,7 +982,7 @@ export class SponsorshipService {
     sponsorshipId: string,
     githubUsername: string,
     recipientOrgId: string,
-  ): Promise<Sponsorship> {
+  ): Promise<{ sponsorship: Sponsorship; token: string }> {
     const sponsorship = await this.sponsorshipRepository.findOne({
       where: { id: sponsorshipId },
     });
@@ -1013,13 +1013,13 @@ export class SponsorshipService {
     await this.sponsorshipRepository.save(sponsorship);
     
     // Generate a sponsored token for the recipient
-    await this.generateSponsoredToken(sponsorship.id);
+    const tokenResult = await this.generateSponsoredToken(sponsorship.id);
 
     this.logger.log(
       `GitHub-claimed sponsorship ${sponsorshipId} for @${githubUsername} → org ${recipientOrgId}`,
     );
 
-    return sponsorship;
+    return { sponsorship, token: tokenResult.token };
   }
 
   /**
@@ -1058,7 +1058,7 @@ export class SponsorshipService {
     sponsorshipId: string,
     email: string,
     recipientOrgId: string,
-  ): Promise<Sponsorship> {
+  ): Promise<{ sponsorship: Sponsorship; token: string }> {
     const sponsorship = await this.sponsorshipRepository.findOne({
       where: { id: sponsorshipId },
     });
@@ -1090,11 +1090,11 @@ export class SponsorshipService {
     await this.sponsorshipRepository.save(sponsorship);
     
     // Generate a sponsored token for the recipient
-    await this.generateSponsoredToken(sponsorship.id);
+    const tokenResult = await this.generateSponsoredToken(sponsorship.id);
 
     this.logger.log(`Email-claimed sponsorship ${sponsorshipId} for ${email} → org ${recipientOrgId}`);
 
-    return sponsorship;
+    return { sponsorship, token: tokenResult.token };
   }
 }
 

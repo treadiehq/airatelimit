@@ -465,12 +465,18 @@ export const useSponsorship = () => {
   const claimAllPendingSponsorships = async () => {
     const pending = pendingSponsorships.value?.pending || []
     let claimedCount = 0
+    const claimedTokens: { name: string; token: string }[] = []
     
     for (const s of pending) {
       try {
         // Use silent mode to avoid individual toasts
         const result = await claimSponsorship(s.id, { silent: true })
-        if (result.success) claimedCount++
+        if (result.success) {
+          claimedCount++
+          if (result.token) {
+            claimedTokens.push({ name: result.sponsorship?.name || s.name, token: result.token })
+          }
+        }
       } catch {
         // Continue with others
       }
@@ -483,7 +489,7 @@ export const useSponsorship = () => {
       await fetchPendingSponsorships()
     }
     
-    return claimedCount
+    return { claimedCount, claimedTokens }
   }
 
   // Keep for backwards compatibility

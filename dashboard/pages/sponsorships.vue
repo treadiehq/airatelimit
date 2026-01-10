@@ -286,10 +286,25 @@ const handleClaimGitHub = async () => {
   }
 }
 
+const claimedTokensList = ref<{ name: string; token: string }[]>([])
+const showMultiTokenModal = ref(false)
+
 const handleClaimAll = async () => {
   claimingGitHub.value = true
   try {
-    await sponsorship.claimAllPendingSponsorships()
+    const result = await sponsorship.claimAllPendingSponsorships()
+    // Show tokens if any were claimed
+    if (result.claimedTokens && result.claimedTokens.length > 0) {
+      if (result.claimedTokens.length === 1) {
+        // Single token - use existing modal
+        newToken.value = result.claimedTokens[0].token
+        showTokenModal.value = true
+      } else {
+        // Multiple tokens - show multi-token modal
+        claimedTokensList.value = result.claimedTokens
+        showMultiTokenModal.value = true
+      }
+    }
     // Refresh data
     await sponsorship.fetchReceivedSponsorships()
     await sponsorship.fetchPendingSponsorships()
@@ -302,7 +317,12 @@ const handleClaimAll = async () => {
 
 const handleClaimOne = async (sponsorshipId: string) => {
   try {
-    await sponsorship.claimSponsorship(sponsorshipId)
+    const result = await sponsorship.claimSponsorship(sponsorshipId)
+    // Show the token if returned
+    if (result?.token) {
+      newToken.value = result.token
+      showTokenModal.value = true
+    }
     // Refresh data
     await sponsorship.fetchReceivedSponsorships()
     await sponsorship.fetchPendingSponsorships()
@@ -1299,6 +1319,49 @@ const getStatusClasses = (status: string) => {
           </div>
 
           <button @click="showTokenModal = false" class="w-full px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors">
+            Done
+          </button>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Multi-Token Modal (for claiming multiple sponsorships) -->
+    <Teleport to="body">
+      <div v-if="showMultiTokenModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" @click.self="showMultiTokenModal = false">
+        <div class="bg-black rounded-xl p-6 w-full max-w-lg border border-gray-500/20 max-h-[80vh] overflow-y-auto">
+          <div class="flex items-center gap-2 mb-4">
+            <svg class="w-5 h-5 text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 class="text-sm font-semibold text-white">Claimed {{ claimedTokensList.length }} Sponsorship(s)</h3>
+          </div>
+
+          <div class="bg-yellow-300/10 border border-yellow-300/10 rounded-lg p-3 mb-4">
+            <div class="flex items-start gap-2">
+              <svg class="w-4 h-4 text-yellow-300 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div class="text-xs text-yellow-300">
+                <strong>Save these tokens now!</strong> They won't be shown again.
+              </div>
+            </div>
+          </div>
+          
+          <div class="space-y-3 mb-4">
+            <div v-for="item in claimedTokensList" :key="item.token" class="bg-gray-500/10 border border-gray-500/10 rounded-lg p-3">
+              <div class="text-xs text-gray-400 mb-1">{{ item.name }}</div>
+              <div class="flex items-center justify-between">
+                <code class="text-sm text-green-300 break-all">{{ item.token }}</code>
+                <button @click="copyToken(item.token)" class="ml-3 text-gray-400 hover:text-white shrink-0">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <button @click="showMultiTokenModal = false" class="w-full px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors">
             Done
           </button>
         </div>

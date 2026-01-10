@@ -308,7 +308,7 @@ export class SponsoredController {
     
     // Try email-only sponsorship (no GitHub required)
     try {
-      const claimed = await this.sponsorshipService.claimSponsorshipByEmail(
+      const { sponsorship: claimed, token } = await this.sponsorshipService.claimSponsorshipByEmail(
         id,
         user.email,
         req.user.organizationId,
@@ -319,6 +319,7 @@ export class SponsoredController {
           id: claimed.id,
           name: claimed.name,
         },
+        token, // Return token so user can use it!
       };
     } catch (error) {
       // If it requires GitHub, check if user has linked GitHub
@@ -332,7 +333,7 @@ export class SponsoredController {
         }
         
         // Try to claim via GitHub
-        const claimed = await this.sponsorshipService.claimSponsorshipByGitHub(
+        const { sponsorship: claimed, token } = await this.sponsorshipService.claimSponsorshipByGitHub(
           id,
           user.linkedGitHubUsername,
           req.user.organizationId,
@@ -343,6 +344,7 @@ export class SponsoredController {
             id: claimed.id,
             name: claimed.name,
           },
+          token, // Return token so user can use it!
         };
       }
       throw error;
