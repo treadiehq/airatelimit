@@ -22,6 +22,7 @@ export interface PlanLimits {
   smartRouting: boolean;
   securityConfig: boolean;
   publicEndpoints: boolean;  // Frontend-safe public API endpoints with origin restriction
+  ipRestrictions: boolean;   // Enterprise: restrict API access by IP/CIDR
   teamManagement: boolean;   // Invite and manage team members
   selfHosting: boolean;
   dedicatedSupport: boolean;
@@ -44,6 +45,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     smartRouting: false,
     securityConfig: false,
     publicEndpoints: false,
+    ipRestrictions: false,
     teamManagement: false,
     selfHosting: false,
     dedicatedSupport: false,
@@ -64,6 +66,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     smartRouting: false,
     securityConfig: false,
     publicEndpoints: false,
+    ipRestrictions: false,
     teamManagement: false,
     selfHosting: false,
     dedicatedSupport: false,
@@ -84,6 +87,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     smartRouting: true,
     securityConfig: true,
     publicEndpoints: true,
+    ipRestrictions: false,  // Enterprise only
     teamManagement: true,
     selfHosting: false,
     dedicatedSupport: false,
@@ -104,6 +108,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     smartRouting: true,
     securityConfig: true,
     publicEndpoints: true,
+    ipRestrictions: true,  // Enterprise feature
     teamManagement: true,
     selfHosting: true,
     dedicatedSupport: true,
@@ -157,6 +162,7 @@ export const FEATURE_NAMES: Record<keyof PlanLimits, string> = {
   smartRouting: 'Smart Routing',
   securityConfig: 'Security Configuration',
   publicEndpoints: 'Public Endpoints',
+  ipRestrictions: 'IP Restrictions',
   teamManagement: 'Team Management',
   selfHosting: 'Self-Hosting License',
   dedicatedSupport: 'Dedicated Support',
@@ -180,6 +186,7 @@ export const FEATURE_MIN_PLAN: Record<keyof PlanLimits, PlanType> = {
   smartRouting: 'pro',
   securityConfig: 'pro',
   publicEndpoints: 'pro',
+  ipRestrictions: 'enterprise',
   teamManagement: 'pro',
   selfHosting: 'enterprise',
   dedicatedSupport: 'enterprise',
