@@ -34,7 +34,7 @@ NODE_ENV=production
 
 3. **Variables** → Add:
 ```
-NUXT_PUBLIC_API_URL=https://<your-backend-domain>.up.railway.app/api
+NUXT_PUBLIC_API_BASE_URL=https://<your-backend-domain>.up.railway.app/api
 NODE_ENV=production
 ```
 

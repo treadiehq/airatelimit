@@ -38,9 +38,10 @@ RUN rm -rf node_modules/.cache
 # ====================================
 USER nodejs
 
-# Railway provides PORT env var
-ENV PORT=3000
+# Railway injects PORT at runtime, set defaults for local dev
+# Nitro reads NITRO_HOST and PORT env vars
 ENV HOST=0.0.0.0
+ENV NITRO_HOST=0.0.0.0
 
 # Run the Nuxt SSR server
 CMD ["node", ".output/server/index.mjs"]
