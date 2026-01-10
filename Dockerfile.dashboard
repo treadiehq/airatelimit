@@ -27,8 +27,11 @@ RUN npm ci && npm cache clean --force
 # Copy dashboard source code
 COPY --chown=nodejs:nodejs dashboard/ .
 
-# Build the SSR app
-RUN npm run build
+# Clear any previous build artifacts and build fresh
+RUN rm -rf .output .nuxt && npm run build
+
+# Verify the build output exists
+RUN ls -la .output/public/_nuxt/ | head -5
 
 # Clean up after build
 RUN rm -rf node_modules/.cache
