@@ -717,7 +717,8 @@ const curlCopied = ref(false)
 const curlMode = ref<'stored' | 'passthrough'>('stored')
 
 // Format large numbers for display
-const formatNumber = (num: number) => {
+const formatNumber = (num: number | null | undefined) => {
+  if (num == null) return '0'
   if (num === Infinity) return '∞'
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
   if (num >= 1000) return (num / 1000).toFixed(1) + 'K'

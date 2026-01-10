@@ -101,14 +101,16 @@ const percentage = computed(() => {
   return (props.value / props.max) * 100
 })
 
-const formatNumber = (num: number) => {
+const formatNumber = (num: number | null | undefined) => {
+  if (num == null) return '0'
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
   if (num >= 1000) return (num / 1000).toFixed(1) + 'K'
   return num.toLocaleString()
 }
 
 // Smart display value formatter for AnimatedCounter
-const formatDisplayValue = (num: number) => {
+const formatDisplayValue = (num: number | null | undefined) => {
+  if (num == null) return 0
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
   if (num >= 10000) return (num / 1000).toFixed(1) + 'K'
   if (num >= 1000) return num.toLocaleString()
