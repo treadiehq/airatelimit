@@ -27,7 +27,7 @@ export class UserUsageController {
     if (!project) {
       throw new NotFoundException('Project not found');
     }
-    if (project.ownerId !== req.user.userId) {
+    if (project.organizationId !== req.user.organizationId) {
       throw new ForbiddenException('Access denied');
     }
 
@@ -62,7 +62,7 @@ export class UserUsageController {
     if (!project) {
       throw new NotFoundException('Project not found');
     }
-    if (project.ownerId !== req.user.userId) {
+    if (project.organizationId !== req.user.organizationId) {
       throw new ForbiddenException('Access denied');
     }
 
@@ -88,7 +88,7 @@ export class UserUsageController {
     if (!project) {
       throw new NotFoundException('Project not found');
     }
-    if (project.ownerId !== req.user.userId) {
+    if (project.organizationId !== req.user.organizationId) {
       throw new ForbiddenException('Access denied');
     }
 
@@ -103,7 +103,7 @@ export class UserUsageController {
     if (!project) {
       throw new NotFoundException('Project not found');
     }
-    if (project.ownerId !== req.user.userId) {
+    if (project.organizationId !== req.user.organizationId) {
       throw new ForbiddenException('Access denied');
     }
 

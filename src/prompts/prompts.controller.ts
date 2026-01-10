@@ -57,8 +57,8 @@ export class PromptsController {
       throw new NotFoundException('Project not found');
     }
 
-    // Verify user owns this project - prevents cross-tenant access
-    if (project.ownerId !== request.user?.userId) {
+    // Verify user is in the same organization - allows team access
+    if (project.organizationId !== request.user?.organizationId) {
       throw new ForbiddenException('Access denied');
     }
 
