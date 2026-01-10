@@ -195,7 +195,7 @@
         <!-- Usage Tab Content -->
         <div v-if="activeTab === 'usage'" class="space-y-6">
         <!-- Plan Usage (Cloud mode only) -->
-        <div v-if="features.showBilling && planUsage.requests" class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-4">
+        <div v-if="features.showBilling && planUsage.requests && planUsage.requests.limit > 0" class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <div class="flex items-center gap-2">
@@ -207,12 +207,12 @@
             </div>
             <div class="text-right">
               <div class="text-sm text-white font-medium">
-                {{ formatNumber(planUsage.requests.current) }} / {{ planUsage.requests.limit === Infinity ? '∞' : formatNumber(planUsage.requests.limit) }}
+                {{ formatNumber(planUsage.requests.current) }} / {{ planUsage.requests.limit === Infinity || planUsage.requests.limit == null ? '∞' : formatNumber(planUsage.requests.limit) }}
               </div>
               <div class="text-xs text-gray-500">requests this month</div>
             </div>
           </div>
-          <div v-if="planUsage.requests.limit !== Infinity" class="mt-3">
+          <div v-if="planUsage.requests.limit !== Infinity && planUsage.requests.limit > 0" class="mt-3">
             <div class="w-full bg-gray-500/10 rounded-full h-1.5 overflow-hidden">
               <div
                 :class="[

@@ -11,7 +11,7 @@
       
       <!-- Area fill -->
       <path
-        v-if="showArea"
+        v-if="showArea && areaPath"
         :d="areaPath"
         :fill="`url(#${gradientId})`"
         class="transition-all duration-500"
@@ -19,6 +19,7 @@
       
       <!-- Line -->
       <path
+        v-if="linePath"
         :d="linePath"
         fill="none"
         :stroke="color"
@@ -76,18 +77,20 @@ const gradientId = `sparkline-gradient-${Math.random().toString(36).slice(2)}`
 const hoveredIndex = ref<number | null>(null)
 
 const points = computed(() => {
-  if (props.data.length === 0) return []
+  // Filter out invalid values (null, undefined, NaN)
+  const validData = props.data.filter(v => v != null && !isNaN(v))
+  if (validData.length === 0) return []
   
-  const max = Math.max(...props.data, 1)
-  const min = Math.min(...props.data, 0)
+  const max = Math.max(...validData, 1)
+  const min = Math.min(...validData, 0)
   const range = max - min || 1
   
   const padding = props.strokeWidth + props.dotRadius
   const usableWidth = props.width - padding * 2
   const usableHeight = props.height - padding * 2
   
-  return props.data.map((val, i) => ({
-    x: padding + (i / Math.max(props.data.length - 1, 1)) * usableWidth,
+  return validData.map((val, i) => ({
+    x: padding + (i / Math.max(validData.length - 1, 1)) * usableWidth,
     y: padding + (1 - (val - min) / range) * usableHeight,
   }))
 })
