@@ -94,6 +94,35 @@ export class CreateSponsorshipDto {
   @IsString({ each: true })
   @IsOptional()
   allowedIpRanges?: string[];
+
+  // ====================================
+  // CLAIMABLE SPONSORSHIPS
+  // ====================================
+
+  // Claim type: how this sponsorship can be claimed
+  @IsString()
+  @IsOptional()
+  @IsIn(['targeted', 'single_link', 'multi_link', 'code'])
+  claimType?: 'targeted' | 'single_link' | 'multi_link' | 'code';
+
+  // Custom claim code (for 'code' type, auto-generated if not provided)
+  @IsString()
+  @IsOptional()
+  @MaxLength(50)
+  claimCode?: string;
+
+  // Maximum number of claims (required for 'multi_link' type)
+  @IsNumber()
+  @IsOptional()
+  @IsPositive()
+  @Min(1)
+  maxClaims?: number;
+
+  // Per-claim budget (optional for 'multi_link', defaults to spendCapUsd / maxClaims)
+  @IsNumber()
+  @IsOptional()
+  @IsPositive()
+  perClaimBudgetUsd?: number;
 }
 
 export class UpdateSponsorshipDto {

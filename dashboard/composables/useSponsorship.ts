@@ -241,6 +241,11 @@ export const useSponsorship = () => {
     expiresAt?: string
     ipRestrictionMode?: 'inherit' | 'custom' | 'none'
     allowedIpRanges?: string[]
+    // Claimable sponsorship fields
+    claimType?: 'targeted' | 'single_link' | 'multi_link' | 'code'
+    claimCode?: string
+    maxClaims?: number
+    perClaimBudgetUsd?: number
   }) => {
     try {
       const data = await api('/sponsorships', {
@@ -248,7 +253,16 @@ export const useSponsorship = () => {
         body: payload,
       })
       sponsorships.value.unshift(data.sponsorship)
-      toast.success('Sponsorship created')
+      
+      // Show different message based on claim type
+      if (data.claimUrl) {
+        toast.success('Sponsorship created! Share the claim link.')
+      } else if (data.claimCode) {
+        toast.success('Sponsorship created! Share the claim code.')
+      } else {
+        toast.success('Sponsorship created')
+      }
+      
       return data
     } catch (error: any) {
       toast.error(error.message || 'Failed to create sponsorship')

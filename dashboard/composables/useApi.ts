@@ -8,7 +8,8 @@ export const useApi = () => {
       ...options.headers,
     }
 
-    if (token.value) {
+    // Only add auth header if not explicitly disabled and token exists
+    if (token.value && !options.noAuth) {
       headers.Authorization = `Bearer ${token.value}`
     }
 

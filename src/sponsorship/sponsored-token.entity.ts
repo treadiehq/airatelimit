@@ -32,6 +32,11 @@ export class SponsoredToken {
   @Index()
   sponsorshipId: string;
 
+  // Recipient organization (for claimable sponsorships where multiple orgs can claim)
+  @Column({ nullable: true })
+  @Index()
+  recipientOrgId: string;
+
   // Token hash (bcrypt) for secure comparison
   @Column({ unique: true })
   @Index()

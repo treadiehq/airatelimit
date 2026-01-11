@@ -16,6 +16,7 @@ import { SponsoredController } from './sponsored.controller';
 import { PoolService } from './pool.service';
 import { PoolController } from './pool.controller';
 import { PublicSponsorshipController } from './public-sponsorship.controller';
+import { ClaimController } from './claim.controller';
 
 import { CommonModule } from '../common/common.module';
 import { User } from '../users/user.entity';
@@ -47,7 +48,7 @@ import { EmailModule } from '../email/email.module';
     UsersModule,
     EmailModule,
   ],
-  controllers: [SponsorshipController, SponsoredController, PoolController, PublicSponsorshipController],
+  controllers: [SponsorshipController, SponsoredController, PoolController, PublicSponsorshipController, ClaimController],
   providers: [SponsorshipService, PoolService],
   exports: [SponsorshipService, PoolService],
 })

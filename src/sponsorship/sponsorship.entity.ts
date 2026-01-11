@@ -16,6 +16,7 @@ import { SponsorshipUsage } from './sponsorship-usage.entity';
 
 export type SponsorshipStatus = 'pending' | 'active' | 'paused' | 'revoked' | 'exhausted' | 'expired';
 export type BillingPeriod = 'one_time' | 'monthly';
+export type ClaimType = 'targeted' | 'single_link' | 'multi_link' | 'code';
 
 /**
  * Sponsorship Entity
@@ -69,6 +70,38 @@ export class Sponsorship {
   @Column({ nullable: true })
   @Index()
   targetGitHubUsername: string;
+
+  // ====================================
+  // CLAIMABLE SPONSORSHIPS
+  // ====================================
+
+  // Claim type: how this sponsorship can be claimed
+  // 'targeted' = traditional (email/GitHub), 'single_link' = one-time link,
+  // 'multi_link' = multiple claims from same link, 'code' = claim code
+  @Column({ type: 'varchar', length: 20, default: 'targeted' })
+  claimType: ClaimType;
+
+  // Unique claim token for link-based claims (single_link, multi_link)
+  @Column({ nullable: true, unique: true })
+  @Index()
+  claimToken: string;
+
+  // User-friendly claim code (e.g., HACK2026-ABCD-1234)
+  @Column({ nullable: true, unique: true })
+  @Index()
+  claimCode: string;
+
+  // Maximum number of claims allowed (null = 1 for single, >1 for multi)
+  @Column({ nullable: true })
+  maxClaims: number;
+
+  // Current number of successful claims
+  @Column({ default: 0 })
+  currentClaims: number;
+
+  // Per-claim budget (for multi_link: total budget / maxClaims or explicit per-claim amount)
+  @Column({ type: 'decimal', precision: 16, scale: 8, nullable: true })
+  perClaimBudgetUsd: number;
 
   // Anonymous sponsor info (for public badge sponsorships)
   @Column({ nullable: true })

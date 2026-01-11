@@ -148,6 +148,7 @@ export class SponsorshipController {
     );
 
     const isPending = result.sponsorship.status === 'pending';
+    const isClaimable = result.sponsorship.claimType !== 'targeted';
 
     return {
       sponsorship: this.formatSponsorship(result.sponsorship),
@@ -157,6 +158,12 @@ export class SponsorshipController {
         : null,
       pendingMessage: isPending 
         ? 'Sponsorship created. The recipient will need to accept it before they can use it.'
+        : null,
+      // Claimable sponsorship info
+      claimUrl: result.claimUrl,
+      claimCode: result.claimCode,
+      claimMessage: isClaimable
+        ? `Share this ${result.claimUrl ? 'link' : 'code'} with recipients to let them claim this sponsorship.`
         : null,
     };
   }
@@ -363,6 +370,14 @@ export class SponsorshipController {
       recipientOrgName: s.recipientOrg?.name,
       recipientEmail: s.recipientEmail,
       targetGitHubUsername: s.targetGitHubUsername,
+
+      // Claimable sponsorship info
+      claimType: s.claimType || 'targeted',
+      claimToken: s.claimToken,
+      claimCode: s.claimCode,
+      maxClaims: s.maxClaims,
+      currentClaims: s.currentClaims || 0,
+      perClaimBudgetUsd: s.perClaimBudgetUsd ? Number(s.perClaimBudgetUsd) : null,
 
       // Timestamps
       createdAt: s.createdAt,

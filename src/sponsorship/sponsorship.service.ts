@@ -11,7 +11,7 @@ import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 
 import { SponsorKey, SponsorKeyProvider } from './sponsor-key.entity';
-import { Sponsorship, SponsorshipStatus } from './sponsorship.entity';
+import { Sponsorship, SponsorshipStatus, ClaimType } from './sponsorship.entity';
 import { SponsoredToken } from './sponsored-token.entity';
 import { SponsorshipUsage } from './sponsorship-usage.entity';
 import { SponsorshipPool } from './sponsorship-pool.entity';
@@ -31,8 +31,25 @@ import {
 // Token prefixes
 const SPONSORED_TOKEN_PREFIX = 'spt_live_';
 const POOL_TOKEN_PREFIX = 'spp_live_';
+const CLAIM_TOKEN_PREFIX = 'clm_';
 const TOKEN_BYTES = 24; // 48 hex chars
 const BCRYPT_ROUNDS = 10;
+
+// Generate a unique claim token
+function generateClaimToken(): string {
+  return CLAIM_TOKEN_PREFIX + crypto.randomBytes(16).toString('hex');
+}
+
+// Generate a user-friendly claim code (e.g., ABCD-1234-EFGH)
+function generateClaimCode(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No confusing chars (0, O, I, 1)
+  let code = '';
+  for (let i = 0; i < 12; i++) {
+    if (i > 0 && i % 4 === 0) code += '-';
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
 
 export interface SponsorshipBudgetCheck {
   allowed: boolean;
@@ -195,7 +212,7 @@ export class SponsorshipService {
   async createSponsorship(
     organizationId: string,
     dto: CreateSponsorshipDto,
-  ): Promise<{ sponsorship: Sponsorship; token: string | null }> {
+  ): Promise<{ sponsorship: Sponsorship; token: string | null; claimUrl?: string; claimCode?: string }> {
     // Validate sponsor key belongs to org
     const sponsorKey = await this.getSponsorKey(dto.sponsorKeyId, organizationId);
 
@@ -204,9 +221,43 @@ export class SponsorshipService {
       throw new BadRequestException('At least one budget (USD or tokens) must be set');
     }
 
+    // Determine claim type (default to 'targeted' for backward compatibility)
+    const claimType = dto.claimType || 'targeted';
+
+    // Validate multi_link has maxClaims
+    if (claimType === 'multi_link' && !dto.maxClaims) {
+      throw new BadRequestException('maxClaims is required for multi_link claim type');
+    }
+
     // If targeting by email or GitHub username (no immediate recipient), use pending status
     const hasPendingRecipient = dto.recipientEmail || dto.targetGitHubUsername;
     
+    // For claimable types, status is 'active' (ready to be claimed)
+    const isClaimable = claimType !== 'targeted';
+    
+    // Generate claim token/code based on type
+    let claimToken: string | null = null;
+    let claimCode: string | null = null;
+    
+    if (claimType === 'single_link' || claimType === 'multi_link') {
+      claimToken = generateClaimToken();
+    }
+    
+    if (claimType === 'code') {
+      claimCode = dto.claimCode?.toUpperCase() || generateClaimCode();
+      // Verify code is unique
+      const existing = await this.sponsorshipRepository.findOne({ where: { claimCode } });
+      if (existing) {
+        throw new BadRequestException('This claim code is already in use. Please choose a different one.');
+      }
+    }
+
+    // Calculate per-claim budget for multi_link if not explicitly set
+    let perClaimBudgetUsd = dto.perClaimBudgetUsd;
+    if (claimType === 'multi_link' && dto.spendCapUsd && dto.maxClaims && !perClaimBudgetUsd) {
+      perClaimBudgetUsd = dto.spendCapUsd / dto.maxClaims;
+    }
+
     const sponsorship = this.sponsorshipRepository.create({
       sponsorKeyId: sponsorKey.id,
       sponsorOrgId: organizationId,
@@ -226,19 +277,26 @@ export class SponsorshipService {
       // IP Restrictions
       ipRestrictionMode: dto.ipRestrictionMode || 'inherit',
       allowedIpRanges: dto.allowedIpRanges || null,
-      // Pending if targeting someone who needs to accept, active otherwise
-      status: hasPendingRecipient ? 'pending' : 'active',
+      // Claimable sponsorships
+      claimType,
+      claimToken,
+      claimCode,
+      maxClaims: claimType === 'multi_link' ? dto.maxClaims : (claimType === 'single_link' || claimType === 'code' ? 1 : null),
+      currentClaims: 0,
+      perClaimBudgetUsd,
+      // Status: claimable types are 'active', targeted with recipient are 'pending'
+      status: isClaimable ? 'active' : (hasPendingRecipient ? 'pending' : 'active'),
     });
 
     await this.sponsorshipRepository.save(sponsorship);
 
-    // Only generate token immediately if not pending (direct sponsorship)
+    // Only generate token immediately if not pending and not claimable (direct sponsorship)
     let tokenResult: { token: string } | null = null;
-    if (!hasPendingRecipient) {
+    if (!hasPendingRecipient && !isClaimable) {
       tokenResult = await this.generateSponsoredToken(sponsorship.id);
     }
 
-    this.logger.log(`Sponsorship created: ${sponsorship.id} by org ${organizationId} (status: ${sponsorship.status})`);
+    this.logger.log(`Sponsorship created: ${sponsorship.id} by org ${organizationId} (type: ${claimType}, status: ${sponsorship.status})`);
 
     // Send email notification if targeting a GitHub user with an email
     if (dto.targetGitHubUsername && dto.recipientEmail) {
@@ -261,7 +319,19 @@ export class SponsorshipService {
       });
     }
 
-    return { sponsorship, token: tokenResult?.token || null };
+    // Build claim URL for link-based claims
+    let claimUrl: string | undefined;
+    if (claimToken) {
+      const dashboardUrl = this.configService.get('CORS_ORIGIN') || 'http://localhost:3001';
+      claimUrl = `${dashboardUrl}/claim/${claimToken}`;
+    }
+
+    return { 
+      sponsorship, 
+      token: tokenResult?.token || null,
+      claimUrl,
+      claimCode: sponsorship.claimCode,
+    };
   }
 
   /**
@@ -342,6 +412,219 @@ export class SponsorshipService {
     const tokenResult = await this.generateSponsoredToken(sponsorship.id);
 
     this.logger.log(`Accepted sponsorship ${sponsorshipId} for org ${organizationId}`);
+
+    return { sponsorship, token: tokenResult.token };
+  }
+
+  // =====================================================
+  // CLAIMABLE SPONSORSHIPS
+  // =====================================================
+
+  /**
+   * Get a claimable sponsorship by token (for public claim page)
+   */
+  async getClaimableSponsorshipByToken(claimToken: string): Promise<{
+    id: string;
+    name: string;
+    description?: string;
+    claimType: ClaimType;
+    budgetUsd?: number;
+    perClaimBudgetUsd?: number;
+    maxClaims?: number;
+    currentClaims: number;
+    sponsorName?: string;
+    expiresAt?: Date;
+    isAvailable: boolean;
+    unavailableReason?: string;
+  }> {
+    const sponsorship = await this.sponsorshipRepository.findOne({
+      where: { claimToken },
+      relations: ['sponsorOrg'],
+    });
+
+    if (!sponsorship) {
+      throw new NotFoundException('Sponsorship not found');
+    }
+
+    // Check if claimable
+    let isAvailable = true;
+    let unavailableReason: string | undefined;
+
+    if (sponsorship.status !== 'active') {
+      isAvailable = false;
+      unavailableReason = `This sponsorship is ${sponsorship.status}`;
+    } else if (sponsorship.maxClaims && sponsorship.currentClaims >= sponsorship.maxClaims) {
+      isAvailable = false;
+      unavailableReason = 'All available claims have been used';
+    } else if (sponsorship.expiresAt && new Date(sponsorship.expiresAt) < new Date()) {
+      isAvailable = false;
+      unavailableReason = 'This sponsorship has expired';
+    }
+
+    return {
+      id: sponsorship.id,
+      name: sponsorship.name,
+      description: sponsorship.description,
+      claimType: sponsorship.claimType,
+      budgetUsd: sponsorship.spendCapUsd ? Number(sponsorship.spendCapUsd) : undefined,
+      perClaimBudgetUsd: sponsorship.perClaimBudgetUsd ? Number(sponsorship.perClaimBudgetUsd) : undefined,
+      maxClaims: sponsorship.maxClaims,
+      currentClaims: sponsorship.currentClaims,
+      sponsorName: sponsorship.sponsorOrg?.name,
+      expiresAt: sponsorship.expiresAt,
+      isAvailable,
+      unavailableReason,
+    };
+  }
+
+  /**
+   * Get a claimable sponsorship by code (for code entry)
+   */
+  async getClaimableSponsorshipByCode(claimCode: string): Promise<{
+    id: string;
+    name: string;
+    description?: string;
+    claimType: ClaimType;
+    budgetUsd?: number;
+    perClaimBudgetUsd?: number;
+    maxClaims?: number;
+    currentClaims: number;
+    sponsorName?: string;
+    expiresAt?: Date;
+    isAvailable: boolean;
+    unavailableReason?: string;
+  }> {
+    const sponsorship = await this.sponsorshipRepository.findOne({
+      where: { claimCode: claimCode.toUpperCase() },
+      relations: ['sponsorOrg'],
+    });
+
+    if (!sponsorship) {
+      throw new NotFoundException('Invalid claim code');
+    }
+
+    // Check if claimable
+    let isAvailable = true;
+    let unavailableReason: string | undefined;
+
+    if (sponsorship.status !== 'active') {
+      isAvailable = false;
+      unavailableReason = `This sponsorship is ${sponsorship.status}`;
+    } else if (sponsorship.maxClaims && sponsorship.currentClaims >= sponsorship.maxClaims) {
+      isAvailable = false;
+      unavailableReason = 'All available claims have been used';
+    } else if (sponsorship.expiresAt && new Date(sponsorship.expiresAt) < new Date()) {
+      isAvailable = false;
+      unavailableReason = 'This sponsorship has expired';
+    }
+
+    return {
+      id: sponsorship.id,
+      name: sponsorship.name,
+      description: sponsorship.description,
+      claimType: sponsorship.claimType,
+      budgetUsd: sponsorship.spendCapUsd ? Number(sponsorship.spendCapUsd) : undefined,
+      perClaimBudgetUsd: sponsorship.perClaimBudgetUsd ? Number(sponsorship.perClaimBudgetUsd) : undefined,
+      maxClaims: sponsorship.maxClaims,
+      currentClaims: sponsorship.currentClaims,
+      sponsorName: sponsorship.sponsorOrg?.name,
+      expiresAt: sponsorship.expiresAt,
+      isAvailable,
+      unavailableReason,
+    };
+  }
+
+  /**
+   * Claim a sponsorship by token
+   */
+  async claimSponsorshipByToken(
+    claimToken: string,
+    organizationId: string,
+  ): Promise<{ sponsorship: Sponsorship; token: string }> {
+    const sponsorship = await this.sponsorshipRepository.findOne({
+      where: { claimToken },
+    });
+
+    if (!sponsorship) {
+      throw new NotFoundException('Sponsorship not found');
+    }
+
+    return this.processClaimableSponsorship(sponsorship, organizationId);
+  }
+
+  /**
+   * Claim a sponsorship by code
+   */
+  async claimSponsorshipByCode(
+    claimCode: string,
+    organizationId: string,
+  ): Promise<{ sponsorship: Sponsorship; token: string }> {
+    const sponsorship = await this.sponsorshipRepository.findOne({
+      where: { claimCode: claimCode.toUpperCase() },
+    });
+
+    if (!sponsorship) {
+      throw new NotFoundException('Invalid claim code');
+    }
+
+    return this.processClaimableSponsorship(sponsorship, organizationId);
+  }
+
+  /**
+   * Process a claimable sponsorship (common logic for token and code claims)
+   */
+  private async processClaimableSponsorship(
+    sponsorship: Sponsorship,
+    organizationId: string,
+  ): Promise<{ sponsorship: Sponsorship; token: string }> {
+    // Check status
+    if (sponsorship.status !== 'active') {
+      throw new BadRequestException(`This sponsorship is ${sponsorship.status}`);
+    }
+
+    // Check if already claimed by this org
+    const existingToken = await this.sponsoredTokenRepository.findOne({
+      where: { 
+        sponsorshipId: sponsorship.id,
+        recipientOrgId: organizationId,
+        isActive: true,
+      },
+    });
+    if (existingToken) {
+      throw new BadRequestException('You have already claimed this sponsorship');
+    }
+
+    // Check claim limits
+    if (sponsorship.maxClaims && sponsorship.currentClaims >= sponsorship.maxClaims) {
+      throw new BadRequestException('All available claims have been used');
+    }
+
+    // Check expiry
+    if (sponsorship.expiresAt && new Date(sponsorship.expiresAt) < new Date()) {
+      throw new BadRequestException('This sponsorship has expired');
+    }
+
+    // For single_link or code, mark as exhausted after claim
+    if (sponsorship.claimType === 'single_link' || sponsorship.claimType === 'code') {
+      sponsorship.currentClaims = 1;
+      if (sponsorship.claimType === 'single_link') {
+        sponsorship.status = 'exhausted'; // Single-use links become exhausted
+      }
+    } else if (sponsorship.claimType === 'multi_link') {
+      sponsorship.currentClaims += 1;
+      // Check if all claims used
+      if (sponsorship.maxClaims && sponsorship.currentClaims >= sponsorship.maxClaims) {
+        sponsorship.status = 'exhausted';
+      }
+    }
+
+    await this.sponsorshipRepository.save(sponsorship);
+
+    // Generate sponsored token for the claimer
+    // For multi_link, we create a token with the per-claim budget
+    const tokenResult = await this.generateSponsoredToken(sponsorship.id, organizationId);
+
+    this.logger.log(`Sponsorship ${sponsorship.id} claimed by org ${organizationId} (type: ${sponsorship.claimType}, claims: ${sponsorship.currentClaims}/${sponsorship.maxClaims || 1})`);
 
     return { sponsorship, token: tokenResult.token };
   }
@@ -545,6 +828,7 @@ export class SponsorshipService {
    */
   async generateSponsoredToken(
     sponsorshipId: string,
+    recipientOrgId?: string,
   ): Promise<{ tokenId: string; token: string; tokenHint: string }> {
     // Generate random token
     const rawToken = SPONSORED_TOKEN_PREFIX + crypto.randomBytes(TOKEN_BYTES).toString('hex');
@@ -556,11 +840,12 @@ export class SponsorshipService {
       tokenHash,
       tokenHint,
       isActive: true,
+      recipientOrgId, // Track which org claimed this token (for claimable sponsorships)
     });
 
     await this.sponsoredTokenRepository.save(token);
 
-    this.logger.log(`Sponsored token generated: ${token.id} for sponsorship ${sponsorshipId}`);
+    this.logger.log(`Sponsored token generated: ${token.id} for sponsorship ${sponsorshipId}${recipientOrgId ? ` (claimed by org ${recipientOrgId})` : ''}`);
 
     return { tokenId: token.id, token: rawToken, tokenHint };
   }

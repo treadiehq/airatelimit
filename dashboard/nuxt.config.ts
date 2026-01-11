@@ -65,6 +65,7 @@ export default defineNuxtConfig({
     // Public pages that need SEO - render server-side
     '/sponsor/**': { ssr: true },
     '/manage-sponsorship/**': { ssr: true },
+    '/claim/**': { ssr: true },
     // All other pages - client-side only (faster, no SSR overhead)
     '/': { ssr: false },
     '/login': { ssr: false },

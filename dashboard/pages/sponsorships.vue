@@ -10,6 +10,7 @@ const { features } = useFeatures()
 const sponsorship = useSponsorship()
 const { copy } = useClipboard()
 const team = useTeam()
+const api = useApi()
 
 // =====================================================
 // TABS
@@ -60,6 +61,19 @@ const topUpAmount = ref(50)
 const showUnlinkGitHubConfirm = ref(false)
 const newToken = ref('')
 
+// Claim by code
+const claimCodeInput = ref('')
+const claimingByCode = ref(false)
+const claimCodeError = ref('')
+
+// Base URL for shareable links (SSR-safe)
+const baseUrl = computed(() => {
+  if (import.meta.client) {
+    return window.location.origin
+  }
+  return ''
+})
+
 const newKey = ref({
   name: '',
   provider: 'openai' as 'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter',
@@ -82,6 +96,11 @@ const newSponsorship = ref({
   expiresAt: '',
   ipRestrictionMode: 'inherit' as 'inherit' | 'custom' | 'none',
   allowedIpRanges: '' as string, // comma-separated for UI
+  // Claimable sponsorships
+  claimType: 'targeted' as 'targeted' | 'single_link' | 'multi_link' | 'code',
+  claimCode: '' as string, // Custom code for 'code' type
+  maxClaims: 10 as number, // For 'multi_link' type
+  perClaimBudgetUsd: null as number | null, // Optional for 'multi_link'
 })
 
 // Team members available for sponsorship (excluding current user)
@@ -201,6 +220,18 @@ onMounted(async () => {
     useToast().error(`GitHub verification failed: ${githubError}`)
     router.replace({ query: { ...route.query, github_linked: undefined, github_error: undefined } })
   }
+  
+  // Check for claim code in URL
+  const claimCode = route.query.code as string
+  if (claimCode) {
+    // Switch to received tab and pre-fill the code
+    activeTab.value = 'received'
+    claimCodeInput.value = claimCode.toUpperCase()
+    // Clean up URL
+    router.replace({ query: { ...route.query, code: undefined } })
+    // Auto-claim if code is present
+    await handleClaimByCode()
+  }
 })
 
 // =====================================================
@@ -226,6 +257,10 @@ const handleCreateKey = async () => {
   } catch (error) {}
 }
 
+// State for showing claim link/code after creation
+const showClaimResultModal = ref(false)
+const claimResult = ref<{ url?: string; code?: string; name: string } | null>(null)
+
 const handleCreateSponsorship = async () => {
   try {
     // Parse comma-separated IP ranges
@@ -240,8 +275,13 @@ const handleCreateSponsorship = async () => {
       description: newSponsorship.value.description || undefined,
       spendCapUsd: newSponsorship.value.spendCapUsd,
       billingPeriod: newSponsorship.value.billingPeriod,
-      targetGitHubUsername: newSponsorship.value.targetGitHubUsername || undefined,
-      recipientEmail: newSponsorship.value.recipientEmail || undefined,
+      // Only include targeted fields for targeted type
+      targetGitHubUsername: newSponsorship.value.claimType === 'targeted' 
+        ? (newSponsorship.value.targetGitHubUsername || undefined) 
+        : undefined,
+      recipientEmail: newSponsorship.value.claimType === 'targeted' 
+        ? (newSponsorship.value.recipientEmail || undefined) 
+        : undefined,
       allowedModels: newSponsorship.value.allowedModels.length > 0 
         ? newSponsorship.value.allowedModels 
         : undefined,
@@ -249,12 +289,37 @@ const handleCreateSponsorship = async () => {
       expiresAt: newSponsorship.value.expiresAt || undefined,
       ipRestrictionMode: newSponsorship.value.ipRestrictionMode,
       allowedIpRanges: ipRanges.length > 0 ? ipRanges : undefined,
+      // Claimable sponsorship fields
+      claimType: newSponsorship.value.claimType,
+      claimCode: newSponsorship.value.claimType === 'code' 
+        ? (newSponsorship.value.claimCode || undefined)
+        : undefined,
+      maxClaims: newSponsorship.value.claimType === 'multi_link' 
+        ? newSponsorship.value.maxClaims 
+        : undefined,
+      perClaimBudgetUsd: newSponsorship.value.claimType === 'multi_link' && newSponsorship.value.perClaimBudgetUsd
+        ? newSponsorship.value.perClaimBudgetUsd
+        : undefined,
     })
     
-    newToken.value = result.token
-    showTokenModal.value = true
     showCreateSponsorshipModal.value = false
     
+    // Show appropriate result modal based on claim type
+    if (result.claimUrl || result.claimCode) {
+      // Claimable sponsorship - show claim link/code modal
+      claimResult.value = {
+        url: result.claimUrl,
+        code: result.claimCode,
+        name: result.sponsorship.name,
+      }
+      showClaimResultModal.value = true
+    } else if (result.token) {
+      // Targeted sponsorship with immediate token
+      newToken.value = result.token
+      showTokenModal.value = true
+    }
+    
+    // Reset form
     newSponsorship.value = {
       sponsorKeyId: '',
       name: '',
@@ -269,12 +334,41 @@ const handleCreateSponsorship = async () => {
       expiresAt: '',
       ipRestrictionMode: 'inherit',
       allowedIpRanges: '',
+      claimType: 'targeted',
+      claimCode: '',
+      maxClaims: 10,
+      perClaimBudgetUsd: null,
     }
   } catch (error) {}
 }
 
 const copyToken = (token: string) => {
   copy(token)
+}
+
+const handleClaimByCode = async () => {
+  if (!claimCodeInput.value) return
+  
+  try {
+    claimingByCode.value = true
+    claimCodeError.value = ''
+    
+    const result = await api(`/claim/code/${claimCodeInput.value.trim()}`, {
+      method: 'POST'
+    })
+    
+    // Show the token
+    newToken.value = result.token
+    showTokenModal.value = true
+    
+    // Clear input and refresh
+    claimCodeInput.value = ''
+    await sponsorship.fetchReceivedSponsorships()
+  } catch (error: any) {
+    claimCodeError.value = error.message || 'Failed to claim sponsorship'
+  } finally {
+    claimingByCode.value = false
+  }
 }
 
 const handleRevoke = (s: { id: string; name: string }) => {
@@ -847,6 +941,37 @@ const getStatusClasses = (status: string) => {
          RECEIVED TAB
          ===================================================== -->
     <div v-if="activeTab === 'received'">
+      <!-- Claim Code Entry -->
+      <div class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-4 mb-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-blue-300/10 flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-sm font-medium text-white">Have a claim code?</h3>
+            <p class="text-xs text-gray-400">Enter a sponsorship code to claim AI credits</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              v-model="claimCodeInput"
+              type="text"
+              placeholder="XXXX-XXXX-XXXX"
+              class="w-36 bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-400 uppercase tracking-wider"
+            />
+            <button
+              @click="handleClaimByCode"
+              :disabled="!claimCodeInput || claimingByCode"
+              class="px-4 py-2 bg-blue-300 text-black rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {{ claimingByCode ? 'Claiming...' : 'Claim' }}
+            </button>
+          </div>
+        </div>
+        <div v-if="claimCodeError" class="mt-2 text-xs text-red-400 text-center">{{ claimCodeError }}</div>
+      </div>
+
       <!-- Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-4">
@@ -1366,7 +1491,7 @@ const getStatusClasses = (status: string) => {
                 />
               </div>
               <div>
-                <label class="block text-xs text-gray-400 mb-1">Type</label>
+                <label class="block text-xs text-gray-400 mb-1">Billing</label>
                 <div class="relative">
                   <select
                     v-model="newSponsorship.billingPeriod"
@@ -1382,8 +1507,131 @@ const getStatusClasses = (status: string) => {
               </div>
             </div>
 
-            <!-- Team Member Selection (if team members exist) -->
-            <div v-if="availableTeamMembers.length > 0">
+            <!-- Distribution Type -->
+            <div>
+              <label class="block text-xs text-gray-400 mb-2">Distribution</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  @click="newSponsorship.claimType = 'targeted'"
+                  :class="[
+                    'px-3 py-2 rounded-lg text-xs font-medium transition-all border text-left',
+                    newSponsorship.claimType === 'targeted'
+                      ? 'bg-blue-300/10 border-blue-300/30 text-blue-300'
+                      : 'bg-gray-500/10 border-gray-500/20 text-gray-400 hover:border-gray-500/40'
+                  ]"
+                >
+                  <div class="flex items-center gap-1.5 mb-0.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Targeted
+                  </div>
+                  <p class="text-[10px] text-gray-500">Send to specific person</p>
+                </button>
+                <button
+                  type="button"
+                  @click="newSponsorship.claimType = 'single_link'"
+                  :class="[
+                    'px-3 py-2 rounded-lg text-xs font-medium transition-all border text-left',
+                    newSponsorship.claimType === 'single_link'
+                      ? 'bg-blue-300/10 border-blue-300/30 text-blue-300'
+                      : 'bg-gray-500/10 border-gray-500/20 text-gray-400 hover:border-gray-500/40'
+                  ]"
+                >
+                  <div class="flex items-center gap-1.5 mb-0.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    Single Link
+                  </div>
+                  <p class="text-[10px] text-gray-500">One claim per link</p>
+                </button>
+                <button
+                  type="button"
+                  @click="newSponsorship.claimType = 'multi_link'"
+                  :class="[
+                    'px-3 py-2 rounded-lg text-xs font-medium transition-all border text-left',
+                    newSponsorship.claimType === 'multi_link'
+                      ? 'bg-blue-300/10 border-blue-300/30 text-blue-300'
+                      : 'bg-gray-500/10 border-gray-500/20 text-gray-400 hover:border-gray-500/40'
+                  ]"
+                >
+                  <div class="flex items-center gap-1.5 mb-0.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Multi-Claim
+                  </div>
+                  <p class="text-[10px] text-gray-500">Many can claim (hackathon)</p>
+                </button>
+                <button
+                  type="button"
+                  @click="newSponsorship.claimType = 'code'"
+                  :class="[
+                    'px-3 py-2 rounded-lg text-xs font-medium transition-all border text-left',
+                    newSponsorship.claimType === 'code'
+                      ? 'bg-blue-300/10 border-blue-300/30 text-blue-300'
+                      : 'bg-gray-500/10 border-gray-500/20 text-gray-400 hover:border-gray-500/40'
+                  ]"
+                >
+                  <div class="flex items-center gap-1.5 mb-0.5">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    Claim Code
+                  </div>
+                  <p class="text-[10px] text-gray-500">Enter code to claim</p>
+                </button>
+              </div>
+            </div>
+
+            <!-- Multi-claim options -->
+            <div v-if="newSponsorship.claimType === 'multi_link'" class="space-y-3 bg-gray-500/5 border border-gray-500/10 rounded-lg p-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Max Claims</label>
+                  <input
+                    v-model.number="newSponsorship.maxClaims"
+                    type="number"
+                    min="2"
+                    placeholder="e.g., 50"
+                    class="w-full bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gray-400"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs text-gray-400 mb-1">Per Claim ($)</label>
+                  <input
+                    v-model.number="newSponsorship.perClaimBudgetUsd"
+                    type="number"
+                    min="1"
+                    :placeholder="`Auto: $${(newSponsorship.spendCapUsd / newSponsorship.maxClaims).toFixed(2)}`"
+                    class="w-full bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-400"
+                  />
+                </div>
+              </div>
+              <p class="text-[10px] text-gray-500">
+                Total: ${{ newSponsorship.spendCapUsd }} split among {{ newSponsorship.maxClaims }} claims
+                ({{ newSponsorship.perClaimBudgetUsd || (newSponsorship.spendCapUsd / newSponsorship.maxClaims).toFixed(2) }} each)
+              </p>
+            </div>
+
+            <!-- Claim code options -->
+            <div v-if="newSponsorship.claimType === 'code'" class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-3">
+              <label class="block text-xs text-gray-400 mb-1">
+                Custom Code
+                <span class="text-gray-500">(optional, auto-generated if empty)</span>
+              </label>
+              <input
+                v-model="newSponsorship.claimCode"
+                type="text"
+                placeholder="e.g., HACKATHON2026"
+                class="w-full bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-400 uppercase"
+              />
+            </div>
+
+            <!-- Team Member Selection (if team members exist and targeted) -->
+            <div v-if="availableTeamMembers.length > 0 && newSponsorship.claimType === 'targeted'">
               <label class="block text-xs text-gray-400 mb-1">
                 Send to Team Member
                 <span class="text-gray-500">(optional)</span>
@@ -1412,8 +1660,8 @@ const getStatusClasses = (status: string) => {
               </p>
             </div>
 
-            <!-- Target GitHub username (only shown if no team member selected) -->
-            <div v-if="!newSponsorship.selectedMemberId">
+            <!-- Target GitHub username (only shown if no team member selected and targeted) -->
+            <div v-if="!newSponsorship.selectedMemberId && newSponsorship.claimType === 'targeted'">
               <label class="block text-xs text-gray-400 mb-1">
                 Target GitHub Username 
                 <span class="text-gray-500">(optional)</span>
@@ -1578,6 +1826,93 @@ const getStatusClasses = (status: string) => {
           </div>
 
           <button @click="showTokenModal = false" class="w-full px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors">
+            Done
+          </button>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Claim Link/Code Result Modal -->
+    <Teleport to="body">
+      <div v-if="showClaimResultModal && claimResult" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" @click.self="showClaimResultModal = false">
+        <div class="bg-black rounded-xl p-6 w-full max-w-lg border border-gray-500/20">
+          <div class="flex items-center gap-2 mb-4">
+            <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 class="text-sm font-semibold text-white">Sponsorship Created!</h3>
+          </div>
+
+          <div class="bg-blue-300/10 border border-blue-300/20 rounded-lg p-4 mb-4">
+            <div class="flex items-start gap-2">
+              <svg class="w-4 h-4 text-blue-300 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div class="text-xs text-blue-300">
+                Share this {{ claimResult.url ? 'link' : 'code' }} with recipients to let them claim <strong>{{ claimResult.name }}</strong>.
+              </div>
+            </div>
+          </div>
+
+          <!-- Claim URL -->
+          <div v-if="claimResult.url" class="mb-4">
+            <label class="block text-xs text-gray-400 mb-1">Claim Link</label>
+            <div class="flex gap-2">
+              <input
+                :value="claimResult.url"
+                readonly
+                class="flex-1 bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2 text-xs text-gray-300 font-mono"
+              />
+              <button
+                @click="copy(claimResult.url!)"
+                class="px-3 py-2 bg-gray-500/20 hover:bg-gray-500/30 rounded-lg transition-colors"
+              >
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Claim Code -->
+          <div v-if="claimResult.code" class="mb-4">
+            <label class="block text-xs text-gray-400 mb-1">Claim Code</label>
+            <div class="flex gap-2 items-center">
+              <code class="flex-1 bg-gray-500/10 border border-gray-500/20 rounded-lg px-4 py-3 text-lg text-blue-300 font-mono font-bold tracking-wider text-center">
+                {{ claimResult.code }}
+              </code>
+              <button
+                @click="copy(claimResult.code!)"
+                class="px-3 py-3 bg-gray-500/20 hover:bg-gray-500/30 rounded-lg transition-colors"
+              >
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
+            <!-- Shareable link with code -->
+            <div class="mt-3 pt-3 border-t border-gray-500/10">
+              <label class="block text-xs text-gray-400 mb-1">Or share this link</label>
+              <div class="flex gap-2">
+                <input
+                  :value="`${baseUrl}/sponsorships?code=${claimResult.code}`"
+                  readonly
+                  class="flex-1 bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2 text-xs text-gray-300 font-mono"
+                />
+                <button
+                  @click="copy(`${baseUrl}/sponsorships?code=${claimResult.code}`)"
+                  class="px-3 py-2 bg-gray-500/20 hover:bg-gray-500/30 rounded-lg transition-colors"
+                >
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              </div>
+              <p class="text-[10px] text-gray-500 mt-1">Recipients click this link, sign in, and claim automatically.</p>
+            </div>
+          </div>
+
+          <button @click="showClaimResultModal = false" class="w-full px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors">
             Done
           </button>
         </div>
