@@ -626,29 +626,30 @@ export class TransparentProxyController {
       const project = await this.projectsService.findByProjectKey(projectKey);
 
       // ====================================
-      // IP RESTRICTIONS: Enterprise security feature
+      // IP RESTRICTIONS: Enterprise security feature (DISABLED FOR NOW)
       // Block requests from IPs not in allowed ranges
+      // TODO: Re-enable when product-market fit is clearer
       // ====================================
-      if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
-        const clientIp = this.getClientIp(req);
-        
-        if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
-          console.warn('IP restriction: Request blocked', {
-            projectId: project.id,
-            clientIp,
-            allowedRanges: project.allowedIpRanges,
-          });
-          throw new ForbiddenException({
-            error: 'ip_not_allowed',
-            message: 'Access denied. Your IP address is not in the allowed range.',
-          });
-        }
-        
-        console.log('IP restriction: Validated', {
-          projectId: project.id,
-          clientIp,
-        });
-      }
+      // if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
+      //   const clientIp = this.getClientIp(req);
+      //   
+      //   if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
+      //     console.warn('IP restriction: Request blocked', {
+      //       projectId: project.id,
+      //       clientIp,
+      //       allowedRanges: project.allowedIpRanges,
+      //     });
+      //     throw new ForbiddenException({
+      //       error: 'ip_not_allowed',
+      //       message: 'Access denied. Your IP address is not in the allowed range.',
+      //     });
+      //   }
+      //   
+      //   console.log('IP restriction: Validated', {
+      //     projectId: project.id,
+      //     clientIp,
+      //   });
+      // }
 
       // ====================================
       // PUBLIC MODE: Origin validation for frontend-safe endpoints
@@ -1272,21 +1273,21 @@ export class TransparentProxyController {
       const project = await this.projectsService.findByProjectKey(projectKey);
 
       // ====================================
-      // IP RESTRICTIONS: Enterprise security feature
+      // IP RESTRICTIONS: Enterprise security feature (DISABLED FOR NOW)
       // ====================================
-      if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
-        const clientIp = this.getClientIp(req);
-        if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
-          console.warn('IP restriction: Request blocked (images)', {
-            projectId: project.id,
-            clientIp,
-          });
-          throw new ForbiddenException({
-            error: 'ip_not_allowed',
-            message: 'Access denied. Your IP address is not in the allowed range.',
-          });
-        }
-      }
+      // if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
+      //   const clientIp = this.getClientIp(req);
+      //   if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
+      //     console.warn('IP restriction: Request blocked (images)', {
+      //       projectId: project.id,
+      //       clientIp,
+      //     });
+      //     throw new ForbiddenException({
+      //       error: 'ip_not_allowed',
+      //       message: 'Access denied. Your IP address is not in the allowed range.',
+      //     });
+      //   }
+      // }
 
       // ====================================
       // RESOLVE API KEY: Stored keys or pass-through
@@ -1527,21 +1528,21 @@ export class TransparentProxyController {
       const project = await this.projectsService.findByProjectKey(projectKey);
 
       // ====================================
-      // IP RESTRICTIONS: Enterprise security feature
+      // IP RESTRICTIONS: Enterprise security feature (DISABLED FOR NOW)
       // ====================================
-      if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
-        const clientIp = this.getClientIp(req);
-        if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
-          console.warn('IP restriction: Request blocked (embeddings)', {
-            projectId: project.id,
-            clientIp,
-          });
-          throw new ForbiddenException({
-            error: 'ip_not_allowed',
-            message: 'Access denied. Your IP address is not in the allowed range.',
-          });
-        }
-      }
+      // if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
+      //   const clientIp = this.getClientIp(req);
+      //   if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
+      //     console.warn('IP restriction: Request blocked (embeddings)', {
+      //       projectId: project.id,
+      //       clientIp,
+      //     });
+      //     throw new ForbiddenException({
+      //       error: 'ip_not_allowed',
+      //       message: 'Access denied. Your IP address is not in the allowed range.',
+      //     });
+      //   }
+      // }
 
       // ====================================
       // RESOLVE API KEY: Stored keys or pass-through
@@ -1789,21 +1790,21 @@ export class TransparentProxyController {
       const project = await this.projectsService.findByProjectKey(projectKey);
 
       // ====================================
-      // IP RESTRICTIONS: Enterprise security feature
+      // IP RESTRICTIONS: Enterprise security feature (DISABLED FOR NOW)
       // ====================================
-      if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
-        const clientIp = this.getClientIp(req);
-        if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
-          console.warn('IP restriction: Request blocked (audio)', {
-            projectId: project.id,
-            clientIp,
-          });
-          throw new ForbiddenException({
-            error: 'ip_not_allowed',
-            message: 'Access denied. Your IP address is not in the allowed range.',
-          });
-        }
-      }
+      // if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
+      //   const clientIp = this.getClientIp(req);
+      //   if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
+      //     console.warn('IP restriction: Request blocked (audio)', {
+      //       projectId: project.id,
+      //       clientIp,
+      //     });
+      //     throw new ForbiddenException({
+      //       error: 'ip_not_allowed',
+      //       message: 'Access denied. Your IP address is not in the allowed range.',
+      //     });
+      //   }
+      // }
 
       // ====================================
       // RESOLVE API KEY: Stored keys or pass-through

@@ -303,9 +303,10 @@ export class Project {
   allowedOrigins: string[];
 
   // ====================================
-  // IP RESTRICTIONS CONFIGURATION
+  // IP RESTRICTIONS CONFIGURATION (DISABLED FOR NOW)
   // ====================================
   // Enterprise security feature: restrict API access to specific IP ranges
+  // TODO: Re-enable when product-market fit is clearer
 
   // Enable IP restrictions (blocks requests from IPs not in allowedIpRanges)
   @Column({ default: false })
@@ -314,6 +315,8 @@ export class Project {
   // Allowed IP addresses or CIDR ranges (e.g., ["10.0.0.0/8", "192.168.1.100", "2001:db8::/32"])
   @Column({ type: 'jsonb', nullable: true })
   allowedIpRanges: string[];
+
+  // Note: IP validation logic is commented out in transparent-proxy.controller.ts
 
   @CreateDateColumn()
   createdAt: Date;

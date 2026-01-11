@@ -119,6 +119,7 @@
                       <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
                     </svg>
                   </button>
+                  <!-- IP Restrictions tab hidden for now - feature disabled
                   <button
                     @click="configTab = 'ip-restrictions'"
                     :class="configTab === 'ip-restrictions' ? 'border-blue-300 text-blue-300' : 'border-transparent text-gray-400 hover:text-gray-400 hover:border-gray-300'"
@@ -129,6 +130,7 @@
                       <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
                     </svg>
                   </button>
+                  -->
                 </nav>
               </div>
 
@@ -255,6 +257,7 @@
                 />
               </div>
 
+              <!-- IP Restrictions tab hidden for now - feature disabled
               <IpRestrictionsTab
                 v-if="hasIpRestrictions"
                 v-show="configTab === 'ip-restrictions'"
@@ -270,6 +273,7 @@
                   description="Restrict API access to specific IP addresses or CIDR ranges. Enterprise security feature for trusted network access control."
                 />
               </div>
+              -->
             </div>
           </div>
         </div>
