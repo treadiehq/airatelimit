@@ -54,6 +54,9 @@ const showRevokeSponsorshipConfirm = ref(false)
 const sponsorshipToRevoke = ref<{ id: string; name: string } | null>(null)
 const showDeleteSponsorshipConfirm = ref(false)
 const sponsorshipToDelete = ref<{ id: string; name: string } | null>(null)
+const showTopUpModal = ref(false)
+const sponsorshipToTopUp = ref<{ id: string; name: string; currentCap: number; spent: number } | null>(null)
+const topUpAmount = ref(50)
 const showUnlinkGitHubConfirm = ref(false)
 const newToken = ref('')
 
@@ -295,6 +298,32 @@ const cancelRevokeSponsorship = () => {
 const handleDelete = (s: { id: string; name: string }) => {
   sponsorshipToDelete.value = s
   showDeleteSponsorshipConfirm.value = true
+}
+
+const handleTopUp = (s: { id: string; name: string; spendCapUsd: number; spentUsd: number }) => {
+  sponsorshipToTopUp.value = {
+    id: s.id,
+    name: s.name,
+    currentCap: s.spendCapUsd || 0,
+    spent: s.spentUsd || 0
+  }
+  topUpAmount.value = 50 // Default top-up amount
+  showTopUpModal.value = true
+}
+
+const confirmTopUp = async () => {
+  if (sponsorshipToTopUp.value && topUpAmount.value > 0) {
+    const newCap = sponsorshipToTopUp.value.currentCap + topUpAmount.value
+    await sponsorship.updateSponsorship(sponsorshipToTopUp.value.id, { spendCapUsd: newCap })
+    await sponsorship.fetchSponsorships()
+  }
+  showTopUpModal.value = false
+  sponsorshipToTopUp.value = null
+}
+
+const cancelTopUp = () => {
+  showTopUpModal.value = false
+  sponsorshipToTopUp.value = null
 }
 
 const confirmDeleteSponsorship = async () => {
@@ -764,6 +793,13 @@ const getStatusClasses = (status: string) => {
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
+                </button>
+                <button
+                  v-if="s.status === 'active' && s.spendCapUsd"
+                  @click="handleTopUp({ id: s.id, name: s.name, spendCapUsd: s.spendCapUsd, spentUsd: s.spentUsd })"
+                  class="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Top Up
                 </button>
                 <button
                   v-if="s.status === 'active'"
@@ -1653,12 +1689,97 @@ const getStatusClasses = (status: string) => {
       </div>
     </Teleport>
 
+    <!-- Top Up Sponsorship Modal -->
+    <Teleport to="body">
+      <div v-if="showTopUpModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" @click.self="cancelTopUp">
+        <div class="bg-black rounded-xl p-6 w-full max-w-md border border-gray-500/20">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-blue-300/10 flex items-center justify-center">
+              <svg class="w-5 h-5 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-white">Top Up Sponsorship</h3>
+              <p class="text-xs text-gray-400">Increase the spending cap for {{ sponsorshipToTopUp?.name }}</p>
+            </div>
+          </div>
+          
+          <!-- Current Status -->
+          <div class="bg-gray-500/10 rounded-lg p-4 mb-4">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <div class="text-gray-400 text-xs mb-1">Current Cap</div>
+                <div class="text-white font-medium">${{ sponsorshipToTopUp?.currentCap?.toFixed(2) }}</div>
+              </div>
+              <div>
+                <div class="text-gray-400 text-xs mb-1">Already Spent</div>
+                <div class="text-white font-medium">${{ sponsorshipToTopUp?.spent?.toFixed(2) }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top Up Amount -->
+          <div class="mb-4">
+            <label class="block text-xs text-gray-400 mb-2">Add Amount ($)</label>
+            <div class="flex gap-2">
+              <button 
+                v-for="amount in [25, 50, 100, 200]" 
+                :key="amount"
+                @click="topUpAmount = amount"
+                :class="[
+                  'px-3 py-2 text-sm rounded-lg border transition-colors',
+                  topUpAmount === amount 
+                    ? 'bg-blue-300/20 border-blue-300/20 text-blue-300' 
+                    : 'bg-gray-500/10 border-gray-500/20 text-gray-400 hover:border-gray-500/40'
+                ]"
+              >
+                ${{ amount }}
+              </button>
+            </div>
+            <div class="mt-3">
+              <input
+                v-model.number="topUpAmount"
+                type="number"
+                min="1"
+                step="1"
+                class="w-full bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-400"
+                placeholder="Custom amount"
+              />
+            </div>
+          </div>
+
+          <!-- New Cap Preview -->
+          <div class="bg-blue-300/10 border border-blue-300/20 rounded-lg p-3 mb-6">
+            <div class="flex justify-between items-center">
+              <span class="text-sm text-gray-300">New Cap</span>
+              <span class="text-lg font-semibold text-blue-300">${{ ((sponsorshipToTopUp?.currentCap || 0) + topUpAmount).toFixed(2) }}</span>
+            </div>
+            <div class="text-xs text-gray-400 mt-1">
+              Remaining after top-up: ${{ ((sponsorshipToTopUp?.currentCap || 0) + topUpAmount - (sponsorshipToTopUp?.spent || 0)).toFixed(2) }}
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-3">
+            <button @click="cancelTopUp" class="px-4 py-2 text-sm text-gray-400 border border-gray-500/10 bg-gray-500/10 rounded-lg hover:text-white transition-colors">Cancel</button>
+            <button 
+              @click="confirmTopUp" 
+              :disabled="topUpAmount <= 0"
+              class="px-4 py-2 bg-blue-300 text-black rounded-lg text-sm font-medium hover:bg-blue-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Top Up ${{ topUpAmount }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <!-- Delete Sponsorship Confirmation Modal -->
     <Teleport to="body">
       <div v-if="showDeleteSponsorshipConfirm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" @click.self="cancelDeleteSponsorship">
         <div class="bg-black rounded-xl p-6 w-full max-w-md border border-gray-500/20">
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
+            <div class="w-10 h-10 rounded-full bg-red-400/10 flex items-center justify-center">
               <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
