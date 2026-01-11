@@ -302,8 +302,29 @@ response = client.chat.completions.create(
 )
 ```
 
+## Sponsorship API
+
+Issue API keys to users with USD-based budgets. Get your org key from **Dashboard → Sponsorships → Generate API Key**.
+
+```bash
+# Create a user token with $10 budget
+curl -X POST https://api.airatelimit.com/api/v1/sponsorships \
+  -H "Authorization: Bearer org_sk_xxx" \
+  -d '{"sponsorKeyId": "key-uuid", "name": "User 123", "spendCapUsd": 10.00}'
+# → {"token": "spt_live_xxx"}
+
+# User makes requests with their token
+curl https://api.airatelimit.com/v1/chat/completions \
+  -H "Authorization: Bearer spt_live_xxx" \
+  -d '{"model": "gpt-4o", "messages": [...]}'
+```
+
+See [Sponsorship API docs](docs/SPONSORSHIP-API.md) for full reference.
+
 ## Resources
 
+- [Identity API](docs/IDENTITY-API.md) - Manage per-user limits programmatically
+- [Sponsorship API](docs/SPONSORSHIP-API.md) - Issue tokens to users programmatically
 - [Remote Config](docs/REMOTE-CONFIG.md) - Switch AI providers without app updates
 - [Prompt Injection](docs/PROMPT.md) - Prompt injection protection
 

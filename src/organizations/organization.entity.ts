@@ -51,6 +51,15 @@ export class Organization {
   @Column({ nullable: true })
   usagePeriodStart: Date; // Start of current billing period (resets monthly)
 
+  // === API Key for Programmatic Access ===
+  
+  @Column({ unique: true, nullable: true })
+  @Index()
+  apiKey: string; // org_sk_xxx - for programmatic sponsorship management
+
+  @Column({ nullable: true })
+  apiKeyHash: string; // bcrypt hash for secure verification
+
   @OneToMany(() => User, (user) => user.organization)
   users: User[];
 

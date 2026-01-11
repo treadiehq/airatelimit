@@ -66,6 +66,57 @@ const claimCodeInput = ref('')
 const claimingByCode = ref(false)
 const claimCodeError = ref('')
 
+// Organization API key for programmatic access
+const orgApiKey = ref({
+  key: '' as string,
+  hint: '' as string,
+  hasKey: false,
+  showKey: false,
+  loading: false,
+  justGenerated: false,
+})
+
+// Load org API key status on mount
+onMounted(async () => {
+  try {
+    const orgData = await api('/organizations/me')
+    orgApiKey.value.hasKey = orgData.hasApiKey
+    orgApiKey.value.hint = orgData.apiKeyHint?.replace('...', '') || ''
+  } catch (e) {
+    // Ignore - org data not available
+  }
+})
+
+// Generate or regenerate org API key
+const generateOrgApiKey = async () => {
+  if (orgApiKey.value.hasKey) {
+    if (!confirm('Are you sure? This will invalidate the current API key. Any services using it will stop working.')) {
+      return
+    }
+  }
+  
+  orgApiKey.value.loading = true
+  try {
+    const result = await api('/organizations/me/api-key', { method: 'POST' })
+    orgApiKey.value.key = result.apiKey
+    orgApiKey.value.hasKey = true
+    orgApiKey.value.showKey = true
+    orgApiKey.value.justGenerated = true
+    orgApiKey.value.hint = result.apiKey.slice(-4)
+  } catch (e) {
+    console.error('Failed to generate API key:', e)
+  } finally {
+    orgApiKey.value.loading = false
+  }
+}
+
+// Copy org API key to clipboard
+const copyOrgApiKey = async () => {
+  if (orgApiKey.value.key) {
+    await copy(orgApiKey.value.key, 'API key copied!')
+  }
+}
+
 // Base URL for shareable links (SSR-safe)
 const baseUrl = computed(() => {
   if (import.meta.client) {
@@ -782,6 +833,64 @@ const getStatusClasses = (status: string) => {
         <div class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-4">
           <div class="text-gray-400 text-xs mb-1">Total Spent</div>
           <div class="text-lg font-semibold text-white">{{ formatCost(sponsorship.totalSpentUsd.value) }}</div>
+        </div>
+      </div>
+
+      <!-- API Access Section -->
+      <div class="mb-8 bg-gray-500/5 border border-gray-500/10 rounded-lg p-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-semibold text-white mb-1">Programmatic API Access</h3>
+            <p class="text-xs text-gray-400">
+              Use your organization API key to manage sponsorships programmatically via REST API.
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div v-if="orgApiKey.hasKey" class="flex items-center gap-2">
+              <code class="px-3 py-1.5 bg-black rounded text-sm text-gray-300 font-mono">
+                {{ orgApiKey.showKey ? orgApiKey.key : `org_sk_...${orgApiKey.hint}` }}
+              </code>
+              <button
+                @click="orgApiKey.showKey = !orgApiKey.showKey"
+                v-if="orgApiKey.key"
+                class="p-1.5 text-gray-400 hover:text-white transition-colors"
+                :title="orgApiKey.showKey ? 'Hide' : 'Show'"
+              >
+                <svg v-if="orgApiKey.showKey" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                </svg>
+                <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              </button>
+              <button
+                v-if="orgApiKey.key"
+                @click="copyOrgApiKey"
+                class="p-1.5 text-gray-400 hover:text-white transition-colors"
+                title="Copy API key"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
+            <button
+              @click="generateOrgApiKey"
+              :disabled="orgApiKey.loading"
+              class="px-3 py-1.5 bg-gray-500/10 border border-gray-500/10 hover:bg-gray-500/20 text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+            >
+              {{ orgApiKey.loading ? 'Generating...' : (orgApiKey.hasKey ? 'Regenerate' : 'Generate API Key') }}
+            </button>
+          </div>
+        </div>
+        <div v-if="orgApiKey.key && orgApiKey.justGenerated" class="mt-3 p-3 bg-yellow-400/10 border border-yellow-400/20 rounded-lg">
+          <p class="text-xs text-yellow-300">
+            <strong>Save this key!</strong> It will only be shown once. Use it as: <code class="bg-black/30 px-1.5 py-0.5 rounded">Authorization: Bearer {{ orgApiKey.key }}</code>
+          </p>
+        </div>
+        <div class="mt-3 text-xs text-gray-500">
+          <a href="https://github.com/treadiehq/airatelimit/blob/main/docs/SPONSORSHIP-API.md" target="_blank" class="text-blue-400 hover:underline">View API documentation →</a>
         </div>
       </div>
 

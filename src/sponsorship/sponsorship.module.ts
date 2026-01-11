@@ -12,6 +12,7 @@ import { PoolToken } from './pool-token.entity';
 
 import { SponsorshipService } from './sponsorship.service';
 import { SponsorshipController } from './sponsorship.controller';
+import { SponsorshipApiController } from './sponsorship-api.controller';
 import { SponsoredController } from './sponsored.controller';
 import { PoolService } from './pool.service';
 import { PoolController } from './pool.controller';
@@ -19,6 +20,7 @@ import { PublicSponsorshipController } from './public-sponsorship.controller';
 import { ClaimController } from './claim.controller';
 
 import { CommonModule } from '../common/common.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
 import { User } from '../users/user.entity';
 import { UsersModule } from '../users/users.module';
 import { EmailModule } from '../email/email.module';
@@ -30,6 +32,9 @@ import { EmailModule } from '../email/email.module';
  * - Sponsors can register API keys and create sponsorships
  * - Recipients can use sponsored tokens to access AI APIs
  * - All usage is tracked and limited according to sponsorship rules
+ * 
+ * Programmatic API:
+ * - /api/v1/sponsorships/* - API key authenticated endpoints
  */
 @Module({
   imports: [
@@ -45,10 +50,18 @@ import { EmailModule } from '../email/email.module';
     ]),
     HttpModule,
     CommonModule,
+    OrganizationsModule,
     UsersModule,
     EmailModule,
   ],
-  controllers: [SponsorshipController, SponsoredController, PoolController, PublicSponsorshipController, ClaimController],
+  controllers: [
+    SponsorshipController, 
+    SponsorshipApiController,  // Programmatic API with org_sk_xxx auth
+    SponsoredController, 
+    PoolController, 
+    PublicSponsorshipController, 
+    ClaimController,
+  ],
   providers: [SponsorshipService, PoolService],
   exports: [SponsorshipService, PoolService],
 })

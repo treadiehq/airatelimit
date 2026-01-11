@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OrganizationsService } from './organizations.service';
 
@@ -22,6 +22,43 @@ export class OrganizationsController {
       name: organization.name,
       description: organization.description,
       createdAt: organization.createdAt,
+      // Include API key hint (not the full key)
+      apiKeyHint: this.organizationsService.getApiKeyHint(organization.apiKey),
+      hasApiKey: !!organization.apiKey,
+    };
+  }
+
+  /**
+   * Generate a new organization API key
+   * POST /api/organizations/me/api-key
+   * 
+   * Returns the plaintext key - SAVE IT! It's only shown once.
+   */
+  @Post('me/api-key')
+  @HttpCode(HttpStatus.OK)
+  async generateApiKey(@Request() req) {
+    const apiKey = await this.organizationsService.generateApiKey(
+      req.user.organizationId,
+    );
+
+    return {
+      apiKey,
+      warning: 'Save this API key! It will only be shown once.',
+      usage: 'Use in Authorization header: Bearer org_sk_xxx',
+    };
+  }
+
+  /**
+   * Revoke the organization API key
+   * POST /api/organizations/me/api-key/revoke
+   */
+  @Post('me/api-key/revoke')
+  @HttpCode(HttpStatus.OK)
+  async revokeApiKey(@Request() req) {
+    await this.organizationsService.revokeApiKey(req.user.organizationId);
+
+    return {
+      message: 'API key revoked. Any services using it will stop working.',
     };
   }
 }
