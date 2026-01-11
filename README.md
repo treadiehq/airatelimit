@@ -338,6 +338,8 @@ npm install @ai-ratelimit/limiter
 
 See [@ai-ratelimit/limiter](./packages/limiter) for docs.
 
+[![Sponsor me on AI Ratelimit](https://img.shields.io/badge/AI_Ratelimit-Sponsor_me-black?style=for-the-badge)](https://airatelimit.com/sponsor/dantelex)
+
 ## License
 
 [FSL-1.1-MIT](LICENSE)
