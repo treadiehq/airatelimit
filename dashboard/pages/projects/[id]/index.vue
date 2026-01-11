@@ -124,7 +124,7 @@
                           <line x1="6.5" y1="10" x2="6.5" y2="14" stroke-width="2"/>
                           <line x1="17.5" y1="10" x2="17.5" y2="14" stroke-width="2"/>
                         </svg>
-                        <span>Flow Designer <span class="text-[10px] text-gray-300 p-1 px-2 rounded-full bg-gray-500/30">Beta</span></span>
+                        <span>Flow Designer <span class="text-[10px] text-amber-300 p-1 px-2 rounded-full bg-gray-500/30">Beta</span></span>
                       </button>
                       <button
                         @click="openDelete"

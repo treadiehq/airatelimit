@@ -9,17 +9,31 @@ const router = useRouter()
 const { features } = useFeatures()
 const sponsorship = useSponsorship()
 const { copy } = useClipboard()
+const team = useTeam()
 
 // =====================================================
 // TABS
 // =====================================================
-const activeTab = ref<'sponsor' | 'received' | 'pools'>('sponsor')
+const activeTab = ref<'sponsor' | 'received' | 'pools'>('received') // Default to received
+
+// Only admins and owners can access the sponsor tab (create keys/sponsorships)
+const canManageSponsorships = computed(() => team.isOwner.value || team.isAdmin.value)
 
 // Set initial tab from URL query
-onMounted(() => {
+onMounted(async () => {
+  // Load team members to check role
+  await team.loadMembers()
+  
   const tab = route.query.tab as string
-  if (tab === 'received' || tab === 'pools') {
-    activeTab.value = tab
+  if (tab === 'sponsor' && canManageSponsorships.value) {
+    activeTab.value = 'sponsor'
+  } else if (tab === 'pools') {
+    activeTab.value = 'pools'
+  } else if (tab === 'received' || !canManageSponsorships.value) {
+    activeTab.value = 'received'
+  } else {
+    // Default for admins/owners with no tab specified
+    activeTab.value = 'sponsor'
   }
 })
 
@@ -38,13 +52,17 @@ const showDeleteKeyConfirm = ref(false)
 const keyToDelete = ref<{ id: string; name: string } | null>(null)
 const showRevokeSponsorshipConfirm = ref(false)
 const sponsorshipToRevoke = ref<{ id: string; name: string } | null>(null)
+const showDeleteSponsorshipConfirm = ref(false)
+const sponsorshipToDelete = ref<{ id: string; name: string } | null>(null)
 const showUnlinkGitHubConfirm = ref(false)
 const newToken = ref('')
 
 const newKey = ref({
   name: '',
-  provider: 'openai' as 'openai' | 'anthropic' | 'google' | 'xai',
+  provider: 'openai' as 'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter',
   apiKey: '',
+  ipRestrictionsEnabled: false,
+  allowedIpRanges: '' as string, // comma-separated for UI, converted to array on submit
 })
 
 const newSponsorship = ref({
@@ -53,12 +71,43 @@ const newSponsorship = ref({
   description: '',
   spendCapUsd: 50,
   billingPeriod: 'one_time' as 'one_time' | 'monthly',
+  selectedMemberId: '' as string, // Team member selection
   targetGitHubUsername: '',
   recipientEmail: '',
   allowedModels: [] as string[],
   maxTokensPerRequest: null as number | null,
   expiresAt: '',
+  ipRestrictionMode: 'inherit' as 'inherit' | 'custom' | 'none',
+  allowedIpRanges: '' as string, // comma-separated for UI
 })
+
+// Team members available for sponsorship (excluding current user)
+const availableTeamMembers = computed(() => {
+  return team.members.value.filter(m => m.role !== 'owner') // Show non-owner members
+})
+
+// When a team member is selected, auto-fill their email
+watch(() => newSponsorship.value.selectedMemberId, (memberId) => {
+  if (memberId) {
+    const member = team.members.value.find(m => m.id === memberId)
+    if (member) {
+      newSponsorship.value.recipientEmail = member.email
+      newSponsorship.value.targetGitHubUsername = '' // Clear GitHub username
+    }
+  } else {
+    // Clear email when deselecting (only if it was auto-filled)
+    newSponsorship.value.recipientEmail = ''
+  }
+})
+
+// Open sponsorship modal and load team members
+const openCreateSponsorshipModal = async () => {
+  // Load team members if not already loaded
+  if (team.members.value.length === 0) {
+    await team.loadMembers()
+  }
+  showCreateSponsorshipModal.value = true
+}
 
 // =====================================================
 // RECEIVED TAB STATE
@@ -156,18 +205,32 @@ onMounted(async () => {
 // =====================================================
 const handleCreateKey = async () => {
   try {
+    // Parse comma-separated IP ranges
+    const ipRanges = newKey.value.allowedIpRanges
+      .split(',')
+      .map(ip => ip.trim())
+      .filter(ip => ip.length > 0)
+
     await sponsorship.createSponsorKey({
       name: newKey.value.name,
       provider: newKey.value.provider,
       apiKey: newKey.value.apiKey,
+      ipRestrictionsEnabled: newKey.value.ipRestrictionsEnabled,
+      allowedIpRanges: ipRanges.length > 0 ? ipRanges : undefined,
     })
     showCreateKeyModal.value = false
-    newKey.value = { name: '', provider: 'openai', apiKey: '' }
+    newKey.value = { name: '', provider: 'openai', apiKey: '', ipRestrictionsEnabled: false, allowedIpRanges: '' }
   } catch (error) {}
 }
 
 const handleCreateSponsorship = async () => {
   try {
+    // Parse comma-separated IP ranges
+    const ipRanges = newSponsorship.value.allowedIpRanges
+      .split(',')
+      .map(ip => ip.trim())
+      .filter(ip => ip.length > 0)
+
     const result = await sponsorship.createSponsorship({
       sponsorKeyId: newSponsorship.value.sponsorKeyId,
       name: newSponsorship.value.name,
@@ -181,6 +244,8 @@ const handleCreateSponsorship = async () => {
         : undefined,
       maxTokensPerRequest: newSponsorship.value.maxTokensPerRequest || undefined,
       expiresAt: newSponsorship.value.expiresAt || undefined,
+      ipRestrictionMode: newSponsorship.value.ipRestrictionMode,
+      allowedIpRanges: ipRanges.length > 0 ? ipRanges : undefined,
     })
     
     newToken.value = result.token
@@ -193,11 +258,14 @@ const handleCreateSponsorship = async () => {
       description: '',
       spendCapUsd: 50,
       billingPeriod: 'one_time',
+      selectedMemberId: '',
       targetGitHubUsername: '',
       recipientEmail: '',
       allowedModels: [],
       maxTokensPerRequest: null,
       expiresAt: '',
+      ipRestrictionMode: 'inherit',
+      allowedIpRanges: '',
     }
   } catch (error) {}
 }
@@ -222,6 +290,24 @@ const confirmRevokeSponsorship = async () => {
 const cancelRevokeSponsorship = () => {
   showRevokeSponsorshipConfirm.value = false
   sponsorshipToRevoke.value = null
+}
+
+const handleDelete = (s: { id: string; name: string }) => {
+  sponsorshipToDelete.value = s
+  showDeleteSponsorshipConfirm.value = true
+}
+
+const confirmDeleteSponsorship = async () => {
+  if (sponsorshipToDelete.value) {
+    await sponsorship.deleteSponsorship(sponsorshipToDelete.value.id)
+  }
+  showDeleteSponsorshipConfirm.value = false
+  sponsorshipToDelete.value = null
+}
+
+const cancelDeleteSponsorship = () => {
+  showDeleteSponsorshipConfirm.value = false
+  sponsorshipToDelete.value = null
 }
 
 const handleRegenerate = async (id: string) => {
@@ -489,16 +575,26 @@ const getStatusClasses = (status: string) => {
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="text-xl font-bold text-white">Sponsorship</h2>
+        <h2 class="text-xl font-bold text-white">
+          Sponsorship
+          <span class="text-xs text-amber-400 bg-amber-500/15 px-2 py-1 rounded-full font-normal">Beta</span>
+        </h2>
         <p class="text-sm text-gray-400 mt-1">
-          Share API credits, receive sponsorships, or create pools for multiple sponsors.
+          <template v-if="canManageSponsorships">
+            Give friends or employees API credits, receive sponsorships, or create pools from multiple sponsors.
+          </template>
+          <template v-else>
+            View and manage sponsorships you've received, or add them to pools.
+          </template>
         </p>
       </div>
     </div>
 
     <!-- Tabs -->
     <div class="flex gap-8 mb-6 border-b border-gray-500/20">
+      <!-- My Sponsorships tab - only visible to admins and owners -->
       <button
+        v-if="canManageSponsorships"
         @click="activeTab = 'sponsor'"
         :class="[
           'pb-3 text-sm font-medium transition-colors relative',
@@ -543,9 +639,9 @@ const getStatusClasses = (status: string) => {
     </div>
 
     <!-- =====================================================
-         SPONSOR TAB
+         SPONSOR TAB (Only for admins and owners)
          ===================================================== -->
-    <div v-if="activeTab === 'sponsor'">
+    <div v-if="activeTab === 'sponsor' && canManageSponsorships">
       <!-- Stats -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div class="bg-gray-500/5 border border-gray-500/10 rounded-lg p-4">
@@ -595,6 +691,9 @@ const getStatusClasses = (status: string) => {
               <div class="flex items-center gap-2">
                 <span class="text-[10px] text-gray-500 uppercase bg-gray-500/10 px-1.5 py-0.5 rounded">{{ key.provider }}</span>
                 <span class="text-sm text-white font-medium">{{ key.name }}</span>
+                <span v-if="key.ipRestrictionsEnabled" class="text-[10px] text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded" title="IP restrictions enabled">
+                  IP
+                </span>
               </div>
               <button
                 @click="handleDeleteKey(key)"
@@ -616,7 +715,7 @@ const getStatusClasses = (status: string) => {
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-semibold text-white">Sponsorships</h3>
           <button
-            @click="showCreateSponsorshipModal = true"
+            @click="openCreateSponsorshipModal"
             :disabled="sponsorship.sponsorKeys.value.length === 0"
             class="flex items-center gap-2 px-3 py-1.5 bg-white text-black hover:bg-gray-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -672,6 +771,13 @@ const getStatusClasses = (status: string) => {
                   class="text-xs text-red-400 hover:text-red-300 transition-colors"
                 >
                   Revoke
+                </button>
+                <button
+                  v-if="s.status === 'revoked'"
+                  @click="handleDelete({ id: s.id, name: s.name })"
+                  class="text-xs text-gray-400 hover:text-red-400 transition-colors"
+                >
+                  Delete
                 </button>
               </div>
             </div>
@@ -1122,6 +1228,35 @@ const getStatusClasses = (status: string) => {
                 class="w-full bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-400 font-mono"
               />
             </div>
+
+            <!-- IP Restrictions -->
+            <div class="border-t border-gray-500/10 pt-4">
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <label class="block text-xs text-gray-400">IP Restrictions</label>
+                  <p class="text-[10px] text-gray-500 mt-0.5">Limit usage to specific IP addresses</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    v-model="newKey.ipRestrictionsEnabled"
+                    class="sr-only peer"
+                  />
+                  <div class="w-9 h-5 bg-gray-500/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-400 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-300 peer-checked:after:bg-white"></div>
+                </label>
+              </div>
+              
+              <div v-if="newKey.ipRestrictionsEnabled">
+                <label class="block text-xs text-gray-400 mb-1">Allowed IP Ranges</label>
+                <textarea
+                  v-model="newKey.allowedIpRanges"
+                  placeholder="10.0.0.0/8, 192.168.1.100, 2001:db8::/32"
+                  rows="2"
+                  class="w-full bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-400 font-mono resize-none"
+                />
+                <p class="text-[10px] text-gray-500 mt-1">Comma-separated IP addresses or CIDR ranges</p>
+              </div>
+            </div>
           </div>
 
           <div class="flex justify-end gap-3 mt-6">
@@ -1211,8 +1346,38 @@ const getStatusClasses = (status: string) => {
               </div>
             </div>
 
-            <!-- Target GitHub username (optional) -->
-            <div>
+            <!-- Team Member Selection (if team members exist) -->
+            <div v-if="availableTeamMembers.length > 0">
+              <label class="block text-xs text-gray-400 mb-1">
+                Send to Team Member
+                <span class="text-gray-500">(optional)</span>
+              </label>
+              <div class="relative">
+                <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <select
+                  v-model="newSponsorship.selectedMemberId"
+                  class="w-full bg-gray-500/10 border border-gray-500/20 rounded-lg pl-9 pr-8 py-2 text-sm text-white focus:outline-none focus:border-gray-400 appearance-none cursor-pointer"
+                >
+                  <option value="">Select a team member...</option>
+                  <option v-for="member in availableTeamMembers" :key="member.id" :value="member.id">
+                    {{ member.email }}
+                  </option>
+                </select>
+                <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+              <p class="text-[10px] text-gray-500 mt-1">
+                Sponsorship will appear in their pending sponsorships
+              </p>
+            </div>
+
+            <!-- Target GitHub username (only shown if no team member selected) -->
+            <div v-if="!newSponsorship.selectedMemberId">
               <label class="block text-xs text-gray-400 mb-1">
                 Target GitHub Username 
                 <span class="text-gray-500">(optional)</span>
@@ -1235,8 +1400,8 @@ const getStatusClasses = (status: string) => {
               </p>
             </div>
 
-            <!-- Recipient Email (shown when GitHub username is entered) -->
-            <div v-if="newSponsorship.targetGitHubUsername">
+            <!-- Recipient Email (shown when GitHub username is entered, hidden when team member selected) -->
+            <div v-if="newSponsorship.targetGitHubUsername && !newSponsorship.selectedMemberId">
               <label class="block text-xs text-gray-400 mb-1">
                 Recipient Email
                 <!-- <span class="text-gray-500">(optional, for notification)</span> -->
@@ -1258,6 +1423,17 @@ const getStatusClasses = (status: string) => {
                 We'll email them instructions to claim the sponsorship
               </p>
             </div>
+
+            <!-- Show selected team member info -->
+            <div v-if="newSponsorship.selectedMemberId" class="bg-blue-300/10 border border-blue-300/20 rounded-lg p-3">
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span class="text-sm text-blue-300">{{ newSponsorship.recipientEmail }}</span>
+              </div>
+              <p class="text-[10px] text-gray-400 mt-1">This team member will receive the sponsorship</p>
+            </div>
             
             <!-- <div>
               <label class="block text-xs text-gray-400 mb-1">Max Tokens per Request (optional)</label>
@@ -1269,6 +1445,53 @@ const getStatusClasses = (status: string) => {
                 class="w-full bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-400"
               />
             </div> -->
+            
+            <!-- IP Restrictions -->
+            <div class="border-t border-gray-500/10 pt-4 mt-2">
+              <label class="block text-xs text-gray-400 mb-2">IP Restrictions</label>
+              <div class="flex gap-2">
+                <button
+                  v-for="mode in [
+                    { value: 'inherit', label: 'Inherit' },
+                    { value: 'custom', label: 'Custom' },
+                    { value: 'none', label: 'None' }
+                  ]"
+                  :key="mode.value"
+                  type="button"
+                  @click="newSponsorship.ipRestrictionMode = mode.value as any"
+                  :class="[
+                    'flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+                    newSponsorship.ipRestrictionMode === mode.value
+                      ? 'bg-blue-300 text-black'
+                      : 'bg-gray-500/10 text-gray-400 hover:bg-gray-500/20'
+                  ]"
+                >
+                  {{ mode.label }}
+                </button>
+              </div>
+              <p class="text-[10px] text-gray-500 mt-1.5">
+                <template v-if="newSponsorship.ipRestrictionMode === 'inherit'">
+                  Use IP restrictions from the provider key (if enabled)
+                </template>
+                <template v-else-if="newSponsorship.ipRestrictionMode === 'custom'">
+                  Set custom IP restrictions for this sponsorship
+                </template>
+                <template v-else>
+                  No IP restrictions (anyone can use this sponsorship)
+                </template>
+              </p>
+              
+              <div v-if="newSponsorship.ipRestrictionMode === 'custom'" class="mt-3">
+                <label class="block text-xs text-gray-400 mb-1">Allowed IP Ranges</label>
+                <textarea
+                  v-model="newSponsorship.allowedIpRanges"
+                  placeholder="10.0.0.0/8, 192.168.1.100"
+                  rows="2"
+                  class="w-full bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-gray-400 font-mono resize-none"
+                />
+                <p class="text-[10px] text-gray-500 mt-1">Comma-separated IP addresses or CIDR ranges</p>
+              </div>
+            </div>
           </div>
 
           <div class="flex justify-end gap-3 mt-6">
@@ -1424,6 +1647,37 @@ const getStatusClasses = (status: string) => {
             <button @click="cancelRevokeSponsorship" class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
             <button @click="confirmRevokeSponsorship" class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
               Revoke
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Delete Sponsorship Confirmation Modal -->
+    <Teleport to="body">
+      <div v-if="showDeleteSponsorshipConfirm" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" @click.self="cancelDeleteSponsorship">
+        <div class="bg-black rounded-xl p-6 w-full max-w-md border border-gray-500/20">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center">
+              <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-sm font-semibold text-white">Delete Sponsorship</h3>
+              <p class="text-xs text-gray-400">This will permanently remove the sponsorship.</p>
+            </div>
+          </div>
+          
+          <p class="text-sm text-gray-300 mb-6">
+            Are you sure you want to delete <strong class="text-white">{{ sponsorshipToDelete?.name }}</strong>? 
+            This action cannot be undone.
+          </p>
+
+          <div class="flex justify-end gap-3">
+            <button @click="cancelDeleteSponsorship" class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">Cancel</button>
+            <button @click="confirmDeleteSponsorship" class="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-medium hover:bg-red-600 transition-colors">
+              Delete
             </button>
           </div>
         </div>

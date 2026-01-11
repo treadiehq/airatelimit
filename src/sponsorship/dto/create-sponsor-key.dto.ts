@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsIn, IsOptional, MaxLength, MinLength } from 'class-validator';
+import { IsString, IsNotEmpty, IsIn, IsOptional, MaxLength, MinLength, IsBoolean, IsArray } from 'class-validator';
 
 export class CreateSponsorKeyDto {
   @IsString()
@@ -7,8 +7,8 @@ export class CreateSponsorKeyDto {
   name: string;
 
   @IsString()
-  @IsIn(['openai', 'anthropic', 'google', 'xai'])
-  provider: 'openai' | 'anthropic' | 'google' | 'xai';
+  @IsIn(['openai', 'anthropic', 'google', 'xai', 'openrouter'])
+  provider: 'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter';
 
   @IsString()
   @IsNotEmpty()
@@ -18,6 +18,16 @@ export class CreateSponsorKeyDto {
   @IsString()
   @IsOptional()
   baseUrl?: string;
+
+  // IP Restrictions
+  @IsBoolean()
+  @IsOptional()
+  ipRestrictionsEnabled?: boolean;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  allowedIpRanges?: string[];
 }
 
 export class UpdateSponsorKeyDto {
@@ -29,5 +39,15 @@ export class UpdateSponsorKeyDto {
   @IsString()
   @IsOptional()
   baseUrl?: string;
+
+  // IP Restrictions
+  @IsBoolean()
+  @IsOptional()
+  ipRestrictionsEnabled?: boolean;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  allowedIpRanges?: string[];
 }
 

@@ -253,6 +253,15 @@ export class SponsorshipController {
   }
 
   /**
+   * Delete a sponsorship (only if revoked)
+   */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteSponsorship(@Request() req, @Param('id') id: string) {
+    await this.sponsorshipService.deleteSponsorship(id, req.user.organizationId);
+  }
+
+  /**
    * Regenerate token for a sponsorship
    */
   @Post(':id/regenerate-token')

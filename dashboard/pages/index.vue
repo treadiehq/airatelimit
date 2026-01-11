@@ -9,7 +9,7 @@
       <div class="text-center">
         <!-- Main Heading -->
         <div class="mb-14">
-          <h1 class="mx-auto w-full text-balance text-center font-semibold tracking-tight text-white max-w-3xl text-2xl !leading-[1.2] sm:text-4xl md:text-5xl lg:text-6xl">
+          <h1 class="mx-auto w-full text-balance text-center font-semibold tracking-tight text-white max-w-3xl text-3xl !leading-[1.2] sm:text-4xl md:text-5xl lg:text-6xl">
             The <span class="text-blue-300">AI backend</span> your mobile app needs
           </h1>
           
@@ -448,9 +448,21 @@
                 <td class="text-center text-gray-500 p-4">2-3 weeks</td>
                 <td class="text-center text-blue-300 p-4">✓ Included</td>
               </tr>
+              <tr class="border-b border-gray-500/10">
+                <td class="text-gray-300 p-4">
+                  <span class="group relative cursor-help">
+                    Sponsorships
+                    <span class="invisible group-hover:visible absolute left-0 top-full mt-2 w-64 p-2 bg-black border border-gray-500/20 rounded-lg text-xs text-gray-300 z-10 shadow-lg">
+                      Sponsor employees, friends or let others sponsor your AI credits.
+                    </span>
+                  </span>
+                </td>
+                <td class="text-center text-gray-500 p-4">3-4 weeks</td>
+                <td class="text-center text-blue-300 p-4">✓ Included</td>
+              </tr>
               <tr>
                 <td class="text-white font-medium p-4">Total time</td>
-                <td class="text-center text-gray-400 font-medium p-4">12-16 weeks</td>
+                <td class="text-center text-gray-400 font-medium p-4">15-20 weeks</td>
                 <td class="text-center text-blue-300 font-medium p-4">5 minutes</td>
               </tr>
             </tbody>
@@ -521,6 +533,10 @@
               <li class="flex items-center gap-2 text-sm text-gray-300">
                 <svg class="w-4 h-4 text-blue-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                 Email support
+              </li>
+              <li class="flex items-center gap-2 text-sm text-gray-300">
+                <svg class="w-4 h-4 text-blue-300 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                Sponsorships
               </li>
             </ul>
             <NuxtLink to="/signup" class="block w-full text-center py-2 px-4 rounded-lg border border-gray-500/10 text-white hover:bg-gray-500/10 transition-colors text-sm font-medium mt-auto">

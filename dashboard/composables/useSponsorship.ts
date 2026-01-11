@@ -7,9 +7,11 @@
 interface SponsorKey {
   id: string
   name: string
-  provider: 'openai' | 'anthropic' | 'google' | 'xai'
+  provider: 'openai' | 'anthropic' | 'google' | 'xai' | 'openrouter'
   keyHint: string
   baseUrl?: string
+  ipRestrictionsEnabled?: boolean
+  allowedIpRanges?: string[]
   createdAt: string
 }
 
@@ -42,6 +44,10 @@ interface Sponsorship {
   maxRequestsPerMinute?: number
   maxRequestsPerDay?: number
   expiresAt?: string
+  
+  // IP Restrictions
+  ipRestrictionMode?: 'inherit' | 'custom' | 'none'
+  allowedIpRanges?: string[]
   
   // Provider
   provider?: string
@@ -171,6 +177,8 @@ export const useSponsorship = () => {
     provider: string
     apiKey: string
     baseUrl?: string
+    ipRestrictionsEnabled?: boolean
+    allowedIpRanges?: string[]
   }) => {
     try {
       const data = await api('/sponsorships/keys', {
@@ -231,6 +239,8 @@ export const useSponsorship = () => {
     maxRequestsPerMinute?: number
     maxRequestsPerDay?: number
     expiresAt?: string
+    ipRestrictionMode?: 'inherit' | 'custom' | 'none'
+    allowedIpRanges?: string[]
   }) => {
     try {
       const data = await api('/sponsorships', {
@@ -308,6 +318,19 @@ export const useSponsorship = () => {
       return data
     } catch (error: any) {
       toast.error(error.message || 'Failed to revoke sponsorship')
+      throw error
+    }
+  }
+
+  const deleteSponsorship = async (id: string) => {
+    try {
+      await api(`/sponsorships/${id}`, {
+        method: 'DELETE',
+      })
+      sponsorships.value = sponsorships.value.filter(s => s.id !== id)
+      toast.success('Sponsorship deleted')
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete sponsorship')
       throw error
     }
   }
@@ -759,6 +782,7 @@ export const useSponsorship = () => {
     pauseSponsorship,
     resumeSponsorship,
     revokeSponsorship,
+    deleteSponsorship,
     regenerateToken,
     getUsageSummary,
     getUsageHistory,

@@ -292,6 +292,7 @@ const basicFeatures = [
   'Cost tracking',
   'Usage analytics',
   'Email support',
+  'Sponsorships',
 ]
 
 const proFeatures = [

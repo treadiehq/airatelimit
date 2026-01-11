@@ -57,6 +57,19 @@ export class SponsorKey {
   @Column({ default: false })
   isDeleted: boolean;
 
+  // ====================================
+  // IP RESTRICTIONS
+  // ====================================
+  
+  // Enable IP restrictions for all sponsorships using this key
+  @Column({ default: false })
+  ipRestrictionsEnabled: boolean;
+
+  // Allowed IP ranges (CIDR notation or single IPs)
+  // Example: ["10.0.0.0/8", "192.168.1.100", "2001:db8::/32"]
+  @Column({ type: 'jsonb', nullable: true })
+  allowedIpRanges: string[];
+
   // Sponsorships using this key
   @OneToMany(() => Sponsorship, (sponsorship) => sponsorship.sponsorKey)
   sponsorships: Sponsorship[];

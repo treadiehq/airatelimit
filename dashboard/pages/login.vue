@@ -80,11 +80,27 @@ useHead({
   title: 'Login - AI Ratelimit'
 })
 
+const { isAuthenticated, loadFromStorage } = useAuth()
 const api = useApi()
 const email = ref('')
 const loading = ref(false)
 const error = ref('')
 const linkSent = ref(false)
+
+// Redirect to dashboard if already authenticated
+onMounted(() => {
+  loadFromStorage()
+  if (isAuthenticated.value) {
+    navigateTo('/projects')
+  }
+})
+
+// Also watch for auth state changes
+watch(isAuthenticated, (authenticated) => {
+  if (authenticated) {
+    navigateTo('/projects')
+  }
+})
 
 const handleRequestMagicLink = async () => {
   loading.value = true

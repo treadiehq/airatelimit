@@ -134,10 +134,24 @@ const inviteEmail = computed(() => {
 
 const isInviteSignup = computed(() => !!inviteToken.value)
 
-// Pre-fill email from invite
+const { isAuthenticated, loadFromStorage } = useAuth()
+
+// Pre-fill email from invite, and redirect if already authenticated
 onMounted(() => {
+  loadFromStorage()
+  if (isAuthenticated.value) {
+    navigateTo('/projects')
+    return
+  }
   if (inviteEmail.value) {
     email.value = inviteEmail.value
+  }
+})
+
+// Watch for auth state changes
+watch(isAuthenticated, (authenticated) => {
+  if (authenticated) {
+    navigateTo('/projects')
   }
 })
 

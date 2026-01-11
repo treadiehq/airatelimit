@@ -116,12 +116,15 @@ export class TransparentProxyController {
     model: string,
     estimatedTokens: number,
     recipientOrgId?: string,
+    clientIp?: string,
   ): Promise<{
     allowed: boolean;
     resolvedAuthorization?: string;
     sponsorshipId?: string;
     sponsoredTokenId?: string;
     provider?: string;
+    sponsorship?: any;
+    sponsorKey?: any;
     error?: { status: number; body: any };
   }> {
     // Check if sponsored usage feature is enabled
@@ -199,13 +202,68 @@ export class TransparentProxyController {
       };
     }
 
+    // Check IP restrictions
+    if (clientIp) {
+      const effectiveIpRanges = this.getEffectiveIpRanges(sponsorship, sponsorship.sponsorKey);
+      if (effectiveIpRanges && !this.ipValidationService.isIpAllowed(clientIp, effectiveIpRanges)) {
+        console.warn('IP restriction: Sponsored token request blocked', {
+          sponsorshipId: sponsorship.id,
+          clientIp,
+          allowedRanges: effectiveIpRanges,
+        });
+        return {
+          allowed: false,
+          error: {
+            status: HttpStatus.FORBIDDEN,
+            body: {
+              error: {
+                message: 'Your IP address is not allowed to use this sponsorship',
+                type: 'ip_not_allowed',
+                code: 'sponsorship_ip_restricted',
+              },
+            },
+          },
+        };
+      }
+    }
+
     // All checks passed
     return {
       allowed: true,
       resolvedAuthorization: `Bearer ${validation.decryptedApiKey}`,
       sponsorshipId: sponsorship.id,
-      provider: sponsorship.sponsorKey?.provider,
+      provider: sponsorship.sponsorKey?.provider || sponsorship.providerDirect,
     };
+  }
+
+  /**
+   * Get effective IP ranges for a sponsorship
+   * Returns null if no IP restrictions apply
+   */
+  private getEffectiveIpRanges(
+    sponsorship: { ipRestrictionMode?: string; allowedIpRanges?: string[] },
+    sponsorKey?: { ipRestrictionsEnabled?: boolean; allowedIpRanges?: string[] } | null,
+  ): string[] | null {
+    // Check the sponsorship's IP restriction mode
+    const mode = sponsorship.ipRestrictionMode || 'inherit';
+
+    if (mode === 'none') {
+      // No IP restrictions for this sponsorship
+      return null;
+    }
+
+    if (mode === 'custom' && sponsorship.allowedIpRanges?.length) {
+      // Use custom IP ranges defined on the sponsorship
+      return sponsorship.allowedIpRanges;
+    }
+
+    // mode === 'inherit' - check sponsor key
+    if (sponsorKey?.ipRestrictionsEnabled && sponsorKey.allowedIpRanges?.length) {
+      return sponsorKey.allowedIpRanges;
+    }
+
+    // No restrictions
+    return null;
   }
 
   /**
@@ -216,6 +274,7 @@ export class TransparentProxyController {
     authorization: string,
     model: string,
     estimatedTokens: number,
+    clientIp?: string,
   ): Promise<{
     allowed: boolean;
     resolvedAuthorization?: string;
@@ -263,6 +322,34 @@ export class TransparentProxyController {
       };
     }
 
+    // Check IP restrictions on the selected sponsorship
+    if (clientIp && routeResult.sponsorship) {
+      const effectiveIpRanges = this.getEffectiveIpRanges(
+        routeResult.sponsorship,
+        routeResult.sponsorKey,
+      );
+      if (effectiveIpRanges && !this.ipValidationService.isIpAllowed(clientIp, effectiveIpRanges)) {
+        console.warn('IP restriction: Pool request blocked', {
+          sponsorshipId: routeResult.sponsorship.id,
+          clientIp,
+          allowedRanges: effectiveIpRanges,
+        });
+        return {
+          allowed: false,
+          error: {
+            status: HttpStatus.FORBIDDEN,
+            body: {
+              error: {
+                message: 'Your IP address is not allowed to use this sponsorship',
+                type: 'ip_not_allowed',
+                code: 'sponsorship_ip_restricted',
+              },
+            },
+          },
+        };
+      }
+    }
+
     // All checks passed - route selected a sponsor
     return {
       allowed: true,
@@ -283,7 +370,11 @@ export class TransparentProxyController {
     responseFormat: 'openai' | 'gemini' | 'anthropic',
     res: Response,
     startTime: number,
+    req: Request,
   ): Promise<void> {
+    // Get client IP for IP restriction checking
+    const clientIp = this.getClientIp(req);
+    
     // Estimate input tokens for validation
     const estimatedInputTokens = this.estimateInputTokens(body);
 
@@ -302,6 +393,7 @@ export class TransparentProxyController {
         authorization,
         model,
         estimatedInputTokens,
+        clientIp,
       );
     } else {
       // Sponsored token - use direct sponsorship
@@ -309,6 +401,8 @@ export class TransparentProxyController {
         authorization,
         model,
         estimatedInputTokens,
+        undefined, // recipientOrgId
+        clientIp,
       );
     }
 
@@ -617,6 +711,7 @@ export class TransparentProxyController {
         responseFormat,
         res,
         startTime,
+        req,
       );
       return;
     }
@@ -624,6 +719,9 @@ export class TransparentProxyController {
     try {
       // Get project configuration
       const project = await this.projectsService.findByProjectKey(projectKey);
+      
+      // Get client IP for sponsorship IP restrictions
+      const clientIp = this.getClientIp(req);
 
       // ====================================
       // IP RESTRICTIONS: Enterprise security feature (DISABLED FOR NOW)
@@ -755,6 +853,7 @@ export class TransparentProxyController {
               model,
               estimatedInputTokens,
               project.organizationId, // Auto-link recipient org
+              clientIp, // IP restriction check
             );
             
             if (!sponsoredAuth.allowed) {
@@ -780,6 +879,7 @@ export class TransparentProxyController {
               `Bearer ${storedKey}`,
               model,
               estimatedInputTokens,
+              clientIp, // IP restriction check
             );
             
             if (!poolAuth.allowed) {
@@ -819,6 +919,7 @@ export class TransparentProxyController {
           model,
           estimatedInputTokens,
           project.organizationId, // Auto-link recipient org
+          clientIp, // IP restriction check
         );
         
         if (!sponsoredAuth.allowed) {

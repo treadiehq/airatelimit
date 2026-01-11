@@ -104,6 +104,9 @@ export class SponsorshipService {
       encryptedApiKey,
       keyHint,
       baseUrl: dto.baseUrl,
+      // IP Restrictions
+      ipRestrictionsEnabled: dto.ipRestrictionsEnabled || false,
+      allowedIpRanges: dto.allowedIpRanges || null,
     });
 
     await this.sponsorKeyRepository.save(key);
@@ -150,6 +153,10 @@ export class SponsorshipService {
 
     if (dto.name) key.name = dto.name;
     if (dto.baseUrl !== undefined) key.baseUrl = dto.baseUrl;
+    
+    // IP Restrictions
+    if (dto.ipRestrictionsEnabled !== undefined) key.ipRestrictionsEnabled = dto.ipRestrictionsEnabled;
+    if (dto.allowedIpRanges !== undefined) key.allowedIpRanges = dto.allowedIpRanges;
 
     await this.sponsorKeyRepository.save(key);
     return key;
@@ -216,6 +223,9 @@ export class SponsorshipService {
       billingPeriod: dto.billingPeriod || 'one_time',
       currentPeriodStart: new Date(),
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+      // IP Restrictions
+      ipRestrictionMode: dto.ipRestrictionMode || 'inherit',
+      allowedIpRanges: dto.allowedIpRanges || null,
       // Pending if targeting someone who needs to accept, active otherwise
       status: hasPendingRecipient ? 'pending' : 'active',
     });
@@ -502,6 +512,28 @@ export class SponsorshipService {
     this.logger.log(`Sponsorship revoked: ${id}, reason: ${dto.reason || 'none'}`);
 
     return sponsorship;
+  }
+
+  /**
+   * Delete a sponsorship (only if revoked)
+   */
+  async deleteSponsorship(
+    id: string,
+    organizationId: string,
+  ): Promise<void> {
+    const sponsorship = await this.getSponsorship(id, organizationId, 'sponsor');
+
+    if (sponsorship.status !== 'revoked') {
+      throw new BadRequestException('Only revoked sponsorships can be deleted');
+    }
+
+    // Delete all associated tokens first
+    await this.sponsoredTokenRepository.delete({ sponsorshipId: id });
+
+    // Delete the sponsorship
+    await this.sponsorshipRepository.remove(sponsorship);
+
+    this.logger.log(`Sponsorship deleted: ${id} by org ${organizationId}`);
   }
 
   // =====================================================

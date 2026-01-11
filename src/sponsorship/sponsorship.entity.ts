@@ -114,6 +114,19 @@ export class Sponsorship {
   @Column({ nullable: true })
   maxRequestsPerDay: number;
 
+  // ====================================
+  // IP RESTRICTIONS
+  // ====================================
+  
+  // IP restriction mode: 'inherit' (from sponsor key), 'custom', or 'none'
+  @Column({ type: 'varchar', length: 20, default: 'inherit' })
+  ipRestrictionMode: 'inherit' | 'custom' | 'none';
+
+  // Custom allowed IP ranges (only used when ipRestrictionMode = 'custom')
+  // Example: ["10.0.0.0/8", "192.168.1.100", "2001:db8::/32"]
+  @Column({ type: 'jsonb', nullable: true })
+  allowedIpRanges: string[];
+
   // Billing period: one-time or recurring monthly
   @Column({ type: 'varchar', length: 20, default: 'one_time' })
   billingPeriod: BillingPeriod;

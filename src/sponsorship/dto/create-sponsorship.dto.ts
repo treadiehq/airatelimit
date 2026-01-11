@@ -83,6 +83,17 @@ export class CreateSponsorshipDto {
   @IsDateString()
   @IsOptional()
   expiresAt?: string;
+
+  // IP Restrictions
+  @IsString()
+  @IsOptional()
+  @IsIn(['inherit', 'custom', 'none'])
+  ipRestrictionMode?: 'inherit' | 'custom' | 'none';
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  allowedIpRanges?: string[];
 }
 
 export class UpdateSponsorshipDto {
@@ -132,6 +143,17 @@ export class UpdateSponsorshipDto {
   @IsDateString()
   @IsOptional()
   expiresAt?: string;
+
+  // IP Restrictions
+  @IsString()
+  @IsOptional()
+  @IsIn(['inherit', 'custom', 'none'])
+  ipRestrictionMode?: 'inherit' | 'custom' | 'none';
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  allowedIpRanges?: string[];
 }
 
 export class RevokeSponsorshipDto {
