@@ -89,9 +89,9 @@ const formatDate = (dateStr: string | null) => {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto px-4 py-8">
+  <div class="max-w-7xl mx-auto px-4 py-8">
     <div class="mb-8">
-      <h1 class="text-xl font-bold text-white">Organization Management</h1>
+      <h1 class="text-xl font-bold text-white">Admin</h1>
       <p class="text-gray-400 mt-1 text-sm">View and manage all organizations and their plans.</p>
     </div>
 
