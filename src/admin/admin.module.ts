@@ -5,10 +5,12 @@ import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { Organization } from '../organizations/organization.entity';
 import { User } from '../users/user.entity';
+import { Project } from '../projects/projects.entity';
+import { Sponsorship } from '../sponsorship/sponsorship.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Organization, User]),
+    TypeOrmModule.forFeature([Organization, User, Project, Sponsorship]),
     ConfigModule,
   ],
   controllers: [AdminController],

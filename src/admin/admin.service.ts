@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization } from '../organizations/organization.entity';
 import { User } from '../users/user.entity';
+import { Project } from '../projects/projects.entity';
+import { Sponsorship } from '../sponsorship/sponsorship.entity';
 
 @Injectable()
 export class AdminService {
@@ -11,6 +13,10 @@ export class AdminService {
     private readonly organizationRepository: Repository<Organization>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Project)
+    private readonly projectRepository: Repository<Project>,
+    @InjectRepository(Sponsorship)
+    private readonly sponsorshipRepository: Repository<Sponsorship>,
   ) {}
 
   /**
@@ -24,11 +30,19 @@ export class AdminService {
     const TRIAL_DAYS = 7;
     const now = new Date();
 
-    // Get user counts and owner info for each organization
+    // Get user counts, project counts, sponsorship counts, and owner info for each organization
     const orgsWithStats = await Promise.all(
       organizations.map(async (org) => {
         const userCount = await this.userRepository.count({
           where: { organizationId: org.id },
+        });
+
+        const projectCount = await this.projectRepository.count({
+          where: { organizationId: org.id },
+        });
+
+        const sponsorshipCount = await this.sponsorshipRepository.count({
+          where: { sponsorOrgId: org.id },
         });
 
         // Get owner (first user in org, ordered by creation date)
@@ -84,13 +98,29 @@ export class AdminService {
           daysRemaining,
           expiresAt: expiresAt?.toISOString() || null,
           userCount,
+          projectCount,
+          sponsorshipCount,
           ownerEmail: owner?.email || null,
           createdAt: org.createdAt,
         };
       }),
     );
 
-    return { organizations: orgsWithStats };
+    // Calculate global stats
+    const totalProjects = await this.projectRepository.count();
+    const totalSponsorships = await this.sponsorshipRepository.count();
+    const activeSponsorships = await this.sponsorshipRepository.count({
+      where: { status: 'active' },
+    });
+
+    return { 
+      organizations: orgsWithStats,
+      stats: {
+        totalProjects,
+        totalSponsorships,
+        activeSponsorships,
+      },
+    };
   }
 
   /**

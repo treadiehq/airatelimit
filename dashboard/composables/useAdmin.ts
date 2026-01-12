@@ -8,8 +8,16 @@ export interface OrganizationInfo {
   daysRemaining: number | null
   expiresAt: string | null
   userCount: number
+  projectCount: number
+  sponsorshipCount: number
   ownerEmail: string | null
   createdAt: string
+}
+
+export interface AdminStats {
+  totalProjects: number
+  totalSponsorships: number
+  activeSponsorships: number
 }
 
 export const PLAN_OPTIONS = [
@@ -36,6 +44,7 @@ export function useAdmin() {
   const { user } = useAuth()
 
   const organizations = ref<OrganizationInfo[]>([])
+  const stats = ref<AdminStats | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -73,6 +82,7 @@ export function useAdmin() {
     try {
       const data = await api('/admin/organizations')
       organizations.value = data.organizations || []
+      stats.value = data.stats || null
     } catch (err: any) {
       error.value = err.message
       console.error('Failed to load organizations:', err)
@@ -108,6 +118,7 @@ export function useAdmin() {
   return {
     // State
     organizations,
+    stats,
     loading,
     error,
     isAdmin,

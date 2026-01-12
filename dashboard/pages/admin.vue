@@ -14,6 +14,7 @@ useHead({
 const features = useFeatures()
 const {
   organizations,
+  stats,
   loading,
   error,
   isAdmin,
@@ -118,6 +119,8 @@ const formatDate = (dateStr: string | null) => {
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Status</th>
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Expires</th>
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Members</th>
+            <th class="px-4 py-3 text-gray-400 font-medium text-sm">Projects</th>
+            <th class="px-4 py-3 text-gray-400 font-medium text-sm">Sponsorships</th>
             <th class="px-4 py-3 text-gray-400 font-medium text-sm">Actions</th>
           </tr>
         </thead>
@@ -226,6 +229,12 @@ const formatDate = (dateStr: string | null) => {
             <td class="px-4 py-4 text-gray-400 text-sm">
               {{ org.userCount }}
             </td>
+            <td class="px-4 py-4 text-gray-400 text-sm">
+              {{ org.projectCount }}
+            </td>
+            <td class="px-4 py-4 text-gray-400 text-sm">
+              {{ org.sponsorshipCount }}
+            </td>
             <td class="px-4 py-4">
               <button
                 v-if="editingOrgId !== org.id"
@@ -251,6 +260,28 @@ const formatDate = (dateStr: string | null) => {
 
     <!-- Stats Summary -->
     <div v-if="!loading && organizations.length > 0" class="mt-8 space-y-4">
+      <!-- Global Stats (Projects & Sponsorships) -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-cyan-300/5 rounded-lg border border-cyan-300/10 p-4">
+          <div class="text-2xl font-bold text-cyan-300">
+            {{ stats?.totalProjects || 0 }}
+          </div>
+          <div class="text-gray-400 text-sm">Total Projects</div>
+        </div>
+        <div class="bg-pink-300/5 rounded-lg border border-pink-300/10 p-4">
+          <div class="text-2xl font-bold text-pink-300">
+            {{ stats?.totalSponsorships || 0 }}
+          </div>
+          <div class="text-gray-400 text-sm">Total Sponsorships</div>
+        </div>
+        <div class="bg-emerald-300/5 rounded-lg border border-emerald-300/10 p-4">
+          <div class="text-2xl font-bold text-emerald-300">
+            {{ stats?.activeSponsorships || 0 }}
+          </div>
+          <div class="text-gray-400 text-sm">Active Sponsorships</div>
+        </div>
+      </div>
+      
       <!-- Plan Stats -->
       <div class="grid grid-cols-4 gap-4">
         <div
