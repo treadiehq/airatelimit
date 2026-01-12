@@ -12,6 +12,10 @@ const { copy } = useClipboard()
 const team = useTeam()
 const api = useApi()
 
+useHead({
+  title: 'Sponsorships - AI Ratelimit',
+})
+
 // =====================================================
 // TABS
 // =====================================================
