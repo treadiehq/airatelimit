@@ -22,9 +22,9 @@ export class OrganizationsController {
       name: organization.name,
       description: organization.description,
       createdAt: organization.createdAt,
-      // Include API key hint (not the full key)
-      apiKeyHint: this.organizationsService.getApiKeyHint(organization.apiKey),
-      hasApiKey: !!organization.apiKey,
+      // API key is never stored in plaintext for security
+      // Only indicate whether one is configured
+      hasApiKey: this.organizationsService.hasApiKey(organization),
     };
   }
 

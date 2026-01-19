@@ -57,13 +57,40 @@ let lastValidationTime = 0;
 const CACHE_TTL_MS = 60 * 1000; // Re-validate every minute
 
 /**
+ * Recalculate time-dependent fields for a cached license
+ * This ensures expiration status is always current, even when returning cached data
+ */
+function recalculateTimeDependentFields(license: LicenseData): LicenseData {
+  if (!license.expiresAt) {
+    return license;
+  }
+
+  const expiresAt = new Date(license.expiresAt);
+  const nowDate = new Date();
+  const isExpired = expiresAt < nowDate;
+  const daysRemaining = Math.max(
+    0,
+    Math.ceil((expiresAt.getTime() - nowDate.getTime()) / (1000 * 60 * 60 * 24)),
+  );
+
+  return {
+    ...license,
+    isValid: !isExpired,
+    isExpired,
+    daysRemaining,
+    error: isExpired ? `License expired on ${license.expiresAt}` : undefined,
+  };
+}
+
+/**
  * Validate an enterprise license key
  */
 export function validateLicense(licenseKey: string | undefined, forceRefresh = false): LicenseData | null {
-  // Return cached result if valid
+  // Return cached result if valid (but recalculate time-dependent fields)
   const now = Date.now();
   if (!forceRefresh && cachedLicense && (now - lastValidationTime) < CACHE_TTL_MS) {
-    return cachedLicense;
+    // Always recalculate expiration status to prevent stale cache attacks
+    return recalculateTimeDependentFields(cachedLicense);
   }
 
   // No key = no license

@@ -53,22 +53,18 @@ export class ProjectsService {
     // TRANSPARENT PROXY MODE: Always generate project key on creation
     // API keys are now passed per-request, not stored
     const projectKey = this.generateProjectKey();
-    const secretKeyPlain = this.generateSecretKey();
-
-    // Hash the secret key for secure storage
-    const secretKeyHash =
-      await this.cryptoService.hashSecretKey(secretKeyPlain);
 
     // Only set provider and baseUrl if actually provided in DTO (legacy support)
     const provider = dto.provider || null;
     const baseUrl =
       dto.baseUrl || (provider ? this.getDefaultBaseUrl(provider) : null);
 
+    // First, create the project without secret key (we need the ID first)
     const project = this.projectsRepository.create({
       ...dto,
       projectKey,
-      secretKey: secretKeyPlain, // Store plain for now (for lookup), will migrate to hash-only
-      secretKeyHash,
+      secretKey: null, // Don't store plaintext
+      secretKeyHash: null, // Will be set after we have the project ID
       ownerId: userId,
       organizationId,
       provider,
@@ -80,8 +76,18 @@ export class ProjectsService {
 
     const saved = await this.projectsRepository.save(project);
 
+    // Now generate secret key with embedded project ID
+    const secretKeyPlain = this.generateSecretKey(saved.id);
+    const secretKeyHash =
+      await this.cryptoService.hashSecretKey(secretKeyPlain);
+
+    // Update with the hash only (not plaintext)
+    await this.projectsRepository.update(saved.id, {
+      secretKeyHash,
+    });
+
     // Return the plaintext secret key only on creation
-    return { ...saved, secretKeyPlain };
+    return { ...saved, secretKeyHash, secretKeyPlain };
   }
 
   async findByOwner(userId: string): Promise<Project[]> {
@@ -181,9 +187,35 @@ export class ProjectsService {
     return `pk_${random}`;
   }
 
-  private generateSecretKey(): string {
+  /**
+   * Generate a secret key with embedded project ID
+   * Format: sk_<projectId>_<random>
+   * Embedding the project ID allows lookup by ID instead of storing plaintext
+   */
+  private generateSecretKey(projectId: string): string {
     const random = randomBytes(24).toString('hex');
-    return `sk_${random}`;
+    return `sk_${projectId}_${random}`;
+  }
+
+  /**
+   * Extract project ID from secret key format
+   * Returns null if the key format is invalid or is a legacy format
+   * 
+   * New format: sk_<projectId>_<random> (3 parts)
+   * Legacy format: sk_<random> (2 parts) - requires hash iteration fallback
+   */
+  private extractProjectIdFromSecretKey(secretKey: string): string | null {
+    if (!secretKey || !secretKey.startsWith('sk_')) {
+      return null;
+    }
+    // Format: sk_<projectId>_<random>
+    // Split by underscore: ['sk', '<projectId>', '<random>']
+    const parts = secretKey.split('_');
+    if (parts.length !== 3) {
+      // Legacy format (sk_<random>) - return null to trigger hash fallback
+      return null;
+    }
+    return parts[1];
   }
 
   async regenerateSecretKey(id: string): Promise<string> {
@@ -192,28 +224,51 @@ export class ProjectsService {
       throw new NotFoundException('Project not found');
     }
 
-    const newSecretKey = this.generateSecretKey();
+    const newSecretKey = this.generateSecretKey(id);
     const secretKeyHash = await this.cryptoService.hashSecretKey(newSecretKey);
 
     await this.projectsRepository.update(id, {
-      secretKey: newSecretKey, // Store plain for lookup (migration period)
+      secretKey: null, // Don't store plaintext - extract project ID from key format instead
       secretKeyHash,
     });
     return newSecretKey;
   }
 
+  /**
+   * Find project by secret key
+   * 
+   * Supports two formats:
+   * 1. New format (sk_<projectId>_<random>): Extract project ID and lookup by ID
+   * 2. Legacy format (sk_<random>): Fall back to hash comparison
+   */
   async findBySecretKey(secretKey: string): Promise<Project | null> {
-    // First try direct lookup (for migration period)
-    const project = await this.projectsRepository.findOne({
-      where: { secretKey },
-    });
-    if (project) {
-      return project;
+    if (!secretKey || !secretKey.startsWith('sk_')) {
+      return null;
     }
 
-    // If not found and we have a hash, try hash comparison
-    // This is a fallback for when we fully migrate to hash-only storage
-    // For now, direct lookup should work
+    // Try new format first: extract project ID from key
+    const projectId = this.extractProjectIdFromSecretKey(secretKey);
+    if (projectId) {
+      return this.findById(projectId);
+    }
+
+    // Legacy format fallback: iterate through projects with hashes
+    // This is needed for keys created before the new format was introduced
+    const projectsWithHash = await this.projectsRepository
+      .createQueryBuilder('project')
+      .where('project.secretKeyHash IS NOT NULL')
+      .getMany();
+
+    for (const project of projectsWithHash) {
+      const matches = await this.cryptoService.verifySecretKey(
+        secretKey,
+        project.secretKeyHash,
+      );
+      if (matches) {
+        return this.decryptProject(project);
+      }
+    }
+
     return null;
   }
 
@@ -221,15 +276,10 @@ export class ProjectsService {
    * Verify a secret key against a project (secure comparison)
    */
   async verifySecretKey(secretKey: string, project: Project): Promise<boolean> {
-    // If we have a hash, use bcrypt comparison
-    if (project.secretKeyHash) {
-      return this.cryptoService.verifySecretKey(
-        secretKey,
-        project.secretKeyHash,
-      );
+    if (!project.secretKeyHash) {
+      return false;
     }
-    // Fallback: constant-time comparison with stored key
-    return this.cryptoService.constantTimeCompare(secretKey, project.secretKey);
+    return this.cryptoService.verifySecretKey(secretKey, project.secretKeyHash);
   }
 
   private getDefaultBaseUrl(provider: string): string {

@@ -85,7 +85,8 @@ onMounted(async () => {
   try {
     const orgData = await api('/organizations/me')
     orgApiKey.value.hasKey = orgData.hasApiKey
-    orgApiKey.value.hint = orgData.apiKeyHint?.replace('...', '') || ''
+    // Hint is no longer available from backend (keys are hash-only for security)
+    orgApiKey.value.hint = ''
   } catch (e) {
     // Ignore - org data not available
   }
@@ -849,7 +850,7 @@ const getStatusClasses = (status: string) => {
           <div class="flex items-center gap-3">
             <div v-if="orgApiKey.hasKey" class="flex items-center gap-2">
               <code class="px-3 py-1.5 bg-black rounded text-sm text-gray-300 font-mono">
-                {{ orgApiKey.showKey ? orgApiKey.key : `org_sk_...${orgApiKey.hint}` }}
+                {{ orgApiKey.showKey && orgApiKey.key ? orgApiKey.key : (orgApiKey.hint ? `org_sk_...${orgApiKey.hint}` : 'org_sk_••••••••') }}
               </code>
               <button
                 @click="orgApiKey.showKey = !orgApiKey.showKey"

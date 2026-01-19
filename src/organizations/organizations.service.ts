@@ -139,16 +139,35 @@ export class OrganizationsService {
 
   /**
    * Generate a new organization API key
-   * Format: org_sk_<32 hex chars>
+   * Format: org_sk_<orgId>_<32 hex chars>
+   * Embedding the org ID allows lookup by ID instead of storing plaintext
    */
-  private generateOrgApiKey(): string {
+  private generateOrgApiKey(organizationId: string): string {
     const random = crypto.randomBytes(16).toString('hex');
-    return `org_sk_${random}`;
+    return `org_sk_${organizationId}_${random}`;
+  }
+
+  /**
+   * Extract organization ID from API key format
+   * Returns null if the key format is invalid
+   */
+  private extractOrgIdFromApiKey(apiKey: string): string | null {
+    if (!apiKey || !apiKey.startsWith('org_sk_')) {
+      return null;
+    }
+    // Format: org_sk_<orgId>_<random>
+    // Split by underscore: ['org', 'sk', '<orgId>', '<random>']
+    const parts = apiKey.split('_');
+    if (parts.length !== 4) {
+      return null;
+    }
+    return parts[2];
   }
 
   /**
    * Generate or regenerate API key for an organization
    * Returns the plaintext key (only shown once)
+   * Only the hash is stored in the database for security
    */
   async generateApiKey(organizationId: string): Promise<string> {
     const org = await this.findById(organizationId);
@@ -156,11 +175,11 @@ export class OrganizationsService {
       throw new BadRequestException('Organization not found');
     }
 
-    const apiKey = this.generateOrgApiKey();
+    const apiKey = this.generateOrgApiKey(organizationId);
     const apiKeyHash = await this.cryptoService.hashSecretKey(apiKey);
 
     await this.organizationsRepository.update(organizationId, {
-      apiKey,
+      apiKey: null, // Don't store plaintext - extract org ID from key format instead
       apiKeyHash,
     });
 
@@ -169,12 +188,14 @@ export class OrganizationsService {
 
   /**
    * Find organization by API key
+   * Extracts the org ID from the key format and looks up by ID
    */
   async findByApiKey(apiKey: string): Promise<Organization | null> {
-    if (!apiKey || !apiKey.startsWith('org_sk_')) {
+    const orgId = this.extractOrgIdFromApiKey(apiKey);
+    if (!orgId) {
       return null;
     }
-    return this.organizationsRepository.findOne({ where: { apiKey } });
+    return this.findById(orgId);
   }
 
   /**
@@ -182,8 +203,7 @@ export class OrganizationsService {
    */
   async verifyApiKey(apiKey: string, org: Organization): Promise<boolean> {
     if (!org.apiKeyHash) {
-      // Fallback: direct comparison if no hash (shouldn't happen)
-      return org.apiKey === apiKey;
+      return false;
     }
     return this.cryptoService.verifySecretKey(apiKey, org.apiKeyHash);
   }
@@ -199,10 +219,9 @@ export class OrganizationsService {
   }
 
   /**
-   * Get API key hint (last 4 chars) for display
+   * Check if organization has an API key configured
    */
-  getApiKeyHint(apiKey: string | null): string | null {
-    if (!apiKey) return null;
-    return `...${apiKey.slice(-4)}`;
+  hasApiKey(org: Organization): boolean {
+    return !!org.apiKeyHash;
   }
 }

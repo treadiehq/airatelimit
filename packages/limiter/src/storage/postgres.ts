@@ -63,6 +63,17 @@ export class PostgresStorage implements Storage {
   // TOKEN BUCKET RATE LIMITING
   // ============================================================
 
+  /**
+   * Atomically try to consume a token from the bucket.
+   * 
+   * Uses a single SQL statement with CTE to ensure atomicity:
+   * 1. Refill tokens based on elapsed time
+   * 2. Check if tokens >= 1
+   * 3. If yes, consume one token atomically
+   * 
+   * This prevents race conditions where concurrent requests could
+   * both read the same token count before either consumes.
+   */
   async tryConsume(
     tenantId: string,
     capacity: number,
@@ -70,32 +81,49 @@ export class PostgresStorage implements Storage {
   ): Promise<{ allowed: boolean; remaining: number; resetMs: number }> {
     const now = Date.now();
 
-    // Use a transaction with row-level locking for atomicity
+    // Atomic token bucket operation using CTE
+    // This combines read, check, and consume into a single atomic SQL statement
     const result = await this.client.query<{
+      allowed: string;
       tokens: string;
       last_refill: string;
     }>(
       `
-      INSERT INTO ${this.bucketsTable} (tenant_id, tokens, last_refill)
-      VALUES ($1, $2, $3)
-      ON CONFLICT (tenant_id) DO UPDATE SET
-        tokens = LEAST($2, ${this.bucketsTable}.tokens + 
-          (($3 - ${this.bucketsTable}.last_refill) / 1000.0 * $4)),
-        last_refill = $3
-      RETURNING tokens, last_refill
+      WITH refilled AS (
+        -- Step 1: Insert or update bucket with refilled tokens
+        INSERT INTO ${this.bucketsTable} (tenant_id, tokens, last_refill)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (tenant_id) DO UPDATE SET
+          tokens = LEAST($2, ${this.bucketsTable}.tokens + 
+            (($3 - ${this.bucketsTable}.last_refill) / 1000.0 * $4)),
+          last_refill = $3
+        RETURNING tenant_id, tokens, last_refill
+      ),
+      consumed AS (
+        -- Step 2: Atomically consume one token if available
+        UPDATE ${this.bucketsTable}
+        SET tokens = tokens - 1
+        WHERE tenant_id = $1 
+          AND (SELECT tokens FROM refilled) >= 1
+        RETURNING tokens
+      )
+      -- Step 3: Return the result
+      SELECT 
+        CASE WHEN EXISTS (SELECT 1 FROM consumed) THEN 1 ELSE 0 END as allowed,
+        COALESCE(
+          (SELECT tokens FROM consumed), 
+          (SELECT tokens FROM refilled)
+        ) as tokens,
+        (SELECT last_refill FROM refilled) as last_refill
       `,
       [tenantId, capacity, now, refillRate]
     );
 
-    let tokens = parseFloat(result.rows[0].tokens);
+    const allowed = result.rows[0].allowed === '1';
+    const tokens = parseFloat(result.rows[0].tokens);
 
-    // Try to consume one token
-    if (tokens >= 1) {
-      await this.client.query(
-        `UPDATE ${this.bucketsTable} SET tokens = tokens - 1 WHERE tenant_id = $1`,
-        [tenantId]
-      );
-      return { allowed: true, remaining: Math.floor(tokens - 1), resetMs: 0 };
+    if (allowed) {
+      return { allowed: true, remaining: Math.floor(tokens), resetMs: 0 };
     }
 
     // Denied - calculate reset time

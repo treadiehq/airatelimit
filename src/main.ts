@@ -8,7 +8,8 @@ import { getEnterpriseLicense } from './config/license';
 import { getDeploymentMode } from './config/features';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { rawBody: true });
+  // Disable built-in body parser to use custom middleware with rawBody capture
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
 
   const configService = app.get(ConfigService);
   
@@ -53,7 +54,18 @@ async function bootstrap() {
   // SECURITY: Request body size limits
   // ====================================
   // Limit JSON body to 2MB (enough for large prompts, prevents abuse)
-  app.use(json({ limit: '2mb' }));
+  // Use verify callback to capture raw body for Stripe webhook signature verification
+  app.use(
+    json({
+      limit: '2mb',
+      verify: (req: any, res, buf) => {
+        // Capture raw body buffer for webhook signature verification (e.g., Stripe)
+        if (buf && buf.length) {
+          req.rawBody = buf;
+        }
+      },
+    }),
+  );
   // Limit URL-encoded body to 1MB
   app.use(urlencoded({ extended: true, limit: '1mb' }));
 

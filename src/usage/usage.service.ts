@@ -89,12 +89,22 @@ export class UsageService {
       };
     }
 
+    // Format periodStart as date string for PostgreSQL
+    const periodStartStr = periodStart.toISOString().split('T')[0];
+
+    // ====================================
+    // SECURITY: Check cardinality limits FIRST
+    // Prevents database row explosion attacks
+    // This must happen BEFORE promotional override check
+    // to prevent abuse even by promotional users
+    // ====================================
+    await this.checkCardinalityLimits(project.id, identity, session, periodStartStr);
+
     // Check for active promotional override (unlimited access)
     if (identityLimit?.unlimitedUntil && identityLimit.unlimitedUntil > new Date()) {
       // Promo is active - allow request but still track usage
       // NOTE: Only increment requestsUsed here, NOT tokensUsed.
       // Tokens are incremented later in finalizeUsageWithCost with actual values.
-      const periodStartStr = periodStart.toISOString().split('T')[0];
       await this.usageRepository.query(
         `INSERT INTO usage_counters (id, "projectId", identity, model, "session", "periodStart", "requestsUsed", "tokensUsed", "inputTokens", "outputTokens", "costUsd", "blockedRequests", "savedUsd", "createdAt", "updatedAt")
          VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, 0, 0, 0, 0, 0, 0, NOW(), NOW())
@@ -135,15 +145,6 @@ export class UsageService {
       shouldCheckTokens && limits.tokenLimit !== null && limits.tokenLimit
       ? limits.tokenLimit 
       : null;
-
-    // Format periodStart as date string for PostgreSQL
-    const periodStartStr = periodStart.toISOString().split('T')[0];
-
-    // ====================================
-    // SECURITY: Check cardinality limits
-    // Prevents database row explosion attacks
-    // ====================================
-    await this.checkCardinalityLimits(project.id, identity, session, periodStartStr);
 
     // Step 1: Ensure the row exists (atomic upsert)
     await this.usageRepository.query(

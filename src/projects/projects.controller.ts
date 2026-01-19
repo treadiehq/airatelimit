@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -52,26 +53,49 @@ export class ProjectsController {
   async create(@Request() req, @Body() dto: CreateUserProjectDto) {
     const userId = req.user.userId;
     const organizationId = req.user.organizationId;
-    return this.projectsService.createForUser(userId, organizationId, dto);
+    const project = await this.projectsService.createForUser(
+      userId,
+      organizationId,
+      dto,
+    );
+    return this.maskApiKey(project);
   }
 
   @Get()
   async findAll(@Request() req) {
     const organizationId = req.user.organizationId;
-    return this.projectsService.findByOrganization(organizationId);
+    const projects =
+      await this.projectsService.findByOrganization(organizationId);
+    return projects.map((p) => this.maskApiKey(p));
   }
 
   @Get(':id')
   async findOne(@Request() req, @Param('id') id: string) {
     const project = await this.verifyProjectAccess(id, req.user.organizationId);
-    return project;
+    return this.maskApiKey(project);
   }
 
   @Put(':id')
   @UseGuards(ProjectFieldsGuard)
-  async update(@Request() req, @Param('id') id: string, @Body() dto: UpdateProjectDto) {
+  async update(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: UpdateProjectDto,
+  ) {
     await this.verifyProjectAccess(id, req.user.organizationId);
-    return this.projectsService.update(id, dto);
+    const updated = await this.projectsService.update(id, dto);
+    return this.maskApiKey(updated);
+  }
+
+  @Patch(':id')
+  async updatePartial(
+    @Request() req,
+    @Param('id') id: string,
+    @Body() dto: UpdateProjectDto,
+  ) {
+    await this.verifyProjectAccess(id, req.user.organizationId);
+    const updated = await this.projectsService.update(id, dto);
+    return this.maskApiKey(updated);
   }
 
   @Delete(':id')
@@ -155,7 +179,8 @@ export class ProjectsController {
     @Body() dto: { routingEnabled?: boolean; routingConfig?: any },
   ) {
     await this.verifyProjectAccess(id, req.user.organizationId);
-    return this.projectsService.update(id, dto);
+    const updated = await this.projectsService.update(id, dto);
+    return this.maskApiKey(updated);
   }
 
   /**
@@ -168,7 +193,8 @@ export class ProjectsController {
     @Body() dto: { budgetConfig?: any },
   ) {
     await this.verifyProjectAccess(id, req.user.organizationId);
-    return this.projectsService.update(id, dto);
+    const updated = await this.projectsService.update(id, dto);
+    return this.maskApiKey(updated);
   }
 
   @Get(':id/security/events')
@@ -187,5 +213,53 @@ export class ProjectsController {
     });
 
     return events;
+  }
+
+  @Post(':id/regenerate-secret')
+  async regenerateSecretKey(@Request() req, @Param('id') id: string) {
+    await this.verifyProjectAccess(id, req.user.organizationId);
+    const newSecretKey = await this.projectsService.regenerateSecretKey(id);
+    return { secretKey: newSecretKey };
+  }
+
+  /**
+   * Mask sensitive API keys in project responses.
+   * Only shows first few and last few characters to confirm key is configured.
+   */
+  private maskApiKey(project: any) {
+    const result = { ...project };
+
+    // Mask legacy openaiApiKey
+    if (result.openaiApiKey) {
+      const key = result.openaiApiKey;
+      result.openaiApiKey =
+        key.length > 11 ? key.substring(0, 7) + '****' + key.slice(-4) : '****';
+    }
+
+    // Mask providerKeys - only show that a key exists, not the actual key
+    if (result.providerKeys) {
+      const maskedProviderKeys: Record<
+        string,
+        { apiKey: string; baseUrl?: string; configured: boolean }
+      > = {};
+      for (const [provider, config] of Object.entries(result.providerKeys)) {
+        const providerConfig = config as { apiKey: string; baseUrl?: string };
+        if (providerConfig?.apiKey) {
+          const key = providerConfig.apiKey;
+          maskedProviderKeys[provider] = {
+            // Show first 4 and last 4 chars only
+            apiKey:
+              key.length > 12
+                ? key.substring(0, 4) + '••••••••' + key.slice(-4)
+                : '••••••••',
+            ...(providerConfig.baseUrl && { baseUrl: providerConfig.baseUrl }),
+            configured: true,
+          };
+        }
+      }
+      result.providerKeys = maskedProviderKeys;
+    }
+
+    return result;
   }
 }
