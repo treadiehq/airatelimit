@@ -88,6 +88,7 @@ export class ProjectsController {
   }
 
   @Patch(':id')
+  @UseGuards(ProjectFieldsGuard)
   async updatePartial(
     @Request() req,
     @Param('id') id: string,
@@ -117,7 +118,7 @@ export class ProjectsController {
     await this.verifyProjectAccess(projectId, req.user.organizationId);
     const summary = await this.usageService.getCostSummaryForProject(projectId);
     const projected = await this.usageService.getProjectedCost(projectId);
-    
+
     return {
       ...summary,
       projected,

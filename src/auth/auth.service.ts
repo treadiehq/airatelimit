@@ -97,7 +97,8 @@ export class AuthService {
    */
   private async signupWithInvite(email: string, inviteToken: string) {
     // Validate the invite token first
-    const inviteDetails = await this.membersService.getInviteByToken(inviteToken);
+    const inviteDetails =
+      await this.membersService.getInviteByToken(inviteToken);
     if (!inviteDetails) {
       throw new BadRequestException('Invalid or expired invitation');
     }
@@ -110,7 +111,10 @@ export class AuthService {
     }
 
     // Create user with the organization from the invite
-    const user = await this.usersService.create(email, inviteDetails.organizationId);
+    const user = await this.usersService.create(
+      email,
+      inviteDetails.organizationId,
+    );
 
     // Accept the invite (this creates membership and deletes the invite)
     await this.membersService.acceptInvite(inviteToken, user.id);
@@ -139,7 +143,11 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { sub: user.id, email: user.email };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      organizationId: user.organizationId,
+    };
     const accessToken = this.jwtService.sign(payload);
 
     return {
@@ -247,17 +255,29 @@ export class AuthService {
 
       if (org) {
         // Check if ANY member of the organization is an admin email (not just current user)
-        const members = await this.membersService.getMembers(user.organizationId);
-        const hasAdminMember = members.some(member =>
-          this.organizationsService.isAdminEmail(member.user?.email)
+        const members = await this.membersService.getMembers(
+          user.organizationId,
+        );
+        const hasAdminMember = members.some((member) =>
+          this.organizationsService.isAdminEmail(member.user?.email),
         );
 
         if (hasAdminMember && org.plan !== 'enterprise') {
           // Organization has admin email member(s) → ensure enterprise plan
-          await this.organizationsService.upgradePlan(user.organizationId, 'enterprise');
-        } else if (!hasAdminMember && org.plan === 'enterprise' && !org.stripeSubscriptionId) {
+          await this.organizationsService.upgradePlan(
+            user.organizationId,
+            'enterprise',
+          );
+        } else if (
+          !hasAdminMember &&
+          org.plan === 'enterprise' &&
+          !org.stripeSubscriptionId
+        ) {
           // No admin members, on enterprise, no paid subscription → downgrade to trial
-          await this.organizationsService.upgradePlan(user.organizationId, 'trial');
+          await this.organizationsService.upgradePlan(
+            user.organizationId,
+            'trial',
+          );
         }
       }
 

@@ -47,19 +47,19 @@ const STREAMING_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes max streaming
 
 /**
  * Transparent Proxy Controller
- * 
+ *
  * This controller acts as a true transparent proxy - it accepts standard OpenAI/Anthropic
  * API requests, checks rate limits, and forwards them exactly as-is to the provider.
- * 
+ *
  * The customer's API key is passed per-request (not stored in our system).
- * 
+ *
  * Usage:
  * - Point your OpenAI SDK baseURL to: https://api.airatelimit.com/v1
  * - Add headers: x-project-key, x-identity, x-tier (optional)
  * - Your Authorization header with your API key is passed through
  */
 @Controller('v1')
-@UseGuards(LicenseGuard)  // Blocks all requests if enterprise license is expired
+@UseGuards(LicenseGuard) // Blocks all requests if enterprise license is expired
 export class TransparentProxyController {
   constructor(
     private readonly projectsService: ProjectsService,
@@ -104,7 +104,9 @@ export class TransparentProxyController {
    * Check if token is any sponsored/pool token
    */
   private isSponsoredOrPoolToken(authorization: string | undefined): boolean {
-    return this.isSponsoredToken(authorization) || this.isPoolToken(authorization);
+    return (
+      this.isSponsoredToken(authorization) || this.isPoolToken(authorization)
+    );
   }
 
   /**
@@ -186,7 +188,9 @@ export class TransparentProxyController {
     }
 
     // Check request size limit
-    if (!this.sponsorshipService.checkRequestSize(sponsorship, estimatedTokens)) {
+    if (
+      !this.sponsorshipService.checkRequestSize(sponsorship, estimatedTokens)
+    ) {
       return {
         allowed: false,
         error: {
@@ -204,8 +208,14 @@ export class TransparentProxyController {
 
     // Check IP restrictions
     if (clientIp) {
-      const effectiveIpRanges = this.getEffectiveIpRanges(sponsorship, sponsorship.sponsorKey);
-      if (effectiveIpRanges && !this.ipValidationService.isIpAllowed(clientIp, effectiveIpRanges)) {
+      const effectiveIpRanges = this.getEffectiveIpRanges(
+        sponsorship,
+        sponsorship.sponsorKey,
+      );
+      if (
+        effectiveIpRanges &&
+        !this.ipValidationService.isIpAllowed(clientIp, effectiveIpRanges)
+      ) {
         console.warn('IP restriction: Sponsored token request blocked', {
           sponsorshipId: sponsorship.id,
           clientIp,
@@ -217,7 +227,8 @@ export class TransparentProxyController {
             status: HttpStatus.FORBIDDEN,
             body: {
               error: {
-                message: 'Your IP address is not allowed to use this sponsorship',
+                message:
+                  'Your IP address is not allowed to use this sponsorship',
                 type: 'ip_not_allowed',
                 code: 'sponsorship_ip_restricted',
               },
@@ -242,7 +253,10 @@ export class TransparentProxyController {
    */
   private getEffectiveIpRanges(
     sponsorship: { ipRestrictionMode?: string; allowedIpRanges?: string[] },
-    sponsorKey?: { ipRestrictionsEnabled?: boolean; allowedIpRanges?: string[] } | null,
+    sponsorKey?: {
+      ipRestrictionsEnabled?: boolean;
+      allowedIpRanges?: string[];
+    } | null,
   ): string[] | null {
     // Check the sponsorship's IP restriction mode
     const mode = sponsorship.ipRestrictionMode || 'inherit';
@@ -258,7 +272,10 @@ export class TransparentProxyController {
     }
 
     // mode === 'inherit' - check sponsor key
-    if (sponsorKey?.ipRestrictionsEnabled && sponsorKey.allowedIpRanges?.length) {
+    if (
+      sponsorKey?.ipRestrictionsEnabled &&
+      sponsorKey.allowedIpRanges?.length
+    ) {
       return sponsorKey.allowedIpRanges;
     }
 
@@ -328,7 +345,10 @@ export class TransparentProxyController {
         routeResult.sponsorship,
         routeResult.sponsorKey,
       );
-      if (effectiveIpRanges && !this.ipValidationService.isIpAllowed(clientIp, effectiveIpRanges)) {
+      if (
+        effectiveIpRanges &&
+        !this.ipValidationService.isIpAllowed(clientIp, effectiveIpRanges)
+      ) {
         console.warn('IP restriction: Pool request blocked', {
           sponsorshipId: routeResult.sponsorship.id,
           clientIp,
@@ -340,7 +360,8 @@ export class TransparentProxyController {
             status: HttpStatus.FORBIDDEN,
             body: {
               error: {
-                message: 'Your IP address is not allowed to use this sponsorship',
+                message:
+                  'Your IP address is not allowed to use this sponsorship',
                 type: 'ip_not_allowed',
                 code: 'sponsorship_ip_restricted',
               },
@@ -374,7 +395,7 @@ export class TransparentProxyController {
   ): Promise<void> {
     // Get client IP for IP restriction checking
     const clientIp = this.getClientIp(req);
-    
+
     // Estimate input tokens for validation
     const estimatedInputTokens = this.estimateInputTokens(body);
 
@@ -412,8 +433,11 @@ export class TransparentProxyController {
     }
 
     // Get provider URL based on the sponsor key's provider
-    const provider = authResult.provider || this.transparentProxyService.detectProvider(model);
-    const providerUrl = this.transparentProxyService.getProviderUrl(provider as any);
+    const provider =
+      authResult.provider || this.transparentProxyService.detectProvider(model);
+    const providerUrl = this.transparentProxyService.getProviderUrl(
+      provider as any,
+    );
 
     console.log('Sponsored request:', {
       sponsorshipId: authResult.sponsorshipId,
@@ -439,16 +463,21 @@ export class TransparentProxyController {
         );
       } else {
         // Handle non-streaming response
-        const providerResponse = await this.transparentProxyService.forwardRequest(
-          authResult.resolvedAuthorization,
-          providerUrl,
-          body,
-        );
+        const providerResponse =
+          await this.transparentProxyService.forwardRequest(
+            authResult.resolvedAuthorization,
+            providerUrl,
+            body,
+          );
 
         // Calculate cost and log usage
         const inputTokens = providerResponse.usage?.prompt_tokens || 0;
         const outputTokens = providerResponse.usage?.completion_tokens || 0;
-        const cost = this.pricingService.calculateCost(model, inputTokens, outputTokens);
+        const cost = this.pricingService.calculateCost(
+          model,
+          inputTokens,
+          outputTokens,
+        );
 
         // Log usage to sponsorship
         const usageResult = await this.sponsorshipService.logUsage({
@@ -539,7 +568,9 @@ export class TransparentProxyController {
     const timeout = setTimeout(() => {
       if (!streamEnded) {
         console.warn('Sponsored streaming timeout:', { sponsorshipId, model });
-        res.write(`data: ${JSON.stringify({ error: 'Stream timeout exceeded' })}\n\n`);
+        res.write(
+          `data: ${JSON.stringify({ error: 'Stream timeout exceeded' })}\n\n`,
+        );
         res.end();
         streamEnded = true;
       }
@@ -592,7 +623,11 @@ export class TransparentProxyController {
 
       const totalTokens = finalInputTokens + finalOutputTokens;
       if (totalTokens > 0) {
-        const cost = this.pricingService.calculateCost(model, finalInputTokens, finalOutputTokens);
+        const cost = this.pricingService.calculateCost(
+          model,
+          finalInputTokens,
+          finalOutputTokens,
+        );
 
         await this.sponsorshipService.logUsage({
           sponsorshipId,
@@ -615,10 +650,18 @@ export class TransparentProxyController {
         });
       }
     } catch (error) {
-      console.error('Sponsored streaming error:', { sponsorshipId, error: error.message });
+      console.error('Sponsored streaming error:', {
+        sponsorshipId,
+        error: error.message,
+      });
       if (!streamEnded) {
-        const errorMessage = error.response?.data?.error?.message || error.message || 'Streaming failed';
-        res.write(`data: ${JSON.stringify({ error: { message: errorMessage, type: 'provider_error' } })}\n\n`);
+        const errorMessage =
+          error.response?.data?.error?.message ||
+          error.message ||
+          'Streaming failed';
+        res.write(
+          `data: ${JSON.stringify({ error: { message: errorMessage, type: 'provider_error' } })}\n\n`,
+        );
         res.end();
         streamEnded = true;
       }
@@ -667,7 +710,8 @@ export class TransparentProxyController {
 
     // Check for native Gemini format (uses 'contents' instead of 'messages')
     if (this.isNativeGeminiFormat(body)) {
-      const { transformed, originalFormat } = this.transformGeminiToOpenAI(body);
+      const { transformed, originalFormat } =
+        this.transformGeminiToOpenAI(body);
       workingBody = transformed;
       responseFormat = originalFormat;
       console.log('Transformed native Gemini format to OpenAI format:', {
@@ -719,7 +763,7 @@ export class TransparentProxyController {
     try {
       // Get project configuration
       const project = await this.projectsService.findByProjectKey(projectKey);
-      
+
       // Get client IP for sponsorship IP restrictions
       const clientIp = this.getClientIp(req);
 
@@ -730,7 +774,7 @@ export class TransparentProxyController {
       // ====================================
       // if (project.ipRestrictionsEnabled && project.allowedIpRanges?.length > 0) {
       //   const clientIp = this.getClientIp(req);
-      //   
+      //
       //   if (!this.ipValidationService.isIpAllowed(clientIp, project.allowedIpRanges)) {
       //     console.warn('IP restriction: Request blocked', {
       //       projectId: project.id,
@@ -742,7 +786,7 @@ export class TransparentProxyController {
       //       message: 'Access denied. Your IP address is not in the allowed range.',
       //     });
       //   }
-      //   
+      //
       //   console.log('IP restriction: Validated', {
       //     projectId: project.id,
       //     clientIp,
@@ -755,14 +799,16 @@ export class TransparentProxyController {
       if (project.publicModeEnabled) {
         // Validate origin if allowedOrigins is configured
         if (project.allowedOrigins && project.allowedOrigins.length > 0) {
-          const requestOrigin = origin || this.extractOriginFromReferer(referer);
+          const requestOrigin =
+            origin || this.extractOriginFromReferer(referer);
           if (!requestOrigin) {
             throw new UnauthorizedException({
               error: 'origin_required',
-              message: 'Public mode requires Origin or Referer header for security. This endpoint is configured for browser-based access only.',
+              message:
+                'Public mode requires Origin or Referer header for security. This endpoint is configured for browser-based access only.',
             });
           }
-          
+
           if (!this.isOriginAllowed(requestOrigin, project.allowedOrigins)) {
             console.warn('Public mode: Origin rejected', {
               projectId: project.id,
@@ -774,7 +820,7 @@ export class TransparentProxyController {
               message: `Origin "${requestOrigin}" is not allowed. Configure allowed origins in the dashboard.`,
             });
           }
-          
+
           console.log('Public mode: Origin validated', {
             projectId: project.id,
             origin: requestOrigin,
@@ -787,7 +833,9 @@ export class TransparentProxyController {
       // Block if organization has exceeded monthly request limit
       // ====================================
       if (isCloudMode() && project.organizationId) {
-        const usageCheck = await this.usageLimitService.checkRequestLimit(project.organizationId);
+        const usageCheck = await this.usageLimitService.checkRequestLimit(
+          project.organizationId,
+        );
         if (!usageCheck.allowed) {
           throw new HttpException(
             {
@@ -812,13 +860,21 @@ export class TransparentProxyController {
       // SYSTEM PROMPT INJECTION
       // If request includes 'systemPrompt' field (name reference), inject the content
       // ====================================
-      if (workingBody.systemPrompt && typeof workingBody.systemPrompt === 'string') {
-        const promptContent = await this.promptsService.getContent(project.id, workingBody.systemPrompt);
+      if (
+        workingBody.systemPrompt &&
+        typeof workingBody.systemPrompt === 'string'
+      ) {
+        const promptContent = await this.promptsService.getContent(
+          project.id,
+          workingBody.systemPrompt,
+        );
         if (promptContent) {
           // Inject system message at the beginning
           workingBody.messages = [
             { role: 'system', content: promptContent },
-            ...(workingBody.messages || []).filter((m: any) => m.role !== 'system'),
+            ...(workingBody.messages || []).filter(
+              (m: any) => m.role !== 'system',
+            ),
           ];
           console.log('Injected system prompt:', {
             projectId: project.id,
@@ -836,16 +892,22 @@ export class TransparentProxyController {
       // Detect provider from model to look up stored key (may be re-detected after smart routing)
       let provider = this.transparentProxyService.detectProvider(model);
       let resolvedAuthorization = authorization;
-      let sponsorshipContext: { sponsorshipId: string; tokenProvider: string } | null = null;
+      let sponsorshipContext: {
+        sponsorshipId: string;
+        tokenProvider: string;
+      } | null = null;
 
       if (!authorization) {
         // Check if project has stored provider keys
         const storedConfig = project.providerKeys?.[provider];
         if (storedConfig?.apiKey) {
           const storedKey = storedConfig.apiKey;
-          
+
           // Check if the stored key is actually a sponsored token
-          if (storedKey.startsWith('spt_') && isFeatureEnabled('sponsoredUsage')) {
+          if (
+            storedKey.startsWith('spt_') &&
+            isFeatureEnabled('sponsoredUsage')
+          ) {
             // Validate the sponsored token and get the real API key
             const estimatedInputTokens = this.estimateInputTokens(workingBody);
             const sponsoredAuth = await this.handleSponsoredTokenAuth(
@@ -855,24 +917,29 @@ export class TransparentProxyController {
               project.organizationId, // Auto-link recipient org
               clientIp, // IP restriction check
             );
-            
+
             if (!sponsoredAuth.allowed) {
-              res.status(sponsoredAuth.error.status).json(sponsoredAuth.error.body);
+              res
+                .status(sponsoredAuth.error.status)
+                .json(sponsoredAuth.error.body);
               return;
             }
-            
+
             resolvedAuthorization = sponsoredAuth.resolvedAuthorization;
             sponsorshipContext = {
               sponsorshipId: sponsoredAuth.sponsorshipId,
               tokenProvider: sponsoredAuth.provider,
             };
-            
+
             console.log('Using sponsored token from project config:', {
               projectId: project.id,
               sponsorshipId: sponsoredAuth.sponsorshipId,
               provider: sponsoredAuth.provider,
             });
-          } else if (storedKey.startsWith('spp_') && isFeatureEnabled('sponsoredUsage')) {
+          } else if (
+            storedKey.startsWith('spp_') &&
+            isFeatureEnabled('sponsoredUsage')
+          ) {
             // Validate the pool token and get a routed sponsor's API key
             const estimatedInputTokens = this.estimateInputTokens(workingBody);
             const poolAuth = await this.handlePoolTokenAuth(
@@ -881,18 +948,18 @@ export class TransparentProxyController {
               estimatedInputTokens,
               clientIp, // IP restriction check
             );
-            
+
             if (!poolAuth.allowed) {
               res.status(poolAuth.error.status).json(poolAuth.error.body);
               return;
             }
-            
+
             resolvedAuthorization = poolAuth.resolvedAuthorization;
             sponsorshipContext = {
               sponsorshipId: poolAuth.sponsorshipId,
               tokenProvider: poolAuth.provider,
             };
-            
+
             console.log('Using pool token from project config:', {
               projectId: project.id,
               sponsorshipId: poolAuth.sponsorshipId,
@@ -911,7 +978,10 @@ export class TransparentProxyController {
             `Missing Authorization header. Either pass your ${provider} API key in the Authorization header, or configure it in the dashboard under Provider Keys.`,
           );
         }
-      } else if (this.isSponsoredToken(authorization) && isFeatureEnabled('sponsoredUsage')) {
+      } else if (
+        this.isSponsoredToken(authorization) &&
+        isFeatureEnabled('sponsoredUsage')
+      ) {
         // Authorization header contains a sponsored token
         const estimatedInputTokens = this.estimateInputTokens(workingBody);
         const sponsoredAuth = await this.handleSponsoredTokenAuth(
@@ -921,24 +991,27 @@ export class TransparentProxyController {
           project.organizationId, // Auto-link recipient org
           clientIp, // IP restriction check
         );
-        
+
         if (!sponsoredAuth.allowed) {
           res.status(sponsoredAuth.error.status).json(sponsoredAuth.error.body);
           return;
         }
-        
+
         resolvedAuthorization = sponsoredAuth.resolvedAuthorization;
         sponsorshipContext = {
           sponsorshipId: sponsoredAuth.sponsorshipId,
           tokenProvider: sponsoredAuth.provider,
         };
-        
+
         console.log('Using sponsored token from Authorization header:', {
           projectId: project.id,
           sponsorshipId: sponsoredAuth.sponsorshipId,
           provider: sponsoredAuth.provider,
         });
-      } else if (this.isPoolToken(authorization) && isFeatureEnabled('sponsoredUsage')) {
+      } else if (
+        this.isPoolToken(authorization) &&
+        isFeatureEnabled('sponsoredUsage')
+      ) {
         // Authorization header contains a pool token
         const estimatedInputTokens = this.estimateInputTokens(workingBody);
         const poolAuth = await this.handlePoolTokenAuth(
@@ -946,18 +1019,18 @@ export class TransparentProxyController {
           model,
           estimatedInputTokens,
         );
-        
+
         if (!poolAuth.allowed) {
           res.status(poolAuth.error.status).json(poolAuth.error.body);
           return;
         }
-        
+
         resolvedAuthorization = poolAuth.resolvedAuthorization;
         sponsorshipContext = {
           sponsorshipId: poolAuth.sponsorshipId,
           tokenProvider: poolAuth.provider,
         };
-        
+
         console.log('Using pool token from Authorization header:', {
           projectId: project.id,
           sponsorshipId: poolAuth.sponsorshipId,
@@ -977,8 +1050,9 @@ export class TransparentProxyController {
         );
         if (routedModel !== model) {
           // Re-detect provider for the routed model
-          const newProvider = this.transparentProxyService.detectProvider(routedModel);
-          
+          const newProvider =
+            this.transparentProxyService.detectProvider(routedModel);
+
           console.log('Smart routing applied:', {
             projectId: project.id,
             originalModel: model,
@@ -988,23 +1062,88 @@ export class TransparentProxyController {
             tier,
             strategy: project.routingConfig.strategy,
           });
-          
+
           // If provider changed, we need to re-resolve authorization
           if (newProvider !== provider && !authorization) {
             const storedConfig = project.providerKeys?.[newProvider];
             if (storedConfig?.apiKey) {
-              resolvedAuthorization = `Bearer ${storedConfig.apiKey}`;
-              console.log('Switched to stored API key for new provider:', {
-                projectId: project.id,
-                provider: newProvider,
-              });
+              const storedKey = storedConfig.apiKey;
+
+              if (
+                storedKey.startsWith('spt_') &&
+                isFeatureEnabled('sponsoredUsage')
+              ) {
+                const estimatedInputTokens =
+                  this.estimateInputTokens(workingBody);
+                const sponsoredAuth = await this.handleSponsoredTokenAuth(
+                  `Bearer ${storedKey}`,
+                  routedModel,
+                  estimatedInputTokens,
+                  project.organizationId,
+                  clientIp,
+                );
+
+                if (!sponsoredAuth.allowed) {
+                  res
+                    .status(sponsoredAuth.error.status)
+                    .json(sponsoredAuth.error.body);
+                  return;
+                }
+
+                resolvedAuthorization = sponsoredAuth.resolvedAuthorization;
+                sponsorshipContext = {
+                  sponsorshipId: sponsoredAuth.sponsorshipId,
+                  tokenProvider: sponsoredAuth.provider,
+                };
+
+                console.log('Using sponsored token after smart routing:', {
+                  projectId: project.id,
+                  sponsorshipId: sponsoredAuth.sponsorshipId,
+                  provider: newProvider,
+                });
+              } else if (
+                storedKey.startsWith('spp_') &&
+                isFeatureEnabled('sponsoredUsage')
+              ) {
+                const estimatedInputTokens =
+                  this.estimateInputTokens(workingBody);
+                const poolAuth = await this.handlePoolTokenAuth(
+                  `Bearer ${storedKey}`,
+                  routedModel,
+                  estimatedInputTokens,
+                  clientIp,
+                );
+
+                if (!poolAuth.allowed) {
+                  res.status(poolAuth.error.status).json(poolAuth.error.body);
+                  return;
+                }
+
+                resolvedAuthorization = poolAuth.resolvedAuthorization;
+                sponsorshipContext = {
+                  sponsorshipId: poolAuth.sponsorshipId,
+                  tokenProvider: poolAuth.provider,
+                };
+
+                console.log('Using pool token after smart routing:', {
+                  projectId: project.id,
+                  sponsorshipId: poolAuth.sponsorshipId,
+                  provider: newProvider,
+                });
+              } else {
+                resolvedAuthorization = `Bearer ${storedKey}`;
+                console.log('Switched to stored API key for new provider:', {
+                  projectId: project.id,
+                  provider: newProvider,
+                });
+              }
             } else {
               throw new UnauthorizedException(
                 `Smart routing changed model to ${routedModel} (${newProvider}), but no API key is configured for ${newProvider}. Configure it in the dashboard under Provider Keys.`,
               );
             }
           }
-          
+
           model = routedModel;
           workingBody.model = routedModel;
           provider = newProvider;
@@ -1033,7 +1172,10 @@ export class TransparentProxyController {
             endpoint: 'chat/completions',
           });
 
-          processedBody = { ...workingBody, messages: anonymizationResult.messages };
+          processedBody = {
+            ...workingBody,
+            messages: anonymizationResult.messages,
+          };
 
           console.log('PII anonymized:', {
             projectId: project.id,
@@ -1104,9 +1246,9 @@ export class TransparentProxyController {
       // before actual tokens are counted after streaming
       const estimatedInputTokens = this.estimateInputTokens(processedBody);
       // Estimate output based on typical response ratio or max_tokens if set
-      const estimatedOutputTokens = processedBody.max_tokens 
-        ? Math.min(processedBody.max_tokens, 500)  // Cap at 500 for estimate
-        : Math.ceil(estimatedInputTokens * 0.5);   // Assume 50% of input as output
+      const estimatedOutputTokens = processedBody.max_tokens
+        ? Math.min(processedBody.max_tokens, 500) // Cap at 500 for estimate
+        : Math.ceil(estimatedInputTokens * 0.5); // Assume 50% of input as output
       const estimatedTokens = estimatedInputTokens + estimatedOutputTokens;
 
       // FLOW EXECUTION: If project has a valid flow config, use flow executor
@@ -1125,7 +1267,8 @@ export class TransparentProxyController {
 
         if (flowResult.action === 'block' && flowResult.response) {
           // Track savings from blocked request
-          const estimatedSavings = this.pricingService.estimateBlockedCost(model);
+          const estimatedSavings =
+            this.pricingService.estimateBlockedCost(model);
           await this.usageService.trackBlockedRequest({
             project,
             identity,
@@ -1238,10 +1381,10 @@ export class TransparentProxyController {
         // Handle regular response
         const providerResponse =
           await this.transparentProxyService.forwardRequest(
-          resolvedAuthorization,
-          providerBaseUrl,
+            resolvedAuthorization,
+            providerBaseUrl,
             processedBody,
-        );
+          );
 
         // Finalize usage with actual tokens and cost
         const inputTokens = providerResponse.usage?.prompt_tokens || 0;
@@ -1264,7 +1407,7 @@ export class TransparentProxyController {
             outputTokens,
             cost,
           });
-          
+
           // Also track to sponsorship if using a sponsored token
           if (sponsorshipContext) {
             await this.sponsorshipService.logUsage({
@@ -1448,11 +1591,12 @@ export class TransparentProxyController {
         );
 
         if (flowResult.action === 'block' && flowResult.response) {
-          const estimatedSavings = this.pricingService.estimateImageCost(
-            model,
-            body.size,
-            body.quality,
-          ) * numImages;
+          const estimatedSavings =
+            this.pricingService.estimateImageCost(
+              model,
+              body.size,
+              body.quality,
+            ) * numImages;
           await this.usageService.trackBlockedRequest({
             project,
             identity,
@@ -2094,7 +2238,7 @@ export class TransparentProxyController {
     let inputTokens = 0;
     let outputTokens = 0;
     let streamEnded = false;
-    
+
     // Track streamed content for token estimation (when provider doesn't return usage)
     let totalStreamedChars = 0;
 
@@ -2110,7 +2254,9 @@ export class TransparentProxyController {
           session,
           model,
         });
-        res.write(`data: ${JSON.stringify({ error: 'Stream timeout exceeded' })}\n\n`);
+        res.write(
+          `data: ${JSON.stringify({ error: 'Stream timeout exceeded' })}\n\n`,
+        );
         res.end();
         streamEnded = true;
       }
@@ -2129,7 +2275,7 @@ export class TransparentProxyController {
           inputTokens = chunk.usage.prompt_tokens || inputTokens;
           outputTokens = chunk.usage.completion_tokens || outputTokens;
         }
-        
+
         // Track content length for token estimation (for providers that don't return usage)
         const deltaContent = chunk.choices?.[0]?.delta?.content;
         if (deltaContent && typeof deltaContent === 'string') {
@@ -2158,16 +2304,16 @@ export class TransparentProxyController {
       // Use actual tokens if available, otherwise estimate from content length
       let finalInputTokens = inputTokens;
       let finalOutputTokens = outputTokens;
-      
+
       if (inputTokens === 0 && outputTokens === 0 && totalStreamedChars > 0) {
         // Provider didn't return usage stats - estimate tokens
         // Rough estimate: ~4 characters per token for English text
         finalOutputTokens = Math.ceil(totalStreamedChars / 4);
-        
+
         // Estimate input tokens from request body
         const inputChars = this.estimateInputChars(body);
         finalInputTokens = Math.ceil(inputChars / 4);
-        
+
         console.log('Token estimation (streaming):', {
           projectId: project.id,
           identity,
@@ -2177,7 +2323,7 @@ export class TransparentProxyController {
           estimatedInputTokens: finalInputTokens,
         });
       }
-      
+
       const totalTokens = finalInputTokens + finalOutputTokens;
       if (totalTokens > 0) {
         const cost = this.pricingService.calculateCost(
@@ -2206,16 +2352,19 @@ export class TransparentProxyController {
       });
       if (!streamEnded) {
         // Forward the error to the client instead of silently ending
-        const errorMessage = error.response?.data?.error?.message 
-          || error.message 
-          || 'Failed to get response from AI provider';
-        res.write(`data: ${JSON.stringify({ 
-          error: { 
-            message: errorMessage,
-            type: 'provider_error',
-            code: error.response?.status || 500
-          } 
-        })}\n\n`);
+        const errorMessage =
+          error.response?.data?.error?.message ||
+          error.message ||
+          'Failed to get response from AI provider';
+        res.write(
+          `data: ${JSON.stringify({
+            error: {
+              message: errorMessage,
+              type: 'provider_error',
+              code: error.response?.status || 500,
+            },
+          })}\n\n`,
+        );
         res.end();
         streamEnded = true;
       }
@@ -2224,7 +2373,9 @@ export class TransparentProxyController {
     }
   }
 
-  private getPeriodStart(limitPeriod: 'hourly' | 'daily' | 'weekly' | 'monthly'): Date {
+  private getPeriodStart(
+    limitPeriod: 'hourly' | 'daily' | 'weekly' | 'monthly',
+  ): Date {
     const now = new Date();
     const year = now.getUTCFullYear();
     const month = now.getUTCMonth();
@@ -2283,7 +2434,7 @@ export class TransparentProxyController {
     if (!body.messages || !Array.isArray(body.messages)) {
       return 0;
     }
-    
+
     let totalChars = 0;
     for (const msg of body.messages) {
       if (typeof msg.content === 'string') {
@@ -2297,7 +2448,7 @@ export class TransparentProxyController {
         }
       }
     }
-    
+
     return totalChars;
   }
 
@@ -2324,13 +2475,21 @@ export class TransparentProxyController {
     }
 
     // Validate model
-    if (body.model && typeof body.model === 'string' && body.model.length > MAX_MODEL_LENGTH) {
-      throw new BadRequestException(`Model name too long (max ${MAX_MODEL_LENGTH} chars)`);
+    if (
+      body.model &&
+      typeof body.model === 'string' &&
+      body.model.length > MAX_MODEL_LENGTH
+    ) {
+      throw new BadRequestException(
+        `Model name too long (max ${MAX_MODEL_LENGTH} chars)`,
+      );
     }
 
     // Validate messages
     if (!body.messages || !Array.isArray(body.messages)) {
-      throw new BadRequestException('messages field is required and must be an array');
+      throw new BadRequestException(
+        'messages field is required and must be an array',
+      );
     }
 
     if (body.messages.length > MAX_MESSAGES) {
@@ -2343,7 +2502,10 @@ export class TransparentProxyController {
         throw new BadRequestException(`Invalid message at index ${i}`);
       }
 
-      if (typeof msg.content === 'string' && msg.content.length > MAX_MESSAGE_LENGTH) {
+      if (
+        typeof msg.content === 'string' &&
+        msg.content.length > MAX_MESSAGE_LENGTH
+      ) {
         throw new BadRequestException(
           `Message at index ${i} too long (max ${MAX_MESSAGE_LENGTH} chars)`,
         );
@@ -2365,8 +2527,14 @@ export class TransparentProxyController {
 
     // Validate max_tokens
     if (body.max_tokens !== undefined) {
-      if (typeof body.max_tokens !== 'number' || body.max_tokens < 1 || body.max_tokens > 128000) {
-        throw new BadRequestException('max_tokens must be between 1 and 128000');
+      if (
+        typeof body.max_tokens !== 'number' ||
+        body.max_tokens < 1 ||
+        body.max_tokens > 128000
+      ) {
+        throw new BadRequestException(
+          'max_tokens must be between 1 and 128000',
+        );
       }
     }
 
@@ -2388,11 +2556,15 @@ export class TransparentProxyController {
 
     // Validate prompt (required)
     if (!body.prompt || typeof body.prompt !== 'string') {
-      throw new BadRequestException('prompt field is required and must be a string');
+      throw new BadRequestException(
+        'prompt field is required and must be a string',
+      );
     }
 
     if (body.prompt.length > MAX_PROMPT_LENGTH) {
-      throw new BadRequestException(`Prompt too long (max ${MAX_PROMPT_LENGTH} chars)`);
+      throw new BadRequestException(
+        `Prompt too long (max ${MAX_PROMPT_LENGTH} chars)`,
+      );
     }
 
     // Validate n (number of images)
@@ -2403,8 +2575,14 @@ export class TransparentProxyController {
     }
 
     // Validate model
-    if (body.model && typeof body.model === 'string' && body.model.length > MAX_MODEL_LENGTH) {
-      throw new BadRequestException(`Model name too long (max ${MAX_MODEL_LENGTH} chars)`);
+    if (
+      body.model &&
+      typeof body.model === 'string' &&
+      body.model.length > MAX_MODEL_LENGTH
+    ) {
+      throw new BadRequestException(
+        `Model name too long (max ${MAX_MODEL_LENGTH} chars)`,
+      );
     }
   }
 
@@ -2421,7 +2599,9 @@ export class TransparentProxyController {
       throw new BadRequestException('model field is required');
     }
     if (body.model.length > MAX_MODEL_LENGTH) {
-      throw new BadRequestException(`Model name too long (max ${MAX_MODEL_LENGTH} chars)`);
+      throw new BadRequestException(
+        `Model name too long (max ${MAX_MODEL_LENGTH} chars)`,
+      );
     }
 
     // Validate input (required) - can be string or array of strings
@@ -2431,21 +2611,28 @@ export class TransparentProxyController {
 
     if (typeof body.input === 'string') {
       if (body.input.length > MAX_MESSAGE_LENGTH) {
-        throw new BadRequestException(`Input too long (max ${MAX_MESSAGE_LENGTH} chars)`);
+        throw new BadRequestException(
+          `Input too long (max ${MAX_MESSAGE_LENGTH} chars)`,
+        );
       }
     } else if (Array.isArray(body.input)) {
       if (body.input.length > 2048) {
         throw new BadRequestException('Too many input items (max 2048)');
       }
       for (let i = 0; i < body.input.length; i++) {
-        if (typeof body.input[i] === 'string' && body.input[i].length > MAX_MESSAGE_LENGTH) {
+        if (
+          typeof body.input[i] === 'string' &&
+          body.input[i].length > MAX_MESSAGE_LENGTH
+        ) {
           throw new BadRequestException(
             `Input at index ${i} too long (max ${MAX_MESSAGE_LENGTH} chars)`,
           );
         }
       }
     } else {
-      throw new BadRequestException('input must be a string or array of strings');
+      throw new BadRequestException(
+        'input must be a string or array of strings',
+      );
     }
   }
 
@@ -2476,7 +2663,8 @@ export class TransparentProxyController {
   ): string {
     // 1. Check tier-specific model overrides first (highest priority)
     if (tier && routingConfig.tierModelOverrides?.[tier]) {
-      const tierOverride = routingConfig.tierModelOverrides[tier][requestedModel];
+      const tierOverride =
+        routingConfig.tierModelOverrides[tier][requestedModel];
       if (tierOverride) {
         return tierOverride;
       }
@@ -2489,16 +2677,17 @@ export class TransparentProxyController {
 
     // 3. Apply cost optimization if enabled
     if (routingConfig.costOptimization?.enabled) {
-      const { tokenThreshold, cheapModel, premiumModel } = routingConfig.costOptimization;
-      
+      const { tokenThreshold, cheapModel, premiumModel } =
+        routingConfig.costOptimization;
+
       // Estimate input tokens from messages
       const estimatedTokens = this.estimateMessageTokens(body);
-      
+
       if (tokenThreshold && cheapModel && estimatedTokens < tokenThreshold) {
         // Simple query - use cheap model
         return cheapModel;
       }
-      
+
       if (premiumModel && estimatedTokens >= (tokenThreshold || 1000)) {
         // Complex query - use premium model (or keep requested)
         return premiumModel;
@@ -2510,14 +2699,14 @@ export class TransparentProxyController {
       case 'cost':
         // Route to cheapest equivalent model
         return this.getCheaperEquivalent(requestedModel) || requestedModel;
-      
+
       case 'fallback':
         // Use fallback chain's first model if available
         if (routingConfig.fallbackChain?.length) {
           return routingConfig.fallbackChain[0];
         }
         break;
-      
+
       case 'latency':
       case 'quality':
         // For now, just use requested model
@@ -2540,7 +2729,7 @@ export class TransparentProxyController {
     if (!body.messages || !Array.isArray(body.messages)) {
       return 0;
     }
-    
+
     let totalChars = 0;
     for (const msg of body.messages) {
       if (typeof msg.content === 'string') {
@@ -2554,7 +2743,7 @@ export class TransparentProxyController {
         }
       }
     }
-    
+
     // Rough estimate: 1 token ≈ 4 characters for English
     return Math.ceil(totalChars / 4);
   }
@@ -2568,18 +2757,18 @@ export class TransparentProxyController {
       'gpt-4o': 'gpt-4o-mini',
       'gpt-4-turbo': 'gpt-4o-mini',
       'gpt-4': 'gpt-4o-mini',
-      'o1': 'o1-mini',
+      o1: 'o1-mini',
       'o1-preview': 'o1-mini',
-      
+
       // Anthropic
       'claude-3-5-sonnet-20241022': 'claude-3-5-haiku-20241022',
       'claude-3-opus-20240229': 'claude-3-5-sonnet-20241022',
-      
+
       // Google
       'gemini-1.5-pro': 'gemini-1.5-flash',
       'gemini-2.0-pro': 'gemini-2.0-flash',
     };
-    
+
     return cheaperModels[model] || null;
   }
 
@@ -2598,7 +2787,7 @@ export class TransparentProxyController {
 
   /**
    * Transform native Gemini format to OpenAI format
-   * 
+   *
    * Native Gemini:
    * {
    *   "systemInstruction": { "parts": [{ "text": "You are helpful" }] },
@@ -2608,7 +2797,7 @@ export class TransparentProxyController {
    *   ],
    *   "generationConfig": { "temperature": 0.7, "maxOutputTokens": 1000 }
    * }
-   * 
+   *
    * OpenAI format:
    * {
    *   "model": "gemini-2.0-flash",
@@ -2621,12 +2810,17 @@ export class TransparentProxyController {
    *   "max_tokens": 1000
    * }
    */
-  private transformGeminiToOpenAI(body: any): { transformed: any; originalFormat: 'gemini' } {
+  private transformGeminiToOpenAI(body: any): {
+    transformed: any;
+    originalFormat: 'gemini';
+  } {
     const messages: Array<{ role: string; content: string }> = [];
 
     // Handle systemInstruction → system message
     if (body.systemInstruction) {
-      const systemText = this.extractTextFromParts(body.systemInstruction.parts);
+      const systemText = this.extractTextFromParts(
+        body.systemInstruction.parts,
+      );
       if (systemText) {
         messages.push({ role: 'system', content: systemText });
       }
@@ -2654,10 +2848,12 @@ export class TransparentProxyController {
     // Map generationConfig to OpenAI params
     if (body.generationConfig) {
       const gc = body.generationConfig;
-      if (gc.temperature !== undefined) transformed.temperature = gc.temperature;
+      if (gc.temperature !== undefined)
+        transformed.temperature = gc.temperature;
       if (gc.topP !== undefined) transformed.top_p = gc.topP;
       if (gc.topK !== undefined) transformed.top_k = gc.topK;
-      if (gc.maxOutputTokens !== undefined) transformed.max_tokens = gc.maxOutputTokens;
+      if (gc.maxOutputTokens !== undefined)
+        transformed.max_tokens = gc.maxOutputTokens;
       if (gc.stopSequences) transformed.stop = gc.stopSequences;
     }
 
@@ -2673,10 +2869,10 @@ export class TransparentProxyController {
    */
   private extractTextFromParts(parts: any[] | undefined): string {
     if (!parts || !Array.isArray(parts)) return '';
-    
+
     return parts
-      .filter(part => part.text)
-      .map(part => part.text)
+      .filter((part) => part.text)
+      .map((part) => part.text)
       .join('');
   }
 
@@ -2688,19 +2884,25 @@ export class TransparentProxyController {
     if (!choice) return response;
 
     return {
-      candidates: [{
-        content: {
-          parts: [{ text: choice.message?.content || choice.delta?.content || '' }],
-          role: 'model',
+      candidates: [
+        {
+          content: {
+            parts: [
+              { text: choice.message?.content || choice.delta?.content || '' },
+            ],
+            role: 'model',
+          },
+          finishReason: this.mapFinishReason(choice.finish_reason),
+          index: choice.index || 0,
         },
-        finishReason: this.mapFinishReason(choice.finish_reason),
-        index: choice.index || 0,
-      }],
-      usageMetadata: response.usage ? {
-        promptTokenCount: response.usage.prompt_tokens,
-        candidatesTokenCount: response.usage.completion_tokens,
-        totalTokenCount: response.usage.total_tokens,
-      } : undefined,
+      ],
+      usageMetadata: response.usage
+        ? {
+            promptTokenCount: response.usage.prompt_tokens,
+            candidatesTokenCount: response.usage.completion_tokens,
+            totalTokenCount: response.usage.total_tokens,
+          }
+        : undefined,
       modelVersion: response.model,
     };
   }
@@ -2713,14 +2915,18 @@ export class TransparentProxyController {
     if (!choice) return chunk;
 
     return {
-      candidates: [{
-        content: {
-          parts: [{ text: choice.delta?.content || '' }],
-          role: 'model',
+      candidates: [
+        {
+          content: {
+            parts: [{ text: choice.delta?.content || '' }],
+            role: 'model',
+          },
+          finishReason: choice.finish_reason
+            ? this.mapFinishReason(choice.finish_reason)
+            : undefined,
+          index: choice.index || 0,
         },
-        finishReason: choice.finish_reason ? this.mapFinishReason(choice.finish_reason) : undefined,
-        index: choice.index || 0,
-      }],
+      ],
     };
   }
 
@@ -2729,13 +2935,13 @@ export class TransparentProxyController {
    */
   private mapFinishReason(reason: string | null): string {
     const mapping: Record<string, string> = {
-      'stop': 'STOP',
-      'length': 'MAX_TOKENS',
-      'content_filter': 'SAFETY',
-      'tool_calls': 'STOP',
-      'function_call': 'STOP',
+      stop: 'STOP',
+      length: 'MAX_TOKENS',
+      content_filter: 'SAFETY',
+      tool_calls: 'STOP',
+      function_call: 'STOP',
     };
-    return reason ? (mapping[reason] || 'STOP') : 'STOP';
+    return reason ? mapping[reason] || 'STOP' : 'STOP';
   }
 
   // ====================================
@@ -2746,7 +2952,7 @@ export class TransparentProxyController {
   /**
    * Detect if request is in native Anthropic format
    * Native format has a top-level 'system' string (not in messages array)
-   * 
+   *
    * Native Anthropic:
    * {
    *   "model": "claude-3-5-sonnet",
@@ -2789,7 +2995,8 @@ export class TransparentProxyController {
 
     // Map Anthropic params to OpenAI params
     if (body.max_tokens !== undefined) transformed.max_tokens = body.max_tokens;
-    if (body.temperature !== undefined) transformed.temperature = body.temperature;
+    if (body.temperature !== undefined)
+      transformed.temperature = body.temperature;
     if (body.top_p !== undefined) transformed.top_p = body.top_p;
     if (body.top_k !== undefined) transformed.top_k = body.top_k;
     if (body.stop_sequences) transformed.stop = body.stop_sequences;
@@ -2808,10 +3015,12 @@ export class TransparentProxyController {
       id: response.id,
       type: 'message',
       role: 'assistant',
-      content: [{
-        type: 'text',
-        text: choice.message?.content || '',
-      }],
+      content: [
+        {
+          type: 'text',
+          text: choice.message?.content || '',
+        },
+      ],
       model: response.model,
       stop_reason: this.mapFinishReasonToAnthropic(choice.finish_reason),
       stop_sequence: null,
@@ -2861,11 +3070,11 @@ export class TransparentProxyController {
    */
   private mapFinishReasonToAnthropic(reason: string | null): string {
     const mapping: Record<string, string> = {
-      'stop': 'end_turn',
-      'length': 'max_tokens',
-      'content_filter': 'content_filter',
+      stop: 'end_turn',
+      length: 'max_tokens',
+      content_filter: 'content_filter',
     };
-    return reason ? (mapping[reason] || 'end_turn') : 'end_turn';
+    return reason ? mapping[reason] || 'end_turn' : 'end_turn';
   }
 
   // ====================================
@@ -2896,24 +3105,24 @@ export class TransparentProxyController {
     if (forwardedFor) {
       // X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
       // The first one is the original client
-      const ips = Array.isArray(forwardedFor) 
-        ? forwardedFor[0] 
+      const ips = Array.isArray(forwardedFor)
+        ? forwardedFor[0]
         : forwardedFor.split(',')[0];
       return ips.trim();
     }
-    
+
     // Check X-Real-IP header (used by some proxies)
     const realIp = req.headers['x-real-ip'];
     if (realIp) {
       return Array.isArray(realIp) ? realIp[0] : realIp;
     }
-    
+
     // Check CF-Connecting-IP header (Cloudflare)
     const cfIp = req.headers['cf-connecting-ip'];
     if (cfIp) {
       return Array.isArray(cfIp) ? cfIp[0] : cfIp;
     }
-    
+
     // Fall back to socket remote address
     return req.socket?.remoteAddress || req.ip || 'unknown';
   }
@@ -2922,18 +3131,21 @@ export class TransparentProxyController {
    * Check if request origin matches allowed origins
    * Supports exact matches and wildcard subdomains (*.example.com)
    */
-  private isOriginAllowed(requestOrigin: string, allowedOrigins: string[]): boolean {
+  private isOriginAllowed(
+    requestOrigin: string,
+    allowedOrigins: string[],
+  ): boolean {
     // Normalize request origin (lowercase, no trailing slash)
     const normalizedRequest = requestOrigin.toLowerCase().replace(/\/$/, '');
-    
+
     for (const allowed of allowedOrigins) {
       const normalizedAllowed = allowed.toLowerCase().replace(/\/$/, '');
-      
+
       // Exact match
       if (normalizedRequest === normalizedAllowed) {
         return true;
       }
-      
+
       // Wildcard subdomain match (e.g., *.example.com)
       if (normalizedAllowed.startsWith('*.')) {
         const baseDomain = normalizedAllowed.slice(2); // Remove '*.'
@@ -2949,7 +3161,7 @@ export class TransparentProxyController {
         }
       }
     }
-    
+
     return false;
   }
 }

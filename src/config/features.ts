@@ -1,6 +1,6 @@
 /**
  * Feature Flags Configuration
- * 
+ *
  * Controls which features are available based on deployment mode:
  * - cloud: Full SaaS with billing, all features enabled
  * - enterprise: Self-hosted with license, premium features enabled
@@ -27,7 +27,7 @@ export interface FeatureFlags {
   webhooks: boolean;
   dataExport: boolean;
   prioritySupport: boolean;
-  
+
   // === Sponsored Usage (cloud + enterprise) ===
   // Allows sponsors to donate API usage to recipients
   sponsoredUsage: boolean;
@@ -42,7 +42,7 @@ export interface FeatureFlags {
 }
 
 export function getDeploymentMode(): DeploymentMode {
-  const mode = process.env.DEPLOYMENT_MODE?.toLowerCase();
+  const mode = process.env.DEPLOYMENT_MODE;
   if (mode === 'cloud' || mode === 'enterprise' || mode === 'self-hosted') {
     return mode;
   }
@@ -162,4 +162,3 @@ export function isEnterpriseMode(): boolean {
 export function isSelfHostedMode(): boolean {
   return getDeploymentMode() === 'self-hosted';
 }
-

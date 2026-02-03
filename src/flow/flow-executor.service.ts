@@ -139,7 +139,12 @@ export class FlowExecutorService {
         // Start node just passes through to the next connected node
         return {
           terminal: false,
-          nextNode: this.getNextNode(node.id, undefined, edgesBySource, nodesById),
+          nextNode: this.getNextNode(
+            node.id,
+            undefined,
+            edgesBySource,
+            nodesById,
+          ),
         };
 
       case 'checkTier':
@@ -178,7 +183,7 @@ export class FlowExecutorService {
     // Find the edge that matches the tier
     // The sourceHandle should match the tier name
     const edges = edgesBySource.get(node.id) || [];
-    
+
     for (const edge of edges) {
       if (edge.sourceHandle === requestTier) {
         const nextNode = nodesById.get(edge.target);
@@ -204,23 +209,31 @@ export class FlowExecutorService {
     context: FlowContext,
     edgesBySource: Map<string, FlowEdge[]>,
     nodesById: Map<string, FlowNode>,
-  ): Promise<{ terminal: boolean; action?: 'allow' | 'block'; nextNode?: FlowNode }> {
+  ): Promise<{
+    terminal: boolean;
+    action?: 'allow' | 'block';
+    nextNode?: FlowNode;
+  }> {
     const { limitType, scope, limit, period } = node.data || {};
-    
+
     // Get current usage - we need to fetch it with the right period
     const periodStart = this.getPeriodStart(period || 'daily');
     const usage = await this.usageService.getUsage({
       projectId: context.projectId,
-      identity: scope === 'session' ? context.session || context.identity : context.identity,
+      identity:
+        scope === 'session'
+          ? context.session || context.identity
+          : context.identity,
       session: scope === 'session' ? context.session : undefined,
       periodStart,
     });
 
     // Check if limit is exceeded (handle null usage - means no usage yet)
-    const currentValue = limitType === 'tokens' 
-      ? (usage?.tokensUsed || 0) 
-      : (usage?.requestsUsed || 0);
-    
+    const currentValue =
+      limitType === 'tokens'
+        ? usage?.tokensUsed || 0
+        : usage?.requestsUsed || 0;
+
     const isExceeded = currentValue >= (limit || Infinity);
 
     // Find the appropriate edge
@@ -251,9 +264,13 @@ export class FlowExecutorService {
     context: FlowContext,
     edgesBySource: Map<string, FlowEdge[]>,
     nodesById: Map<string, FlowNode>,
-  ): Promise<{ terminal: boolean; action?: 'allow' | 'block'; nextNode?: FlowNode }> {
+  ): Promise<{
+    terminal: boolean;
+    action?: 'allow' | 'block';
+    nextNode?: FlowNode;
+  }> {
     const { model, limit } = node.data || {};
-    
+
     // If no specific model set, or model doesn't match, pass through
     if (!model || (context.model && !context.model.includes(model))) {
       const edges = edgesBySource.get(node.id) || [];
@@ -342,7 +359,7 @@ export class FlowExecutorService {
     nodesById: Map<string, FlowNode>,
   ): FlowNode | undefined {
     const edges = edgesBySource.get(sourceId) || [];
-    
+
     // If sourceHandle specified, find matching edge
     if (sourceHandle) {
       for (const edge of edges) {
@@ -393,21 +410,38 @@ export class FlowExecutorService {
     if (startEdges.length === 0) return false;
 
     // Must have at least one terminal node (allow or limitResponse)
-    const hasTerminal = nodes.some(
-      (n: any) => n.type === 'allow' || n.type === 'limitResponse',
-    );
-    if (!hasTerminal) return false;
-
-    // Check if at least one terminal node is reachable from start
-    // Simple check: terminal nodes must have at least one incoming edge
     const terminalNodes = nodes.filter(
       (n: any) => n.type === 'allow' || n.type === 'limitResponse',
     );
-    const hasReachableTerminal = terminalNodes.some((terminal: any) =>
-      edges.some((e: any) => e.target === terminal.id),
-    );
+    if (terminalNodes.length === 0) return false;
 
-    return hasReachableTerminal;
+    // Check if at least one terminal node is reachable from start
+    const adjacencyMap = new Map<string, string[]>();
+    for (const edge of edges) {
+      const targets = adjacencyMap.get(edge.source) || [];
+      targets.push(edge.target);
+      adjacencyMap.set(edge.source, targets);
+    }
+
+    const reachable = new Set<string>();
+    const queue: string[] = [startNode.id];
+    reachable.add(startNode.id);
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (!current) {
+        continue;
+      }
+      const neighbors = adjacencyMap.get(current) || [];
+      for (const neighbor of neighbors) {
+        if (!reachable.has(neighbor)) {
+          reachable.add(neighbor);
+          queue.push(neighbor);
+        }
+      }
+    }
+
+    return terminalNodes.some((terminal: any) => reachable.has(terminal.id));
   }
 
   /**
@@ -443,4 +477,3 @@ export class FlowExecutorService {
     }
   }
 }
-

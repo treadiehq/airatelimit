@@ -4,7 +4,7 @@ import Stripe from 'stripe';
 
 /**
  * Stripe Service
- * 
+ *
  * Low-level Stripe API wrapper. Only instantiated in cloud mode.
  */
 @Injectable()
@@ -16,9 +16,11 @@ export class StripeService implements OnModuleInit {
 
   onModuleInit() {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
-    
+
     if (!secretKey) {
-      this.logger.warn('STRIPE_SECRET_KEY not configured - billing features will not work');
+      this.logger.warn(
+        'STRIPE_SECRET_KEY not configured - billing features will not work',
+      );
       return;
     }
 
@@ -81,7 +83,9 @@ export class StripeService implements OnModuleInit {
     return this.client.billingPortal.sessions.create({
       customer: params.customerId,
       return_url: params.returnUrl,
-      ...(params.configurationId ? { configuration: params.configurationId } : {}),
+      ...(params.configurationId
+        ? { configuration: params.configurationId }
+        : {}),
     });
   }
 
@@ -97,15 +101,16 @@ export class StripeService implements OnModuleInit {
   }): Promise<Stripe.BillingPortal.Configuration> {
     return this.client.billingPortal.configurations.create({
       business_profile: {
-        headline: params.headline || `Manage your ${params.businessName} subscription`,
+        headline:
+          params.headline || `Manage your ${params.businessName} subscription`,
         privacy_policy_url: params.privacyPolicyUrl,
         terms_of_service_url: params.termsOfServiceUrl,
       },
       features: {
         payment_method_update: { enabled: true },
         invoice_history: { enabled: true },
-        subscription_cancel: { 
-          enabled: true, 
+        subscription_cancel: {
+          enabled: true,
           mode: 'at_period_end',
           proration_behavior: 'none',
         },
@@ -120,8 +125,12 @@ export class StripeService implements OnModuleInit {
   /**
    * List all portal configurations
    */
-  async listPortalConfigurations(): Promise<Stripe.BillingPortal.Configuration[]> {
-    const response = await this.client.billingPortal.configurations.list({ limit: 10 });
+  async listPortalConfigurations(): Promise<
+    Stripe.BillingPortal.Configuration[]
+  > {
+    const response = await this.client.billingPortal.configurations.list({
+      limit: 10,
+    });
     return response.data;
   }
 
@@ -153,14 +162,32 @@ export class StripeService implements OnModuleInit {
     email: string;
     metadata?: Record<string, string>;
   }): Promise<Stripe.Customer> {
-    // First try to find existing customer
-    const existing = await this.client.customers.list({
-      email: params.email,
-      limit: 1,
-    });
+    const organizationId = params.metadata?.organizationId;
+    let startingAfter: string | undefined;
 
-    if (existing.data.length > 0) {
-      return existing.data[0];
+    while (true) {
+      const existing = await this.client.customers.list({
+        email: params.email,
+        limit: 100,
+        ...(startingAfter ? { starting_after: startingAfter } : {}),
+      });
+
+      if (organizationId) {
+        const matchingCustomer = existing.data.find(
+          (customer) => customer.metadata?.organizationId === organizationId,
+        );
+        if (matchingCustomer) {
+          return matchingCustomer;
+        }
+      } else if (existing.data.length > 0) {
+        return existing.data[0];
+      }
+
+      if (!existing.has_more || existing.data.length === 0) {
+        break;
+      }
+
+      startingAfter = existing.data[existing.data.length - 1].id;
     }
 
     // Create new customer
@@ -180,7 +207,9 @@ export class StripeService implements OnModuleInit {
   /**
    * Cancel a subscription at period end
    */
-  async cancelSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
+  async cancelSubscription(
+    subscriptionId: string,
+  ): Promise<Stripe.Subscription> {
     return this.client.subscriptions.update(subscriptionId, {
       cancel_at_period_end: true,
     });
@@ -189,7 +218,9 @@ export class StripeService implements OnModuleInit {
   /**
    * Resume a cancelled subscription
    */
-  async resumeSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
+  async resumeSubscription(
+    subscriptionId: string,
+  ): Promise<Stripe.Subscription> {
     return this.client.subscriptions.update(subscriptionId, {
       cancel_at_period_end: false,
     });
@@ -198,7 +229,10 @@ export class StripeService implements OnModuleInit {
   /**
    * List invoices for a customer
    */
-  async listInvoices(customerId: string, limit = 10): Promise<Stripe.Invoice[]> {
+  async listInvoices(
+    customerId: string,
+    limit = 10,
+  ): Promise<Stripe.Invoice[]> {
     const response = await this.client.invoices.list({
       customer: customerId,
       limit,
@@ -214,7 +248,10 @@ export class StripeService implements OnModuleInit {
     signature: string,
     webhookSecret: string,
   ): Stripe.Event {
-    return this.client.webhooks.constructEvent(payload, signature, webhookSecret);
+    return this.client.webhooks.constructEvent(
+      payload,
+      signature,
+      webhookSecret,
+    );
   }
 }
-

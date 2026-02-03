@@ -31,12 +31,7 @@ const DEFAULT_PLAN: Plan = {
  * Create a rate limiter instance
  */
 export function createLimiter(options: LimiterOptions): Limiter {
-  const {
-    storage,
-    plans,
-    getPlan = () => 'default',
-    hooks = {},
-  } = options;
+  const { storage, plans, getPlan = () => 'default', hooks = {} } = options;
 
   // Validate that at least one plan exists
   if (Object.keys(plans).length === 0) {
@@ -46,7 +41,9 @@ export function createLimiter(options: LimiterOptions): Limiter {
   /**
    * Get the plan configuration for a tenant
    */
-  async function getPlanConfig(tenantId: string): Promise<{ plan: Plan; planName: string }> {
+  async function getPlanConfig(
+    tenantId: string,
+  ): Promise<{ plan: Plan; planName: string }> {
     const planName = await getPlan(tenantId);
     const plan = plans[planName] ?? plans['default'] ?? DEFAULT_PLAN;
     return { plan, planName };
@@ -57,9 +54,13 @@ export function createLimiter(options: LimiterOptions): Limiter {
    */
   async function checkQuotaWarning(
     tenantId: string,
-    usage: QuotaUsage
+    usage: QuotaUsage,
   ): Promise<void> {
-    if (hooks.onQuotaWarning && usage.percentUsed >= 80 && usage.percentUsed < 100) {
+    if (
+      hooks.onQuotaWarning &&
+      usage.percentUsed >= 80 &&
+      usage.percentUsed < 100
+    ) {
       await hooks.onQuotaWarning(tenantId, usage);
     }
   }
@@ -76,7 +77,7 @@ export function createLimiter(options: LimiterOptions): Limiter {
     const rateLimitResult = await storage.tryConsume(
       tenantId,
       plan.rateLimit.capacity,
-      plan.rateLimit.refillRate
+      plan.rateLimit.refillRate,
     );
 
     if (!rateLimitResult.allowed) {
@@ -106,7 +107,7 @@ export function createLimiter(options: LimiterOptions): Limiter {
 
       if (projectedUsage >= plan.quota.maxTokens) {
         const usage = await getUsage(tenantId);
-        
+
         // Trigger hook
         if (hooks.onQuotaExceeded) {
           await hooks.onQuotaExceeded(tenantId, usage);
@@ -193,9 +194,8 @@ export function createLimiter(options: LimiterOptions): Limiter {
     const costUsage = await storage.getCostUsage(tenantId);
 
     const tokenLimit = plan.quota?.maxTokens ?? Infinity;
-    const percentUsed = tokenLimit === Infinity 
-      ? 0 
-      : (tokenUsage.tokens / tokenLimit) * 100;
+    const percentUsed =
+      tokenLimit === Infinity ? 0 : (tokenUsage.tokens / tokenLimit) * 100;
 
     return {
       tokensUsed: tokenUsage.tokens,
@@ -219,13 +219,19 @@ export function createLimiter(options: LimiterOptions): Limiter {
   // EXPRESS MIDDLEWARE
   // ============================================================
 
-  function middleware<TReq = unknown>(opts: MiddlewareOptions<TReq>): MiddlewareHandler {
+  function middleware<TReq = unknown>(
+    opts: MiddlewareOptions<TReq>,
+  ): MiddlewareHandler {
     const { getTenantId, getEstimatedTokens, getModel } = opts;
 
-    return async (req: any, res: any, next: (error?: any) => void): Promise<void> => {
+    return async (
+      req: any,
+      res: any,
+      next: (error?: any) => void,
+    ): Promise<void> => {
       try {
         const tenantId = await getTenantId(req as TReq);
-        
+
         if (!tenantId) {
           res.status(400).json({
             error: 'missing_tenant_id',
@@ -234,8 +240,8 @@ export function createLimiter(options: LimiterOptions): Limiter {
           return;
         }
 
-        const estimatedTokens = getEstimatedTokens?.(req as TReq);
-        const model = getModel?.(req as TReq);
+        const estimatedTokens = await getEstimatedTokens?.(req as TReq);
+        const model = await getModel?.(req as TReq);
 
         const result = await enforce({
           tenantId,
@@ -247,9 +253,10 @@ export function createLimiter(options: LimiterOptions): Limiter {
           const denied = result;
           const errorResponse: LimiterErrorResponse = {
             error: denied.error,
-            message: denied.error === 'rate_limit_exceeded'
-              ? 'Too many requests. Please slow down.'
-              : 'Monthly quota exceeded. Please upgrade your plan.',
+            message:
+              denied.error === 'rate_limit_exceeded'
+                ? 'Too many requests. Please slow down.'
+                : 'Monthly quota exceeded. Please upgrade your plan.',
             tenantId: denied.tenantId,
             limit: denied.limit,
             retryAfterMs: denied.retryAfterMs,
@@ -262,12 +269,15 @@ export function createLimiter(options: LimiterOptions): Limiter {
 
           // Set standard rate limit headers
           const statusCode = denied.error === 'rate_limit_exceeded' ? 429 : 403;
-          
+
           if (denied.retryAfterMs) {
             res.setHeader('Retry-After', Math.ceil(denied.retryAfterMs / 1000));
           }
           res.setHeader('X-RateLimit-Limit', denied.limit.limit);
-          res.setHeader('X-RateLimit-Remaining', Math.max(0, denied.limit.limit - denied.limit.current));
+          res.setHeader(
+            'X-RateLimit-Remaining',
+            Math.max(0, denied.limit.limit - denied.limit.current),
+          );
 
           res.status(statusCode).json(errorResponse);
           return;
@@ -295,4 +305,3 @@ export function createLimiter(options: LimiterOptions): Limiter {
     resetUsage,
   };
 }
-

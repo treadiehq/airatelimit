@@ -48,11 +48,20 @@ export type Plans = Record<string, Plan>;
  */
 export interface LimiterHooks {
   /** Called when a tenant reaches 80% of their monthly quota */
-  onQuotaWarning?: (tenantId: string, usage: QuotaUsage) => void | Promise<void>;
+  onQuotaWarning?: (
+    tenantId: string,
+    usage: QuotaUsage,
+  ) => void | Promise<void>;
   /** Called when a tenant is rate limited */
-  onRateLimited?: (tenantId: string, retryAfterMs: number) => void | Promise<void>;
+  onRateLimited?: (
+    tenantId: string,
+    retryAfterMs: number,
+  ) => void | Promise<void>;
   /** Called when a tenant exceeds their quota */
-  onQuotaExceeded?: (tenantId: string, usage: QuotaUsage) => void | Promise<void>;
+  onQuotaExceeded?: (
+    tenantId: string,
+    usage: QuotaUsage,
+  ) => void | Promise<void>;
 }
 
 /**
@@ -171,16 +180,22 @@ export interface MiddlewareOptions<TReq = unknown> {
   /** Function to extract tenant ID from request */
   getTenantId: (req: TReq) => string | Promise<string>;
   /** Optional: Function to extract estimated tokens from request */
-  getEstimatedTokens?: (req: TReq) => number | undefined;
+  getEstimatedTokens?: (
+    req: TReq,
+  ) => number | undefined | Promise<number | undefined>;
   /** Optional: Function to extract model name from request */
-  getModel?: (req: TReq) => string | undefined;
+  getModel?: (req: TReq) => string | undefined | Promise<string | undefined>;
 }
 
 /**
  * Generic middleware handler type
  * Compatible with Express, Fastify, or any framework
  */
-export type MiddlewareHandler = (req: any, res: any, next: (error?: any) => void) => Promise<void>;
+export type MiddlewareHandler = (
+  req: any,
+  res: any,
+  next: (error?: any) => void,
+) => Promise<void>;
 
 // ============================================================
 // ERROR RESPONSE
@@ -212,17 +227,18 @@ export interface LimiterErrorResponse {
 export interface Limiter {
   /** Check if a request should be allowed */
   enforce(options: EnforceOptions): Promise<EnforceResult>;
-  
+
   /** Report usage after an AI call */
   reportUsage(options: ReportUsageOptions): Promise<void>;
-  
+
   /** Get current quota usage for a tenant */
   getUsage(tenantId: string): Promise<QuotaUsage>;
-  
+
   /** Express middleware factory */
-  middleware<TReq = unknown>(options: MiddlewareOptions<TReq>): MiddlewareHandler;
-  
+  middleware<TReq = unknown>(
+    options: MiddlewareOptions<TReq>,
+  ): MiddlewareHandler;
+
   /** Reset a tenant's usage (for testing or admin purposes) */
   resetUsage(tenantId: string): Promise<void>;
 }
-

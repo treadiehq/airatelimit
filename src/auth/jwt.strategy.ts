@@ -31,6 +31,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException();
     }
 
+    if (
+      !payload.organizationId ||
+      payload.organizationId !== user.organizationId
+    ) {
+      throw new UnauthorizedException(
+        'Organization context has changed. Please log in again.',
+      );
+    }
+
     // Load organization with plan for feature/plan guards
     const organization = user.organizationId
       ? await this.organizationsService.findById(user.organizationId)
@@ -40,7 +49,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       userId: user.id,
       email: user.email,
       organizationId: user.organizationId,
-      organization: organization ? { id: organization.id, plan: organization.plan } : null,
+      organization: organization
+        ? { id: organization.id, plan: organization.plan }
+        : null,
     };
   }
 }

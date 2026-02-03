@@ -1,4 +1,13 @@
-import { IsEmail, IsString, MinLength, MaxLength, IsOptional } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class SignupDto {
   @IsEmail()
@@ -10,7 +19,12 @@ export class SignupDto {
   @IsOptional()
   organizationName?: string;
 
-  @IsString()
   @IsOptional()
+  @IsNotEmpty()
+  @IsString()
+  @Length(64, 64)
+  @Matches(/^[a-f0-9]{64}$/, {
+    message: 'Invalid invite token format',
+  })
   inviteToken?: string;
 }
