@@ -30,6 +30,7 @@ npm-debug.log*
 .env.*.local
 dashboard/.env
 dashboard/.env.*
+.npmrc
 # Internal docs - not for public repo
 docs/ENTERPRISE.md
 docs/DEPLOYMENT-INT.md
