@@ -15,7 +15,7 @@ import { Sponsorship } from './sponsorship.entity';
  * Bearer tokens issued to recipients for API access.
  * Token format: spt_live_xxxxxxxx or spt_test_xxxxxxxx
  * 
- * Tokens are hashed for storage (like passwords).
+ * Tokens are hashed with SHA256 for storage and O(1) lookup.
  * The raw token is only shown once on creation.
  */
 @Entity('sponsored_tokens')
@@ -37,7 +37,7 @@ export class SponsoredToken {
   @Index()
   recipientOrgId: string;
 
-  // Token hash (bcrypt) for secure comparison
+  // Token hash (SHA256) for fast O(1) database lookups
   @Column({ unique: true })
   @Index()
   tokenHash: string;

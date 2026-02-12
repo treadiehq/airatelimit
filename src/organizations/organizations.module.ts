@@ -1,4 +1,4 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -8,14 +8,18 @@ import { OrganizationsService } from './organizations.service';
 import { OrganizationsController } from './organizations.controller';
 import { SeedReservedNamesService } from './seed-reserved-names.service';
 import { OrgApiKeyGuard } from '../common/guards/org-api-key.guard';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Organization, ReservedOrganizationName]),
+    forwardRef(() => UsersModule),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET'),
+        secret:
+          configService.get<string>('jwtSecret') ||
+          configService.get<string>('JWT_SECRET'),
         signOptions: { expiresIn: '7d' },
       }),
       inject: [ConfigService],

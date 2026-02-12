@@ -8,7 +8,6 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import * as crypto from 'crypto';
-import * as bcrypt from 'bcrypt';
 
 import { SponsorKey, SponsorKeyProvider } from './sponsor-key.entity';
 import { Sponsorship, SponsorshipStatus, ClaimType } from './sponsorship.entity';
@@ -33,7 +32,6 @@ const SPONSORED_TOKEN_PREFIX = 'spt_live_';
 const POOL_TOKEN_PREFIX = 'spp_live_';
 const CLAIM_TOKEN_PREFIX = 'clm_';
 const TOKEN_BYTES = 24; // 48 hex chars
-const BCRYPT_ROUNDS = 10;
 
 // Generate a unique claim token
 function generateClaimToken(): string {
@@ -832,7 +830,8 @@ export class SponsorshipService {
   ): Promise<{ tokenId: string; token: string; tokenHint: string }> {
     // Generate random token
     const rawToken = SPONSORED_TOKEN_PREFIX + crypto.randomBytes(TOKEN_BYTES).toString('hex');
-    const tokenHash = await bcrypt.hash(rawToken, BCRYPT_ROUNDS);
+    // Use SHA256 for O(1) lookups (consistent with PoolService token hashing)
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
     const tokenHint = '...' + rawToken.slice(-4);
 
     const token = this.sponsoredTokenRepository.create({
@@ -884,96 +883,97 @@ export class SponsorshipService {
       return { allowed: false, reason: 'Invalid token format' };
     }
 
-    // Find all active tokens and check hash
-    const tokens = await this.sponsoredTokenRepository.find({
-      where: { isActive: true },
+    // O(1) lookup: hash the incoming token with SHA256 and query directly by hash.
+    // This replaces the previous O(N) bcrypt loop that fetched ALL active tokens
+    // and performed a slow bcrypt.compare on each one (~100ms per token).
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+    const token = await this.sponsoredTokenRepository.findOne({
+      where: { tokenHash, isActive: true },
       relations: ['sponsorship', 'sponsorship.sponsorKey'],
     });
 
-    for (const token of tokens) {
-      const matches = await bcrypt.compare(rawToken, token.tokenHash);
-      if (matches) {
-        const sponsorship = token.sponsorship;
-
-        // Update usage stats
-        token.lastUsedAt = new Date();
-        token.usageCount += 1;
-        await this.sponsoredTokenRepository.save(token);
-
-        // Auto-link recipient org on first use if not already set
-        if (recipientOrgId && !sponsorship.recipientOrgId) {
-          sponsorship.recipientOrgId = recipientOrgId;
-          await this.sponsorshipRepository.save(sponsorship);
-          this.logger.log(
-            `Auto-linked sponsorship ${sponsorship.id} to recipient org ${recipientOrgId}`,
-          );
-        }
-
-        // Check sponsorship status
-        if (sponsorship.status !== 'active') {
-          return {
-            allowed: false,
-            reason: `Sponsorship is ${sponsorship.status}`,
-            sponsorship,
-          };
-        }
-
-        // Check expiry
-        if (sponsorship.expiresAt && sponsorship.expiresAt < new Date()) {
-          return {
-            allowed: false,
-            reason: 'Sponsorship has expired',
-            sponsorship,
-          };
-        }
-
-        // Check if monthly budget needs reset
-        if (sponsorship.billingPeriod === 'monthly') {
-          await this.checkAndResetMonthlyBudget(sponsorship);
-        }
-
-        // Check budget
-        const remainingUsd = sponsorship.spendCapUsd
-          ? Number(sponsorship.spendCapUsd) - Number(sponsorship.spentUsd)
-          : null;
-        const remainingTokens = sponsorship.spendCapTokens
-          ? Number(sponsorship.spendCapTokens) - Number(sponsorship.spentTokens)
-          : null;
-
-        if (remainingUsd !== null && remainingUsd <= 0) {
-          return {
-            allowed: false,
-            reason: 'Budget exhausted (USD)',
-            remainingUsd: 0,
-            sponsorship,
-          };
-        }
-
-        if (remainingTokens !== null && remainingTokens <= 0) {
-          return {
-            allowed: false,
-            reason: 'Budget exhausted (tokens)',
-            remainingTokens: 0,
-            sponsorship,
-          };
-        }
-
-        // Get decrypted API key
-        const decryptedApiKey = this.cryptoService.decrypt(
-          sponsorship.sponsorKey.encryptedApiKey,
-        );
-
-        return {
-          allowed: true,
-          remainingUsd,
-          remainingTokens,
-          sponsorship,
-          decryptedApiKey,
-        };
-      }
+    if (!token) {
+      return { allowed: false, reason: 'Invalid or revoked token' };
     }
 
-    return { allowed: false, reason: 'Invalid or revoked token' };
+    const sponsorship = token.sponsorship;
+
+    // Update usage stats
+    token.lastUsedAt = new Date();
+    token.usageCount += 1;
+    await this.sponsoredTokenRepository.save(token);
+
+    // Auto-link recipient org on first use if not already set
+    if (recipientOrgId && !sponsorship.recipientOrgId) {
+      sponsorship.recipientOrgId = recipientOrgId;
+      await this.sponsorshipRepository.save(sponsorship);
+      this.logger.log(
+        `Auto-linked sponsorship ${sponsorship.id} to recipient org ${recipientOrgId}`,
+      );
+    }
+
+    // Check sponsorship status
+    if (sponsorship.status !== 'active') {
+      return {
+        allowed: false,
+        reason: `Sponsorship is ${sponsorship.status}`,
+        sponsorship,
+      };
+    }
+
+    // Check expiry
+    if (sponsorship.expiresAt && sponsorship.expiresAt < new Date()) {
+      return {
+        allowed: false,
+        reason: 'Sponsorship has expired',
+        sponsorship,
+      };
+    }
+
+    // Check if monthly budget needs reset
+    if (sponsorship.billingPeriod === 'monthly') {
+      await this.checkAndResetMonthlyBudget(sponsorship);
+    }
+
+    // Check budget
+    const remainingUsd = sponsorship.spendCapUsd
+      ? Number(sponsorship.spendCapUsd) - Number(sponsorship.spentUsd)
+      : null;
+    const remainingTokens = sponsorship.spendCapTokens
+      ? Number(sponsorship.spendCapTokens) - Number(sponsorship.spentTokens)
+      : null;
+
+    if (remainingUsd !== null && remainingUsd <= 0) {
+      return {
+        allowed: false,
+        reason: 'Budget exhausted (USD)',
+        remainingUsd: 0,
+        sponsorship,
+      };
+    }
+
+    if (remainingTokens !== null && remainingTokens <= 0) {
+      return {
+        allowed: false,
+        reason: 'Budget exhausted (tokens)',
+        remainingTokens: 0,
+        sponsorship,
+      };
+    }
+
+    // Get decrypted API key
+    const decryptedApiKey = this.cryptoService.decrypt(
+      sponsorship.sponsorKey.encryptedApiKey,
+    );
+
+    return {
+      allowed: true,
+      remainingUsd,
+      remainingTokens,
+      sponsorship,
+      decryptedApiKey,
+    };
   }
 
   /**

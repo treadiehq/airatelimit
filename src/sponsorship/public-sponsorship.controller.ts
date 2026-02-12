@@ -32,7 +32,7 @@ const BCRYPT_ROUNDS = 10;
 const SPONSORED_TOKEN_PREFIX = 'spt_live_';
 const TOKEN_BYTES = 24;
 
-interface AuthenticatedRequest extends Request {
+interface AuthenticatedRequest extends Omit<Request, 'user'> {
   user?: { userId: string; email: string; organizationId: string };
 }
 

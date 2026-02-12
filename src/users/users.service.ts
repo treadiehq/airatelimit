@@ -95,4 +95,12 @@ export class UsersService {
       where: { linkedGitHubUsername: username },
     });
   }
+
+  /**
+   * Delete a user by ID. Used for rollback when subsequent operations
+   * fail during signup (e.g. invite acceptance failure).
+   */
+  async delete(userId: string): Promise<void> {
+    await this.usersRepository.delete(userId);
+  }
 }

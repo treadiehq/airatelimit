@@ -108,18 +108,14 @@ export class SecurityService {
   };
 
   /**
-   * Check if a message contains prompt injection attempts
-   * Supports both string content and array content (multi-modal/vision format)
+   * Run security scan on raw text against injection patterns.
+   * This is the core scanning engine used by all public-facing methods.
    */
-  checkMessage(
-    content: string | any[],
+  private scanText(
+    text: string,
     enabledCategories?: string[],
   ): SecurityCheckResult {
-    // Extract text from content (handles both string and array formats)
-    const textContent = this.extractTextContent(content);
-    
-    // If no text content, allow (nothing to check)
-    if (!textContent) {
+    if (!text) {
       return { allowed: true };
     }
 
@@ -130,7 +126,7 @@ export class SecurityService {
       if (!patterns) continue;
 
       for (const pattern of patterns) {
-        if (pattern.test(textContent)) {
+        if (pattern.test(text)) {
           return {
             allowed: false,
             reason: this.getReasonForCategory(category),
@@ -145,19 +141,78 @@ export class SecurityService {
   }
 
   /**
+   * Extract all scannable text from a message object.
+   * Collects text from content, tool_calls, function_call, and name fields
+   * since attackers can place prompt injections in any of these.
+   */
+  private extractAllMessageText(message: any): string {
+    const parts: string[] = [];
+
+    // Extract from content (string or multimodal array)
+    const contentText = this.extractTextContent(message.content);
+    if (contentText) {
+      parts.push(contentText);
+    }
+
+    // Extract from tool_calls (OpenAI function calling format)
+    if (Array.isArray(message.tool_calls)) {
+      for (const call of message.tool_calls) {
+        if (call.function?.name) {
+          parts.push(call.function.name);
+        }
+        if (call.function?.arguments) {
+          parts.push(call.function.arguments);
+        }
+      }
+    }
+
+    // Extract from function_call (legacy OpenAI function calling format)
+    if (message.function_call) {
+      if (message.function_call.name) {
+        parts.push(message.function_call.name);
+      }
+      if (message.function_call.arguments) {
+        parts.push(message.function_call.arguments);
+      }
+    }
+
+    // Extract from name field (used in tool/function response messages)
+    if (typeof message.name === 'string') {
+      parts.push(message.name);
+    }
+
+    return parts.join('\n');
+  }
+
+  /**
+   * Check if a message contains prompt injection attempts
+   * Supports both string content and array content (multi-modal/vision format)
+   */
+  checkMessage(
+    content: string | any[],
+    enabledCategories?: string[],
+  ): SecurityCheckResult {
+    const textContent = this.extractTextContent(content);
+    return this.scanText(textContent, enabledCategories);
+  }
+
+  /**
    * Check all messages in a conversation
    * Supports both string content and array content (multi-modal/vision format)
    * 
    * SECURITY: Check ALL messages since the entire messages array is user-controlled input.
    * An attacker can inject malicious content in any role (system/assistant/user).
+   * Scans content, tool_calls, function_call, and name fields for injection attempts.
    */
   checkMessages(
-    messages: Array<{ role: string; content: string | any[] }>,
+    messages: Array<any>,
     enabledCategories?: string[],
   ): SecurityCheckResult {
     // Check all messages - the entire messages array is user-controlled input
     for (const message of messages) {
-      const result = this.checkMessage(message.content, enabledCategories);
+      // Collect all scannable text from every field of the message
+      const allText = this.extractAllMessageText(message);
+      const result = this.scanText(allText, enabledCategories);
       if (!result.allowed) {
         return result;
       }
@@ -167,12 +222,19 @@ export class SecurityService {
   }
 
   /**
-   * Advanced heuristic checks for sophisticated attacks
-   * Supports both string content and array content (multi-modal/vision format)
+   * Advanced heuristic checks for sophisticated attacks.
+   * Accepts either a content field (string/array) or a full message object.
+   * When a full message object is passed, all text fields are inspected.
    */
-  checkAdvancedHeuristics(content: string | any[]): SecurityCheckResult {
-    // Extract text from content (handles both string and array formats)
-    const textContent = this.extractTextContent(content);
+  checkAdvancedHeuristics(contentOrMessage: string | any[] | { content?: any; tool_calls?: any; function_call?: any; name?: string }): SecurityCheckResult {
+    // If it looks like a full message object (has role, tool_calls, function_call, etc.),
+    // extract all text fields. Otherwise treat as a content value.
+    let textContent: string;
+    if (contentOrMessage !== null && typeof contentOrMessage === 'object' && !Array.isArray(contentOrMessage) && ('tool_calls' in contentOrMessage || 'function_call' in contentOrMessage || 'role' in contentOrMessage)) {
+      textContent = this.extractAllMessageText(contentOrMessage);
+    } else {
+      textContent = this.extractTextContent(contentOrMessage as string | any[]);
+    }
     
     // If no text content, allow (nothing to check)
     if (!textContent) {

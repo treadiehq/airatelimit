@@ -262,14 +262,62 @@ export class AnonymizationService {
   }
 
   /**
+   * Anonymize tool_calls and function_call fields on a message.
+   * Returns a shallow copy with anonymized arguments.
+   */
+  private anonymizeToolFields(
+    message: any,
+    config: Partial<AnonymizationConfig>,
+  ): { message: any; piiDetected: boolean; replacementCount: number } {
+    let piiDetected = false;
+    let replacementCount = 0;
+    const updated = { ...message };
+
+    // Anonymize tool_calls[].function.arguments (OpenAI function calling format)
+    if (Array.isArray(updated.tool_calls)) {
+      updated.tool_calls = updated.tool_calls.map((call: any) => {
+        if (call.function?.arguments && typeof call.function.arguments === 'string') {
+          const result = this.anonymizeText(call.function.arguments, config);
+          if (result.piiDetected) {
+            piiDetected = true;
+            replacementCount += result.replacements.length;
+          }
+          return {
+            ...call,
+            function: { ...call.function, arguments: result.text },
+          };
+        }
+        return call;
+      });
+    }
+
+    // Anonymize function_call.arguments (legacy OpenAI function calling format)
+    if (updated.function_call?.arguments && typeof updated.function_call.arguments === 'string') {
+      const result = this.anonymizeText(updated.function_call.arguments, config);
+      if (result.piiDetected) {
+        piiDetected = true;
+        replacementCount += result.replacements.length;
+      }
+      updated.function_call = { ...updated.function_call, arguments: result.text };
+    }
+
+    return { message: updated, piiDetected, replacementCount };
+  }
+
+  /**
    * Anonymize messages array (for chat completions)
-   * Handles both string content and array content (multimodal/vision models)
+   * Handles both string content and array content (multimodal/vision models),
+   * as well as tool_calls and function_call arguments.
+   *
+   * SECURITY: The entire messages array is user-controlled input.
+   * PII can appear in any role and in any text field, so all messages
+   * and all text-bearing fields are scanned.
    */
   anonymizeMessages(
-    messages: Array<{ role: string; content: string | any[] }>,
+    messages: Array<any>,
     config: Partial<AnonymizationConfig> = {},
   ): {
-    messages: Array<{ role: string; content: string | any[] }>;
+    messages: Array<any>;
     piiDetected: boolean;
     totalReplacements: number;
   } {
@@ -277,21 +325,27 @@ export class AnonymizationService {
     let totalReplacements = 0;
 
     const anonymizedMessages = messages.map((message) => {
-      // Only anonymize user messages by default (assistant/system messages are our own)
-      if (message.role !== 'user') {
-        return message;
+      let updated = { ...message };
+
+      // Anonymize content field (string or multimodal array)
+      if (updated.content !== undefined && updated.content !== null) {
+        const contentResult = this.anonymizeContent(updated.content, config);
+        if (contentResult.piiDetected) {
+          piiDetected = true;
+          totalReplacements += contentResult.replacementCount;
+        }
+        updated.content = contentResult.content;
       }
 
-      const result = this.anonymizeContent(message.content, config);
-      if (result.piiDetected) {
+      // Anonymize tool_calls and function_call arguments
+      const toolResult = this.anonymizeToolFields(updated, config);
+      if (toolResult.piiDetected) {
         piiDetected = true;
-        totalReplacements += result.replacementCount;
+        totalReplacements += toolResult.replacementCount;
       }
+      updated = toolResult.message;
 
-      return {
-        ...message,
-        content: result.content,
-      };
+      return updated;
     });
 
     return { messages: anonymizedMessages, piiDetected, totalReplacements };
@@ -308,19 +362,59 @@ export class AnonymizationService {
   }
 
   /**
-   * Check if content contains PII without modifying it
-   * Handles both string content and array content (multimodal/vision models)
+   * Extract all scannable text from a message object.
+   * Collects text from content, tool_calls, function_call, and name fields.
+   */
+  private extractAllMessageText(message: any): string {
+    const parts: string[] = [];
+
+    if (message.content !== undefined && message.content !== null) {
+      const contentText = this.extractTextContent(message.content);
+      if (contentText) {
+        parts.push(contentText);
+      }
+    }
+
+    if (Array.isArray(message.tool_calls)) {
+      for (const call of message.tool_calls) {
+        if (call.function?.arguments) {
+          parts.push(call.function.arguments);
+        }
+      }
+    }
+
+    if (message.function_call?.arguments) {
+      parts.push(message.function_call.arguments);
+    }
+
+    return parts.join('\n');
+  }
+
+  /**
+   * Check if content contains PII without modifying it.
+   * Handles string content, array content (multimodal/vision models),
+   * and full message objects (inspects tool_calls/function_call arguments).
    */
   detectPII(
-    content: string | any[],
+    contentOrMessage: string | any[] | { content?: any; tool_calls?: any; function_call?: any },
     config: Partial<AnonymizationConfig> = {},
   ): {
     hasPII: boolean;
     types: string[];
     count: number;
   } {
-    // Extract text from content (handles both string and array formats)
-    const text = this.extractTextContent(content);
+    // Determine if this is a full message object or a content value
+    let text: string;
+    if (
+      contentOrMessage !== null &&
+      typeof contentOrMessage === 'object' &&
+      !Array.isArray(contentOrMessage) &&
+      ('tool_calls' in contentOrMessage || 'function_call' in contentOrMessage || 'role' in contentOrMessage)
+    ) {
+      text = this.extractAllMessageText(contentOrMessage);
+    } else {
+      text = this.extractTextContent(contentOrMessage as string | any[]);
+    }
     
     if (!text) {
       return { hasPII: false, types: [], count: 0 };

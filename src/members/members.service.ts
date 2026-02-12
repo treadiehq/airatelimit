@@ -8,8 +8,8 @@ import {
   Inject,
   forwardRef,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 import { OrganizationMember, MemberRole } from './organization-member.entity';
@@ -44,6 +44,8 @@ export class MembersService {
     private orgsRepo: Repository<Organization>,
     @InjectRepository(Project)
     private projectsRepo: Repository<Project>,
+    @InjectDataSource()
+    private dataSource: DataSource,
     private emailService: EmailService,
     private configService: ConfigService,
     @Inject(forwardRef(() => PlanService))
@@ -398,7 +400,10 @@ export class MembersService {
   }
 
   /**
-   * Remove a member from the organization
+   * Remove a member from the organization.
+   * Uses a database transaction to ensure the membership deletion and user
+   * update are atomic -- preventing a dangling organizationId that could
+   * lead to privilege escalation via ensureMembership.
    */
   async removeMember(
     organizationId: string,
@@ -456,12 +461,14 @@ export class MembersService {
       );
     }
 
-    // Remove member
-    await this.membersRepo.remove(member);
-
-    // Update user's organizationId to null
-    member.user.organizationId = null;
-    await this.usersRepo.save(member.user);
+    // Atomically remove membership and clear user's organizationId.
+    // If either operation fails, both are rolled back -- preventing
+    // a state where the user has organizationId set but no membership.
+    await this.dataSource.transaction(async (manager) => {
+      await manager.remove(member);
+      member.user.organizationId = null;
+      await manager.save(member.user);
+    });
 
     this.logger.log(
       `Member ${member.user.email} removed from organization ${organizationId}`,
@@ -481,7 +488,10 @@ export class MembersService {
   }
 
   /**
-   * Ensure a user has a membership record (for migration)
+   * Ensure a user has a membership record.
+   * Only used during initial signup (new org creation) where the user is the
+   * first member. Grants 'owner' only if the org has zero existing members;
+   * otherwise fail-safes to 'member' to prevent privilege escalation.
    */
   async ensureMembership(userId: string, organizationId: string): Promise<void> {
     const existing = await this.membersRepo.findOne({
@@ -489,10 +499,18 @@ export class MembersService {
     });
     
     if (!existing) {
+      // Only grant 'owner' if the organization has no members at all
+      // (i.e. this is genuinely the first user / org creator).
+      // Otherwise, fail-safe to 'member' to prevent privilege escalation
+      // from dangling organizationId references.
+      const memberCount = await this.membersRepo.count({
+        where: { organizationId },
+      });
+
       const member = this.membersRepo.create({
         userId,
         organizationId,
-        role: 'owner', // First user is always owner
+        role: memberCount === 0 ? 'owner' : 'member',
       });
       await this.membersRepo.save(member);
     }

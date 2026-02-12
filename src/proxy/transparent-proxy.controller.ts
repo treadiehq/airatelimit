@@ -1197,7 +1197,7 @@ export class TransparentProxyController {
         if (!securityResult.allowed || project.securityHeuristicsEnabled) {
           for (const message of processedBody.messages) {
             const heuristicResult =
-              this.securityService.checkAdvancedHeuristics(message.content);
+              this.securityService.checkAdvancedHeuristics(message);
             if (!heuristicResult.allowed) {
               securityResult.allowed = false;
               securityResult.reason = heuristicResult.reason;
@@ -1376,6 +1376,7 @@ export class TransparentProxyController {
           model,
           periodStart,
           responseFormat,
+          usageCheck.estimatedTokens,
         );
       } else {
         // Handle regular response
@@ -1406,6 +1407,7 @@ export class TransparentProxyController {
             inputTokens,
             outputTokens,
             cost,
+            estimatedTokens: usageCheck.estimatedTokens,
           });
 
           // Also track to sponsorship if using a sponsored token
@@ -1695,6 +1697,7 @@ export class TransparentProxyController {
         inputTokens: 0,
         outputTokens: 0,
         cost,
+        estimatedTokens: usageCheck.estimatedTokens,
       });
 
       console.log('Image generation completed:', {
@@ -1962,6 +1965,7 @@ export class TransparentProxyController {
         inputTokens: actualTokens,
         outputTokens: 0,
         cost,
+        estimatedTokens: usageCheck.estimatedTokens,
       });
 
       console.log('Embeddings completed:', {
@@ -2178,6 +2182,7 @@ export class TransparentProxyController {
         inputTokens: 0,
         outputTokens: 0,
         cost,
+        estimatedTokens: usageCheck.estimatedTokens,
       });
 
       console.log('Audio transcription completed:', {
@@ -2228,6 +2233,7 @@ export class TransparentProxyController {
     model: string,
     periodStart: Date,
     responseFormat: 'openai' | 'gemini' | 'anthropic' = 'openai',
+    estimatedTokens?: number,
   ) {
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
@@ -2340,6 +2346,7 @@ export class TransparentProxyController {
           inputTokens: finalInputTokens,
           outputTokens: finalOutputTokens,
           cost,
+          estimatedTokens,
         });
       }
     } catch (error) {

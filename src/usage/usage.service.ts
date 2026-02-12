@@ -37,6 +37,7 @@ interface CheckAndUpdateResult {
   usagePercent?: { requests?: number; tokens?: number }; // For rule engine
   promoActive?: boolean; // User has active promotional override
   giftedCreditsUsed?: boolean; // Gifted credits were consumed
+  estimatedTokens?: number; // Tokens reserved during check (must be passed to finalize for adjustment)
 }
 
 interface FinalizeParams {
@@ -46,6 +47,7 @@ interface FinalizeParams {
   session?: string; // Session ID
   periodStart: Date;
   actualTokensUsed: number;
+  estimatedTokens?: number; // Tokens reserved during checkAndUpdateUsage (for adjustment)
 }
 
 @Injectable()
@@ -126,8 +128,9 @@ export class UsageService {
     // Determine which limits to check
     // SMART DETECTION: If tier/identity has a limit set, check it regardless of project.limitType
     // This allows tier limits to work independently without requiring Basic Limits configuration
-    const hasTierRequestLimit = limits.requestLimit !== null && limits.requestLimit !== undefined && limits.requestLimit > 0;
-    const hasTierTokenLimit = limits.tokenLimit !== null && limits.tokenLimit !== undefined && limits.tokenLimit > 0;
+    // NOTE: >= 0 (not > 0) so that a limit of 0 correctly blocks all requests
+    const hasTierRequestLimit = limits.requestLimit !== null && limits.requestLimit !== undefined && limits.requestLimit >= 0;
+    const hasTierTokenLimit = limits.tokenLimit !== null && limits.tokenLimit !== undefined && limits.tokenLimit >= 0;
     
     // Check request limits if: tier has it set, OR project limitType includes requests
     const shouldCheckRequests = hasTierRequestLimit || 
@@ -137,12 +140,13 @@ export class UsageService {
       project.limitType === 'tokens' || project.limitType === 'both';
 
     // Effective limits (null = unlimited)
+    // NOTE: Use explicit !== null/undefined checks instead of truthiness to handle limit of 0
     const effectiveRequestLimit =
-      shouldCheckRequests && limits.requestLimit !== null && limits.requestLimit
+      shouldCheckRequests && limits.requestLimit !== null && limits.requestLimit !== undefined
       ? limits.requestLimit 
       : null;
     const effectiveTokenLimit =
-      shouldCheckTokens && limits.tokenLimit !== null && limits.tokenLimit
+      shouldCheckTokens && limits.tokenLimit !== null && limits.tokenLimit !== undefined
       ? limits.tokenLimit 
       : null;
 
@@ -154,35 +158,61 @@ export class UsageService {
       [project.id, identity, model, session, periodStartStr],
     );
 
-    // Step 2: Atomic UPDATE with limit check in WHERE clause
-    // This is the key: the UPDATE only succeeds if we're under the limit
-    // NOTE: We only increment requestsUsed here, NOT tokensUsed.
-    // Tokens are incremented later in finalizeUsageWithCost with actual values.
-    // This prevents double-counting (estimated + actual).
+    // Step 2: Atomic UPDATE with aggregate limit check via CTE
+    //
+    // Key changes vs. the old per-row check:
+    //   a) Aggregate usage across ALL models/sessions for the identity (or per-model
+    //      only, depending on whether the limit came from a model-specific config).
+    //      This prevents users from bypassing quotas by switching models or rotating
+    //      session IDs.
+    //   b) Reserve estimated tokens in the SET clause (tokensUsed += requestedTokens).
+    //      This prevents concurrent requests from all passing the token check before
+    //      any finalize runs. The finalizeUsageWithCost method will later adjust:
+    //        tokensUsed += (actualTokens - estimatedTokens)
+    //   c) FOR UPDATE in the CTE locks all relevant rows for this identity in the
+    //      period, serializing concurrent limit checks for the same identity.
     const updateResult = await this.usageRepository.query(
-      `UPDATE usage_counters
-       SET 
-         "requestsUsed" = "requestsUsed" + $1,
-         "updatedAt" = NOW()
-       WHERE 
-         "projectId" = $3
-         AND identity = $4
-         AND model = $5
-         AND "session" = $6
-         AND "periodStart" = $7
-         AND ($8::int IS NULL OR "requestsUsed" + $1 <= $8)
-         AND ($9::int IS NULL OR "tokensUsed" + $2 <= $9)
-       RETURNING *`,
+      `WITH aggregate AS (
+        SELECT
+          COALESCE(SUM("requestsUsed"), 0) as total_requests,
+          COALESCE(SUM("tokensUsed"), 0) as total_tokens,
+          COALESCE(SUM(CASE WHEN model = $5 THEN "requestsUsed" ELSE 0 END), 0) as model_requests,
+          COALESCE(SUM(CASE WHEN model = $5 THEN "tokensUsed" ELSE 0 END), 0) as model_tokens
+        FROM usage_counters
+        WHERE "projectId" = $3
+          AND identity = $4
+          AND "periodStart" = $7
+        FOR UPDATE
+      )
+      UPDATE usage_counters uc
+      SET
+        "requestsUsed" = uc."requestsUsed" + $1,
+        "tokensUsed" = uc."tokensUsed" + $2,
+        "updatedAt" = NOW()
+      FROM aggregate agg
+      WHERE
+        uc."projectId" = $3
+        AND uc.identity = $4
+        AND uc.model = $5
+        AND uc."session" = $6
+        AND uc."periodStart" = $7
+        AND ($8::int IS NULL OR
+          CASE WHEN $10::boolean THEN agg.model_requests ELSE agg.total_requests END + $1 <= $8)
+        AND ($9::int IS NULL OR
+          CASE WHEN $11::boolean THEN agg.model_tokens ELSE agg.total_tokens END + $2 <= $9)
+      RETURNING uc.*`,
       [
-        requestedRequests,
-        requestedTokens,
-        project.id,
-        identity,
-        model,
-        session,
-        periodStartStr,
-        effectiveRequestLimit,
-        effectiveTokenLimit,
+        requestedRequests,      // $1
+        requestedTokens,        // $2 (now reserved in tokensUsed)
+        project.id,             // $3
+        identity,               // $4
+        model,                  // $5
+        session,                // $6
+        periodStartStr,         // $7
+        effectiveRequestLimit,  // $8
+        effectiveTokenLimit,    // $9
+        limits.requestLimitModelScoped, // $10
+        limits.tokenLimitModelScoped,   // $11
       ],
     );
 
@@ -208,6 +238,7 @@ export class UsageService {
         allowed: true,
         usageCounter: usage,
         usagePercent,
+        estimatedTokens: requestedTokens,
       };
     }
 
@@ -221,37 +252,35 @@ export class UsageService {
     );
 
     if (giftResult.consumed) {
-      // Gifted credits covered the request - track usage but allow
-      // NOTE: Only increment requestsUsed here, NOT tokensUsed.
-      // Tokens are incremented later in finalizeUsageWithCost with actual values.
+      // Gifted credits covered the request - track usage and reserve tokens
       await this.usageRepository.query(
-        `UPDATE usage_counters SET "requestsUsed" = "requestsUsed" + $1, "updatedAt" = NOW()
+        `UPDATE usage_counters
+         SET "requestsUsed" = "requestsUsed" + $1, "tokensUsed" = "tokensUsed" + $2, "updatedAt" = NOW()
          WHERE "projectId" = $3 AND identity = $4 AND model = $5 AND "session" = $6 AND "periodStart" = $7`,
-        [requestedRequests, project.id, identity, model, session, periodStartStr],
+        [requestedRequests, requestedTokens, project.id, identity, model, session, periodStartStr],
       );
-      return { allowed: true, giftedCreditsUsed: true };
+      return { allowed: true, giftedCreditsUsed: true, estimatedTokens: requestedTokens };
     }
 
-    // Fetch current usage to include in the error message
-    const currentUsage = await this.usageRepository.findOne({
-      where: {
-        projectId: project.id,
-        identity,
-        model,
-        session,
-        periodStart,
-      },
-    });
+    // Fetch aggregate usage across appropriate scope for the error message
+    const aggregateUsage = await this.usageRepository.query(
+      `SELECT
+        COALESCE(SUM("requestsUsed"), 0) as total_requests,
+        COALESCE(SUM("tokensUsed"), 0) as total_tokens
+       FROM usage_counters
+       WHERE "projectId" = $1 AND identity = $2 AND "periodStart" = $3`,
+      [project.id, identity, periodStartStr],
+    );
 
-    const currentRequests = currentUsage?.requestsUsed || 0;
-    const currentTokens = currentUsage?.tokensUsed || 0;
+    const currentRequests = parseInt(aggregateUsage[0]?.total_requests || '0', 10);
+    const currentTokens = parseInt(aggregateUsage[0]?.total_tokens || '0', 10);
 
     // Determine which limit was exceeded
     const requestsExceeded =
-      effectiveRequestLimit &&
+      effectiveRequestLimit !== null &&
       currentRequests + requestedRequests > effectiveRequestLimit;
     const tokensExceeded =
-      effectiveTokenLimit &&
+      effectiveTokenLimit !== null &&
       currentTokens + requestedTokens > effectiveTokenLimit;
 
     const response = limits.customResponse || this.getLimitResponse(project);
@@ -386,6 +415,10 @@ export class UsageService {
   // Get limits with identity-aware hierarchy
   // Priority: identity limits > tier.modelLimits[model] > project.modelLimits[model] > tier general > project general
   // Note: -1 or null = explicitly unlimited (no fallback), undefined = fallback to next level
+  //
+  // Also returns scope flags indicating whether each limit came from a model-specific
+  // config (should be checked per-model) or a general config (should be checked globally
+  // across all models/sessions). This is critical for correct aggregation scope.
   private getLimitsForIdentity(
     project: Project,
     tier?: string,
@@ -399,6 +432,8 @@ export class UsageService {
     requestLimit?: number | null;
     tokenLimit?: number | null;
     customResponse?: any;
+    requestLimitModelScoped: boolean;
+    tokenLimitModelScoped: boolean;
   } {
     let limits: {
       requestLimit?: number | null;
@@ -406,11 +441,15 @@ export class UsageService {
       customResponse?: any;
     } = {};
 
-    // Start with project-level general limits as base
+    // Track whether each limit originated from a model-specific config
+    let requestLimitModelScoped = false;
+    let tokenLimitModelScoped = false;
+
+    // Start with project-level general limits as base (global scope)
     limits.requestLimit = project.dailyRequestLimit;
     limits.tokenLimit = project.dailyTokenLimit;
 
-    // Override with tier general limits if available
+    // Override with tier general limits if available (still global scope)
     if (tier && project.tiers && project.tiers[tier]) {
       const tierConfig = project.tiers[tier];
       if (tierConfig.requestLimit !== undefined) {
@@ -424,7 +463,7 @@ export class UsageService {
       }
     }
 
-    // Override with project-level model-specific limits if available
+    // Override with project-level model-specific limits if available (model scope)
     if (model && project.modelLimits && project.modelLimits[model]) {
       const modelConfig = project.modelLimits[model];
       if (modelConfig.requestLimit !== undefined) {
@@ -433,16 +472,18 @@ export class UsageService {
           modelConfig.requestLimit === -1 || modelConfig.requestLimit === null
             ? null
             : modelConfig.requestLimit;
+        requestLimitModelScoped = true;
       }
       if (modelConfig.tokenLimit !== undefined) {
         limits.tokenLimit =
           modelConfig.tokenLimit === -1 || modelConfig.tokenLimit === null
             ? null
             : modelConfig.tokenLimit;
+        tokenLimitModelScoped = true;
       }
     }
 
-    // Override with tier model-specific limits
+    // Override with tier model-specific limits (model scope)
     if (
       tier &&
       model &&
@@ -458,6 +499,7 @@ export class UsageService {
           tierModelConfig.requestLimit === null
             ? null
             : tierModelConfig.requestLimit;
+        requestLimitModelScoped = true;
       }
       if (tierModelConfig.tokenLimit !== undefined) {
         limits.tokenLimit =
@@ -465,10 +507,11 @@ export class UsageService {
           tierModelConfig.tokenLimit === null
             ? null
             : tierModelConfig.tokenLimit;
+        tokenLimitModelScoped = true;
       }
     }
 
-    // Override with identity-specific limits (HIGHEST PRIORITY)
+    // Override with identity-specific limits (HIGHEST PRIORITY, global scope)
     if (identityLimit) {
       if (
         identityLimit.requestLimit !== undefined &&
@@ -477,6 +520,7 @@ export class UsageService {
         // -1 means explicitly unlimited
         limits.requestLimit =
           identityLimit.requestLimit === -1 ? null : identityLimit.requestLimit;
+        requestLimitModelScoped = false; // Identity limits are global
       }
       if (
         identityLimit.tokenLimit !== undefined &&
@@ -484,13 +528,14 @@ export class UsageService {
       ) {
         limits.tokenLimit =
           identityLimit.tokenLimit === -1 ? null : identityLimit.tokenLimit;
+        tokenLimitModelScoped = false; // Identity limits are global
       }
       if (identityLimit.customResponse !== undefined) {
         limits.customResponse = identityLimit.customResponse;
       }
     }
 
-    return limits;
+    return { ...limits, requestLimitModelScoped, tokenLimitModelScoped };
   }
 
   async finalizeUsage(params: FinalizeParams): Promise<void> {
@@ -501,15 +546,21 @@ export class UsageService {
       session = '',
       periodStart,
       actualTokensUsed,
+      estimatedTokens = 0,
     } = params;
     const periodStartStr = periodStart.toISOString().split('T')[0];
 
-    // Atomic increment - no race condition
+    // Adjust tokensUsed: subtract the reserved estimate and add actual usage.
+    // Net effect: tokensUsed += (actualTokensUsed - estimatedTokens)
+    // If estimatedTokens is 0 (legacy callers / promo path), this adds the full actual amount.
+    const tokenAdjustment = actualTokensUsed - estimatedTokens;
+
+    // Atomic adjustment - no race condition
     await this.usageRepository.query(
       `UPDATE usage_counters
        SET "tokensUsed" = "tokensUsed" + $1, "updatedAt" = NOW()
        WHERE "projectId" = $2 AND identity = $3 AND model = $4 AND "session" = $5 AND "periodStart" = $6`,
-      [actualTokensUsed, project.id, identity, model, session, periodStartStr],
+      [tokenAdjustment, project.id, identity, model, session, periodStartStr],
     );
   }
 
@@ -522,6 +573,7 @@ export class UsageService {
     inputTokens: number;
     outputTokens: number;
     cost: number;
+    estimatedTokens?: number; // Tokens reserved during checkAndUpdateUsage (for adjustment)
   }): Promise<void> {
     const {
       project,
@@ -532,10 +584,17 @@ export class UsageService {
       inputTokens,
       outputTokens,
       cost,
+      estimatedTokens = 0,
     } = params;
     const periodStartStr = periodStart.toISOString().split('T')[0];
 
-    // Atomic increment - no race condition
+    // Adjust tokensUsed: subtract the reserved estimate and add actual usage.
+    // Net effect: tokensUsed += (actualTokens - estimatedTokens)
+    // If estimatedTokens is 0 (legacy callers / promo path), this adds the full actual amount.
+    const actualTokens = inputTokens + outputTokens;
+    const tokenAdjustment = actualTokens - estimatedTokens;
+
+    // Atomic adjustment - no race condition
     await this.usageRepository.query(
       `UPDATE usage_counters
        SET 
@@ -546,7 +605,7 @@ export class UsageService {
          "updatedAt" = NOW()
        WHERE "projectId" = $5 AND identity = $6 AND model = $7 AND "session" = $8 AND "periodStart" = $9`,
       [
-        inputTokens + outputTokens,
+        tokenAdjustment,
         inputTokens,
         outputTokens,
         cost,
@@ -563,7 +622,7 @@ export class UsageService {
       await this.incrementOrganizationUsage(
         project.organizationId,
         1, // 1 request
-        inputTokens + outputTokens,
+        actualTokens,
       );
     }
   }

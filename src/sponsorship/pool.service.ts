@@ -177,6 +177,15 @@ export class PoolService {
       throw new NotFoundException('Sponsorship not found');
     }
 
+    // Verify the pool owner has rights to this sponsorship.
+    // Only the sponsor (who created it) or the recipient (who was granted it)
+    // should be able to add it to their pool.
+    if (sponsorship.sponsorOrgId !== ownerOrgId && sponsorship.recipientOrgId !== ownerOrgId) {
+      throw new ForbiddenException(
+        'You do not have permission to add this sponsorship to a pool',
+      );
+    }
+
     // Check if sponsorship is already in this pool
     const existingMember = await this.memberRepository.findOne({
       where: { poolId, sponsorshipId: dto.sponsorshipId },

@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { ProjectsService } from '../../projects/projects.service';
 import { OrganizationsService } from '../../organizations/organizations.service';
+import { UsersService } from '../../users/users.service';
 
 /**
  * Guard that accepts either:
@@ -24,6 +25,7 @@ export class ProjectAuthGuard implements CanActivate {
     private configService: ConfigService,
     private projectsService: ProjectsService,
     private organizationsService: OrganizationsService,
+    private usersService: UsersService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -74,24 +76,45 @@ export class ProjectAuthGuard implements CanActivate {
   private async validateJwt(token: string, request: any): Promise<boolean> {
     try {
       const payload = await this.jwtService.verifyAsync(token, {
-        secret: this.configService.get<string>('JWT_SECRET'),
+        secret:
+          this.configService.get<string>('jwtSecret') ||
+          this.configService.get<string>('JWT_SECRET'),
       });
 
+      // Verify the user still exists in the database
+      const user = await this.usersService.findById(payload.sub);
+      if (!user) {
+        throw new UnauthorizedException('User no longer exists');
+      }
+
+      // Verify the user's organization context hasn't changed
+      if (
+        !payload.organizationId ||
+        payload.organizationId !== user.organizationId
+      ) {
+        throw new UnauthorizedException(
+          'Organization context has changed. Please log in again.',
+        );
+      }
+
       // Load organization with plan for PlanGuard
-      const organization = payload.organizationId
-        ? await this.organizationsService.findById(payload.organizationId)
-        : null;
+      const organization = await this.organizationsService.findById(
+        user.organizationId,
+      );
 
       request.user = {
-        userId: payload.sub,
-        email: payload.email,
-        organizationId: payload.organizationId,
+        userId: user.id,
+        email: user.email,
+        organizationId: user.organizationId,
         organization: organization ? { id: organization.id, plan: organization.plan } : null,
       };
       request.authType = 'jwt';
 
       return true;
-    } catch {
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
       throw new UnauthorizedException('Invalid token');
     }
   }

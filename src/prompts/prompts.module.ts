@@ -7,6 +7,7 @@ import { PromptsService } from './prompts.service';
 import { PromptsController } from './prompts.controller';
 import { ProjectsModule } from '../projects/projects.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { UsersModule } from '../users/users.module';
 import { ProjectAuthGuard } from '../common/guards/project-auth.guard';
 
 @Module({
@@ -14,6 +15,7 @@ import { ProjectAuthGuard } from '../common/guards/project-auth.guard';
     TypeOrmModule.forFeature([Prompt]),
     forwardRef(() => ProjectsModule),
     OrganizationsModule,
+    UsersModule,
     ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

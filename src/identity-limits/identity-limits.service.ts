@@ -152,6 +152,7 @@ export class IdentityLimitsService {
 
   /**
    * Gift tokens or requests to an identity (additive)
+   * Uses atomic upsert to prevent lost updates under concurrent access.
    */
   async giftCredits(
     projectId: string,
@@ -160,33 +161,34 @@ export class IdentityLimitsService {
     requests: number,
     reason?: string,
   ): Promise<IdentityLimit> {
-    let existing = await this.getForIdentity(projectId, identity);
+    const metadata = reason
+      ? JSON.stringify({
+          lastGiftReason: reason,
+          lastGiftDate: new Date().toISOString(),
+        })
+      : null;
 
-    if (!existing) {
-      // Create a new record for this identity
-      existing = this.identityLimitRepository.create({
-        projectId,
-        identity,
-        giftedTokens: 0,
-        giftedRequests: 0,
-        enabled: true,
-      });
-    }
+    // Atomic upsert: creates the row if missing, or atomically increments gifted credits.
+    // Using SQL arithmetic (col = col + value) ensures concurrent gifts are additive
+    // rather than overwriting each other via read-modify-write.
+    await this.identityLimitRepository.query(
+      `INSERT INTO identity_limits (id, "projectId", identity, "giftedTokens", "giftedRequests", enabled, metadata, "createdAt", "updatedAt")
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, true, $5::jsonb, NOW(), NOW())
+       ON CONFLICT ("projectId", identity)
+       DO UPDATE SET
+         "giftedTokens" = identity_limits."giftedTokens" + $3,
+         "giftedRequests" = identity_limits."giftedRequests" + $4,
+         metadata = CASE
+           WHEN $5::jsonb IS NOT NULL
+           THEN COALESCE(identity_limits.metadata, '{}'::jsonb) || $5::jsonb
+           ELSE identity_limits.metadata
+         END,
+         "updatedAt" = NOW()`,
+      [projectId, identity, tokens, requests, metadata],
+    );
 
-    // Add to existing gifted amounts
-    existing.giftedTokens = (existing.giftedTokens || 0) + tokens;
-    existing.giftedRequests = (existing.giftedRequests || 0) + requests;
-
-    // Store reason in metadata
-    if (reason) {
-      existing.metadata = {
-        ...existing.metadata,
-        lastGiftReason: reason,
-        lastGiftDate: new Date().toISOString(),
-      };
-    }
-
-    return this.identityLimitRepository.save(existing);
+    // Return the updated entity
+    return this.getForIdentity(projectId, identity) as Promise<IdentityLimit>;
   }
 
   /**
@@ -225,7 +227,8 @@ export class IdentityLimitsService {
 
   /**
    * Consume gifted credits (called when limits would be exceeded)
-   * Returns true if gifted credits were consumed, false if none available
+   * Returns true if gifted credits were consumed, false if none available.
+   * Uses atomic CTE with FOR UPDATE to prevent double-spending under concurrent access.
    */
   async consumeGiftedCredits(
     projectId: string,
@@ -233,19 +236,42 @@ export class IdentityLimitsService {
     tokensNeeded: number,
     requestsNeeded: number,
   ): Promise<{ consumed: boolean; tokensConsumed: number; requestsConsumed: number }> {
-    const existing = await this.getForIdentity(projectId, identity);
-    if (!existing) {
-      return { consumed: false, tokensConsumed: 0, requestsConsumed: 0 };
-    }
+    // Atomic consume: the CTE locks the row (FOR UPDATE) and computes consumption
+    // amounts from the current balance, then the UPDATE atomically deducts them.
+    // The WHERE clause (tokens_to_consume > 0 OR requests_to_consume > 0) ensures
+    // the UPDATE only proceeds if there are credits to consume, preventing
+    // double-spending when concurrent requests race for the same credits.
+    const result = await this.identityLimitRepository.query(
+      `WITH to_consume AS (
+        SELECT
+          id,
+          LEAST($3::int, COALESCE("giftedTokens", 0)) as tokens_to_consume,
+          LEAST($4::int, COALESCE("giftedRequests", 0)) as requests_to_consume
+        FROM identity_limits
+        WHERE "projectId" = $1 AND identity = $2
+        FOR UPDATE
+      )
+      UPDATE identity_limits il
+      SET
+        "giftedTokens" = COALESCE(il."giftedTokens", 0) - tc.tokens_to_consume,
+        "giftedRequests" = COALESCE(il."giftedRequests", 0) - tc.requests_to_consume,
+        "updatedAt" = NOW()
+      FROM to_consume tc
+      WHERE il.id = tc.id
+        AND (tc.tokens_to_consume > 0 OR tc.requests_to_consume > 0)
+      RETURNING tc.tokens_to_consume as "tokensConsumed", tc.requests_to_consume as "requestsConsumed"`,
+      [projectId, identity, tokensNeeded, requestsNeeded],
+    );
 
-    const tokensToConsume = Math.min(tokensNeeded, existing.giftedTokens || 0);
-    const requestsToConsume = Math.min(requestsNeeded, existing.giftedRequests || 0);
+    // TypeORM raw query returns [rows, affectedCount] for PostgreSQL
+    const rows = Array.isArray(result[0]) ? result[0] : result;
 
-    if (tokensToConsume > 0 || requestsToConsume > 0) {
-      existing.giftedTokens = (existing.giftedTokens || 0) - tokensToConsume;
-      existing.giftedRequests = (existing.giftedRequests || 0) - requestsToConsume;
-      await this.identityLimitRepository.save(existing);
-      return { consumed: true, tokensConsumed: tokensToConsume, requestsConsumed: requestsToConsume };
+    if (rows.length > 0) {
+      return {
+        consumed: true,
+        tokensConsumed: parseInt(rows[0].tokensConsumed, 10),
+        requestsConsumed: parseInt(rows[0].requestsConsumed, 10),
+      };
     }
 
     return { consumed: false, tokensConsumed: 0, requestsConsumed: 0 };

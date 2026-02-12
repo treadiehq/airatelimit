@@ -116,8 +116,16 @@ export class AuthService {
       inviteDetails.organizationId,
     );
 
-    // Accept the invite (this creates membership and deletes the invite)
-    await this.membersService.acceptInvite(inviteToken, user.id);
+    // Accept the invite (this creates membership and deletes the invite).
+    // If this fails, clean up the user to prevent a dangling organizationId
+    // that could lead to privilege escalation via ensureMembership.
+    try {
+      await this.membersService.acceptInvite(inviteToken, user.id);
+    } catch (error) {
+      // Rollback: remove the user to prevent dangling organizationId
+      await this.usersService.delete(user.id);
+      throw error;
+    }
 
     // Send magic link for first login
     await this.requestMagicLink({ email: user.email }, true);
@@ -281,8 +289,11 @@ export class AuthService {
         }
       }
 
-      // Ensure user has a membership record (for users created before team management)
-      await this.membersService.ensureMembership(user.id, user.organizationId);
+      // NOTE: ensureMembership was previously called here on every login, but this
+      // created a privilege escalation vulnerability: any user with a dangling
+      // organizationId (from a partial signup failure or incomplete member removal)
+      // would be silently re-added as 'owner'. Legacy users without membership
+      // records should be handled by a one-time migration, not the login flow.
     }
 
     // Generate JWT with organizationId

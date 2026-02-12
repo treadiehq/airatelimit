@@ -8,6 +8,7 @@ import { IdentityLimitsController } from './identity-limits.controller';
 import { ProjectsModule } from '../projects/projects.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { UsageModule } from '../usage/usage.module';
+import { UsersModule } from '../users/users.module';
 import { ProjectAuthGuard } from '../common/guards/project-auth.guard';
 
 @Module({
@@ -16,6 +17,7 @@ import { ProjectAuthGuard } from '../common/guards/project-auth.guard';
     forwardRef(() => ProjectsModule),
     OrganizationsModule,
     forwardRef(() => UsageModule),
+    UsersModule,
     ConfigModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
