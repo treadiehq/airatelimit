@@ -7,14 +7,15 @@ function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
   const nodeEnv = process.env.NODE_ENV || 'development';
   
-  if (nodeEnv === 'production') {
+  if (nodeEnv !== 'development' && nodeEnv !== 'test') {
     if (!secret) {
       throw new Error('CRITICAL: JWT_SECRET must be set in production');
     }
     if (secret.length < 32) {
       throw new Error('CRITICAL: JWT_SECRET must be at least 32 characters');
     }
-    if (secret.includes('change') || secret.includes('your-')) {
+    const lower = secret.toLowerCase();
+    if (lower.includes('change') || lower.includes('your-') || lower.includes('placeholder') || lower.includes('example')) {
       throw new Error('CRITICAL: JWT_SECRET contains placeholder text - please set a real secret');
     }
   }
@@ -33,12 +34,16 @@ function validateEncryptionKey(): void {
   const key = process.env.ENCRYPTION_KEY;
   const nodeEnv = process.env.NODE_ENV || 'development';
   
-  if (nodeEnv === 'production') {
+  if (nodeEnv !== 'development' && nodeEnv !== 'test') {
     if (!key) {
       throw new Error('CRITICAL: ENCRYPTION_KEY must be set in production to encrypt stored API keys');
     }
     if (key.length < 32) {
       throw new Error('CRITICAL: ENCRYPTION_KEY must be at least 32 characters');
+    }
+    const lower = key.toLowerCase();
+    if (lower.includes('change') || lower.includes('your-') || lower.includes('placeholder') || lower.includes('example')) {
+      throw new Error('CRITICAL: ENCRYPTION_KEY contains placeholder text - please set a real key');
     }
   } else if (!key) {
     console.warn('⚠️  ENCRYPTION_KEY not set - provider API keys will be stored in plaintext (dev only)');

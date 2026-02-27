@@ -254,6 +254,7 @@ export class PricingService {
     { pattern: /^gemini-3/i, pricing: { input: 2.0, output: 8.0 } },
     { pattern: /^gemini-2\.5-pro/i, pricing: { input: 1.5, output: 6.0 } },
     { pattern: /^gemini-2\.5/i, pricing: { input: 0.1, output: 0.4 } },
+    { pattern: /^gemini-2\.0-pro/i, pricing: { input: 1.25, output: 5.0 } },
     { pattern: /^gemini-2\.0/i, pricing: { input: 0.1, output: 0.4 } },
     { pattern: /^gemini-2/i, pricing: { input: 0.1, output: 0.4 } },
     { pattern: /^gemini-1\.5-pro/i, pricing: { input: 1.25, output: 5.0 } },
@@ -313,13 +314,16 @@ export class PricingService {
    * 4. Default fallback
    */
   getPricing(model: string): ModelPricing {
+    // Strip provider prefix (e.g. "openai/gpt-4o" → "gpt-4o", "anthropic/claude-3" → "claude-3")
+    const normalizedModel = model.includes('/') ? model.split('/').pop()! : model;
+
     // 1. Try exact match
-    if (this.pricing[model]) {
-      return this.pricing[model];
+    if (this.pricing[normalizedModel]) {
+      return this.pricing[normalizedModel];
     }
 
     // 2. Try case-insensitive exact match
-    const modelLower = model.toLowerCase();
+    const modelLower = normalizedModel.toLowerCase();
     for (const [key, pricing] of Object.entries(this.pricing)) {
       if (key.toLowerCase() === modelLower) {
         return pricing;
@@ -328,7 +332,7 @@ export class PricingService {
 
     // 3. Try pattern matching for model families
     for (const { pattern, pricing } of this.modelFamilyPatterns) {
-      if (pattern.test(model)) {
+      if (pattern.test(normalizedModel)) {
         return pricing;
       }
     }

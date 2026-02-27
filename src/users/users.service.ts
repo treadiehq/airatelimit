@@ -17,7 +17,7 @@ export class UsersService {
     password?: string,
   ): Promise<User> {
     const user = this.usersRepository.create({
-      email,
+      email: email.toLowerCase(),
       organizationId,
       passwordHash: password ? await bcrypt.hash(password, 10) : null,
     });
@@ -47,7 +47,7 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { email } });
+    return this.usersRepository.findOne({ where: { email: email.toLowerCase() } });
   }
 
   async findById(id: string): Promise<User | null> {
@@ -88,11 +88,11 @@ export class UsersService {
   }
 
   /**
-   * Find user by linked GitHub username
+   * Find user by linked GitHub username (lowercased for consistent matching with storage)
    */
   async findByGitHubUsername(username: string): Promise<User | null> {
     return this.usersRepository.findOne({
-      where: { linkedGitHubUsername: username },
+      where: { linkedGitHubUsername: username.toLowerCase() },
     });
   }
 

@@ -760,9 +760,15 @@ export class TransparentProxyController {
       return;
     }
 
+    // Track usage reservation for rollback on failure (failed requests must not consume quota)
+    let usageCheckResult: { allowed: boolean; estimatedTokens?: number } | null = null;
+    let projectForRollback: any = null;
+    let periodStartForRollback: Date | null = null;
+
     try {
       // Get project configuration
       const project = await this.projectsService.findByProjectKey(projectKey);
+      projectForRollback = project;
 
       // Get client IP for sponsorship IP restrictions
       const clientIp = this.getClientIp(req);
@@ -1240,6 +1246,7 @@ export class TransparentProxyController {
 
       // Get period start based on project's limit period
       const periodStart = this.getPeriodStart(project.limitPeriod || 'daily');
+      periodStartForRollback = periodStart;
 
       // Estimate tokens from input messages (for pre-check before request)
       // This closes the race condition window where requests could slip through
@@ -1347,6 +1354,8 @@ export class TransparentProxyController {
         return;
       }
 
+      usageCheckResult = usageCheck;
+
       // Get provider URL (provider already detected above for stored key resolution)
       const providerBaseUrl =
         this.transparentProxyService.getProviderUrl(provider);
@@ -1452,6 +1461,23 @@ export class TransparentProxyController {
         throw error;
       }
 
+      // Roll back usage reservation so failed requests do not consume quota
+      if (usageCheckResult?.allowed && projectForRollback && periodStartForRollback) {
+        try {
+          await this.usageService.rollbackUsage({
+            project: projectForRollback,
+            identity,
+            model,
+            session: sessionId,
+            periodStart: periodStartForRollback,
+            requestedRequests: 1,
+            requestedTokens: usageCheckResult.estimatedTokens ?? 0,
+          });
+        } catch (rollbackErr) {
+          console.error('Rollback usage failed:', rollbackErr);
+        }
+      }
+
       console.error('Transparent proxy error:', {
         projectKey,
         identity,
@@ -1514,6 +1540,8 @@ export class TransparentProxyController {
     const model = body.model || 'dall-e-3';
     const sessionId = session || '';
     const numImages = body.n || 1;
+
+    let imagesRollback: { project: any; periodStart: Date; requestedRequests: number; requestedTokens: number } | null = null;
 
     try {
       const project = await this.projectsService.findByProjectKey(projectKey);
@@ -1676,6 +1704,8 @@ export class TransparentProxyController {
         return;
       }
 
+      imagesRollback = { project, periodStart, requestedRequests: numImages, requestedTokens: usageCheck.estimatedTokens ?? 0 };
+
       // Forward to OpenAI
       const providerResponse =
         await this.transparentProxyService.forwardRequest(
@@ -1712,6 +1742,22 @@ export class TransparentProxyController {
       res.json(providerResponse);
     } catch (error) {
       if (error instanceof HttpException) throw error;
+
+      if (imagesRollback) {
+        try {
+          await this.usageService.rollbackUsage({
+            project: imagesRollback.project,
+            identity,
+            model,
+            session: sessionId,
+            periodStart: imagesRollback.periodStart,
+            requestedRequests: imagesRollback.requestedRequests,
+            requestedTokens: imagesRollback.requestedTokens,
+          });
+        } catch (rollbackErr) {
+          console.error('Rollback usage failed (images):', rollbackErr);
+        }
+      }
 
       console.error('Image generation error:', {
         projectKey,
@@ -1771,6 +1817,8 @@ export class TransparentProxyController {
     const startTime = Date.now();
     const model = body.model || 'text-embedding-3-small';
     const sessionId = session || '';
+
+    let embeddingsRollback: { project: any; periodStart: Date; requestedRequests: number; requestedTokens: number } | null = null;
 
     try {
       const project = await this.projectsService.findByProjectKey(projectKey);
@@ -1941,6 +1989,8 @@ export class TransparentProxyController {
         return;
       }
 
+      embeddingsRollback = { project, periodStart, requestedRequests: 1, requestedTokens: usageCheck.estimatedTokens ?? 0 };
+
       // Forward to OpenAI
       const providerResponse =
         await this.transparentProxyService.forwardRequest(
@@ -1980,6 +2030,22 @@ export class TransparentProxyController {
       res.json(providerResponse);
     } catch (error) {
       if (error instanceof HttpException) throw error;
+
+      if (embeddingsRollback) {
+        try {
+          await this.usageService.rollbackUsage({
+            project: embeddingsRollback.project,
+            identity,
+            model,
+            session: sessionId,
+            periodStart: embeddingsRollback.periodStart,
+            requestedRequests: embeddingsRollback.requestedRequests,
+            requestedTokens: embeddingsRollback.requestedTokens,
+          });
+        } catch (rollbackErr) {
+          console.error('Rollback usage failed (embeddings):', rollbackErr);
+        }
+      }
 
       console.error('Embeddings error:', {
         projectKey,
@@ -2034,6 +2100,8 @@ export class TransparentProxyController {
     const startTime = Date.now();
     const model = body.model || 'whisper-1';
     const sessionId = session || '';
+
+    let audioRollback: { project: any; periodStart: Date; requestedRequests: number; requestedTokens: number } | null = null;
 
     try {
       const project = await this.projectsService.findByProjectKey(projectKey);
@@ -2163,6 +2231,8 @@ export class TransparentProxyController {
         return;
       }
 
+      audioRollback = { project, periodStart, requestedRequests: 1, requestedTokens: usageCheck.estimatedTokens ?? 0 };
+
       // Forward to OpenAI (note: this endpoint typically uses multipart/form-data)
       const providerResponse =
         await this.transparentProxyService.forwardRequest(
@@ -2196,6 +2266,22 @@ export class TransparentProxyController {
       res.json(providerResponse);
     } catch (error) {
       if (error instanceof HttpException) throw error;
+
+      if (audioRollback) {
+        try {
+          await this.usageService.rollbackUsage({
+            project: audioRollback.project,
+            identity,
+            model,
+            session: sessionId,
+            periodStart: audioRollback.periodStart,
+            requestedRequests: audioRollback.requestedRequests,
+            requestedTokens: audioRollback.requestedTokens,
+          });
+        } catch (rollbackErr) {
+          console.error('Rollback usage failed (audio):', rollbackErr);
+        }
+      }
 
       console.error('Audio transcription error:', {
         projectKey,
@@ -2350,6 +2436,21 @@ export class TransparentProxyController {
         });
       }
     } catch (error) {
+      // Roll back usage reservation so failed streams do not consume quota
+      try {
+        await this.usageService.rollbackUsage({
+          project,
+          identity,
+          model,
+          session,
+          periodStart,
+          requestedRequests: 1,
+          requestedTokens: estimatedTokens ?? 0,
+        });
+      } catch (rollbackErr) {
+        console.error('Rollback usage failed (stream):', rollbackErr);
+      }
+
       console.error('Transparent proxy stream error:', {
         projectId: project.id,
         identity,
@@ -2733,23 +2834,43 @@ export class TransparentProxyController {
    * Estimate token count from chat messages in request body
    */
   private estimateMessageTokens(body: any): number {
-    if (!body.messages || !Array.isArray(body.messages)) {
-      return 0;
-    }
-
     let totalChars = 0;
-    for (const msg of body.messages) {
-      if (typeof msg.content === 'string') {
-        totalChars += msg.content.length;
-      } else if (Array.isArray(msg.content)) {
-        // Handle multi-modal content
-        for (const part of msg.content) {
-          if (part.type === 'text' && part.text) {
-            totalChars += part.text.length;
+
+    // OpenAI / Anthropic format: body.messages
+    if (body.messages && Array.isArray(body.messages)) {
+      for (const msg of body.messages) {
+        if (typeof msg.content === 'string') {
+          totalChars += msg.content.length;
+        } else if (Array.isArray(msg.content)) {
+          for (const part of msg.content) {
+            if (part.type === 'text' && part.text) {
+              totalChars += part.text.length;
+            }
           }
         }
       }
     }
+
+    // Native Gemini format: body.contents (parts with text)
+    if (body.contents && Array.isArray(body.contents)) {
+      for (const content of body.contents) {
+        if (content.parts && Array.isArray(content.parts)) {
+          for (const part of content.parts) {
+            if (part.text) {
+              totalChars += part.text.length;
+            }
+          }
+        }
+      }
+      // Also count systemInstruction
+      if (body.systemInstruction?.parts) {
+        for (const part of body.systemInstruction.parts) {
+          if (part.text) totalChars += part.text.length;
+        }
+      }
+    }
+
+    if (totalChars === 0) return 0;
 
     // Rough estimate: 1 token ≈ 4 characters for English
     return Math.ceil(totalChars / 4);

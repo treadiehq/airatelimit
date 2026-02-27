@@ -25,33 +25,18 @@ import { ConfigService } from '@nestjs/config';
           database: url.pathname.slice(1),
           entities: [__dirname + '/../**/*.entity{.ts,.js}'],
           
-          // Auto-create tables on startup (safe for new deployments)
-          synchronize: true,
-          
+          // Only auto-sync schema in development; production uses manual migrations
+          synchronize: !isProduction,
+
           // ====================================
-          // CONNECTION POOL SETTINGS
+          // CONNECTION POOL & QUERY SETTINGS (pg driver via extra)
           // ====================================
-          // Pool size based on environment
-          // Production: larger pool for concurrent requests
-          // Development: smaller pool to save resources
-          poolSize: isProduction ? 20 : 5,
-          
-          // Connection timeout (ms) - how long to wait for a connection from pool
-          connectionTimeoutMillis: 10000,
-          
-          // Idle timeout (ms) - how long a connection can be idle before being closed
-          idleTimeoutMillis: 30000,
-          
-          // ====================================
-          // QUERY SETTINGS
-          // ====================================
-          // Statement timeout (ms) - max time for a single query
-          // Prevents runaway queries from blocking the pool
           extra: {
-            statement_timeout: 30000, // 30 seconds max query time
-            idle_in_transaction_session_timeout: 60000, // 60 seconds max idle in transaction
-            // Enable prepared statements for better performance
             max: isProduction ? 20 : 5,
+            connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 30000,
+            statement_timeout: 30000,
+            idle_in_transaction_session_timeout: 60000,
           },
           
           // ====================================

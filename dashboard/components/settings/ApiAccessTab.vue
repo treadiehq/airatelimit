@@ -55,7 +55,7 @@
           </svg>
         </button>
         <button
-          v-if="project.secretKey"
+          v-if="canCopySecretKey"
           @click="copyKey(project.secretKey, 'Secret key copied!')"
           class="px-2.5 py-2 mr-2 rounded-lg bg-transparent hover:bg-gray-500/10 text-white transition-colors"
         >
@@ -124,6 +124,13 @@ const exampleCopied = ref(false)
 const maskedSecretKey = computed(() => {
   if (!props.project?.secretKey) return 'sk_xxxxxxxxxxxxxx'
   return 'sk_' + 'x'.repeat(props.project.secretKey.length - 3)
+})
+
+// Only show copy when we have the real key (create/regenerate response), not the API masked placeholder
+const canCopySecretKey = computed(() => {
+  const k = props.project?.secretKey
+  if (!k || k.length < 30) return false
+  return /[a-f0-9]/i.test(k) // real keys contain hex; placeholder is sk_••••••••••••
 })
 
 const copyKey = async (key: string, message: string) => {

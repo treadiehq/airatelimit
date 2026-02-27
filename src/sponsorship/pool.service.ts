@@ -405,9 +405,10 @@ export class PoolService {
       throw new NotFoundException('Pool token not found');
     }
 
-    token.isActive = false;
-    token.revokedAt = new Date();
-    await this.tokenRepository.save(token);
+    await this.tokenRepository.update(token.id, {
+      isActive: false,
+      revokedAt: new Date(),
+    });
   }
 
   /**
@@ -451,10 +452,16 @@ export class PoolService {
       return { success: false, error: 'Pool is inactive' };
     }
 
-    // Update token usage
-    token.lastUsedAt = new Date();
-    token.usageCount += 1;
-    await this.tokenRepository.save(token);
+    // Atomic usage update — avoids overwriting isActive on revoked tokens
+    await this.tokenRepository
+      .createQueryBuilder()
+      .update()
+      .set({
+        lastUsedAt: new Date(),
+        usageCount: () => '"usageCount" + 1',
+      })
+      .where('id = :id', { id: token.id })
+      .execute();
 
     // Get pool with members
     const pool = await this.poolRepository.findOne({

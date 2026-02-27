@@ -168,20 +168,11 @@ export class AuthService {
   }
 
   async requestMagicLink(dto: RequestMagicLinkDto, isNewUser: boolean = false) {
-    // Check if user exists FIRST - prevents attackers from consuming
-    // rate limit quota for legitimate users by making failed requests
-    const user = await this.usersService.findByEmail(dto.email);
+    const email = dto.email.toLowerCase();
 
-    // Don't auto-create users from login - they must sign up first
-    if (!user) {
-      throw new UnauthorizedException(
-        'No account found with this email. Please sign up first.',
-      );
-    }
-
-    // Only apply rate limiting for valid users - this prevents denial-of-service
-    // attacks where attackers lock out legitimate users by exhausting their quota
-    const rateLimitKey = `magic-link:${dto.email.toLowerCase()}`;
+    // Rate-limit ALL requests before any user lookup to prevent
+    // both enumeration and database flooding for unknown emails
+    const rateLimitKey = `magic-link:${email}`;
     const rateLimit = this.rateLimitService.check(
       rateLimitKey,
       this.MAGIC_LINK_LIMIT,
@@ -198,25 +189,30 @@ export class AuthService {
       );
     }
 
-    // Generate secure random token
-    const token = crypto.randomBytes(32).toString('hex');
+    const user = await this.usersService.findByEmail(email);
 
-    // Token expires in 15 minutes
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    if (user) {
+      // Generate secure random token
+      const token = crypto.randomBytes(32).toString('hex');
 
-    // Save token to user
-    await this.usersService.saveMagicLinkToken(user, token, expiresAt);
+      // Token expires in 15 minutes
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-    // Generate magic link
-    const frontendUrl =
-      this.configService.get('corsOrigin') || 'http://localhost:3001';
-    const magicLink = `${frontendUrl}/auth/verify?token=${token}`;
+      // Save token to user
+      await this.usersService.saveMagicLinkToken(user, token, expiresAt);
 
-    // Send email (or log to console in development)
-    await this.emailService.sendMagicLink(user.email, magicLink, isNewUser);
+      // Generate magic link
+      const frontendUrl =
+        this.configService.get('corsOrigin') || 'http://localhost:3001';
+      const magicLink = `${frontendUrl}/auth/verify?token=${token}`;
 
+      // Send email (or log to console in development)
+      await this.emailService.sendMagicLink(user.email, magicLink, isNewUser);
+    }
+
+    // Always return the same response to prevent email enumeration
     return {
-      message: 'Magic link sent! Check your email (or console in development).',
+      message: 'If an account exists for this email, a magic link has been sent.',
     };
   }
 

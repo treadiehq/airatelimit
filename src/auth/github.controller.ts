@@ -71,11 +71,11 @@ export class GitHubController {
       throw new UnauthorizedException('Invalid token payload');
     }
 
-    // Store user ID in state for the callback
-    const state = Buffer.from(JSON.stringify({
-      userId,
-      timestamp: Date.now(),
-    })).toString('base64');
+    // Sign the state with JWT to prevent forgery (OAuth CSRF protection)
+    const state = this.jwtService.sign(
+      { sub: userId, purpose: 'github-link' },
+      { expiresIn: '10m' },
+    );
 
     const params = new URLSearchParams({
       client_id: this.clientId,
@@ -111,14 +111,19 @@ export class GitHubController {
     }
 
     try {
-      // Decode state to get user ID
-      const stateData = JSON.parse(Buffer.from(state, 'base64').toString());
-      const { userId, timestamp } = stateData;
-
-      // Check state is not too old (10 min max)
-      if (Date.now() - timestamp > 10 * 60 * 1000) {
-        return res.redirect(`${redirectUrl}&github_error=expired`);
+      // Verify signed state to prevent OAuth CSRF / state forgery
+      let stateData: any;
+      try {
+        stateData = this.jwtService.verify(state);
+      } catch {
+        return res.redirect(`${redirectUrl}&github_error=invalid_state`);
       }
+
+      if (stateData.purpose !== 'github-link') {
+        return res.redirect(`${redirectUrl}&github_error=invalid_state`);
+      }
+
+      const userId = stateData.sub;
 
       // Exchange code for access token
       const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {

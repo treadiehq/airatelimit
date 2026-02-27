@@ -30,8 +30,8 @@ export class PoolToken {
   poolId: string;
 
   // Token hash for secure comparison
+  // unique: true already creates an index; no separate @Index() needed
   @Column({ unique: true })
-  @Index()
   tokenHash: string;
 
   // Token hint for display (last 4 chars)

@@ -7,7 +7,7 @@ import { CreateUserProjectDto } from './dto/create-user-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CryptoService } from '../common/crypto.service';
 import { PlanService } from '../common/services/plan.service';
-import { randomBytes } from 'crypto';
+import { randomBytes, timingSafeEqual } from 'crypto';
 
 @Injectable()
 export class ProjectsService {
@@ -252,8 +252,7 @@ export class ProjectsService {
       return this.findById(projectId);
     }
 
-    // Legacy format fallback: iterate through projects with hashes
-    // This is needed for keys created before the new format was introduced
+    // Legacy format fallback 1: projects with hashed keys (post-migration 005)
     const projectsWithHash = await this.projectsRepository
       .createQueryBuilder('project')
       .where('project.secretKeyHash IS NOT NULL')
@@ -269,17 +268,32 @@ export class ProjectsService {
       }
     }
 
+    // Legacy format fallback 2: projects with plaintext secretKey (pre-migration 005)
+    // Migration 005 added secretKeyHash; during transition both formats are supported
+    const legacyProject = await this.projectsRepository.findOne({
+      where: { secretKey },
+    });
+    if (legacyProject) {
+      return this.decryptProject(legacyProject);
+    }
+
     return null;
   }
 
   /**
    * Verify a secret key against a project (secure comparison)
+   * Supports both hashed keys (new format) and plaintext (legacy) during transition.
    */
   async verifySecretKey(secretKey: string, project: Project): Promise<boolean> {
-    if (!project.secretKeyHash) {
-      return false;
+    if (project.secretKeyHash) {
+      return this.cryptoService.verifySecretKey(secretKey, project.secretKeyHash);
     }
-    return this.cryptoService.verifySecretKey(secretKey, project.secretKeyHash);
+    // Legacy: plaintext secretKey (pre-migration 005)
+    if (project.secretKey) {
+      return secretKey.length === project.secretKey.length &&
+        timingSafeEqual(Buffer.from(secretKey, 'utf8'), Buffer.from(project.secretKey, 'utf8'));
+    }
+    return false;
   }
 
   private getDefaultBaseUrl(provider: string): string {

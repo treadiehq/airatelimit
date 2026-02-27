@@ -226,9 +226,25 @@ export class ProjectsController {
   /**
    * Mask sensitive API keys in project responses.
    * Only shows first few and last few characters to confirm key is configured.
+   * Never returns plaintext secretKey; uses masked hint when key exists (hash or legacy).
    */
   private maskApiKey(project: any) {
     const result = { ...project };
+
+    // One-time plaintext (create response only): return as secretKey then remove
+    if (result.secretKeyPlain) {
+      result.secretKey = result.secretKeyPlain;
+      delete result.secretKeyPlain;
+    }
+    // Mask or remove secretKey - never leak plaintext in other responses
+    else if (result.secretKey) {
+      const key = result.secretKey;
+      result.secretKey =
+        key.length > 11 ? key.substring(0, 7) + '****' + key.slice(-4) : 'sk_****';
+    } else if (result.secretKeyHash) {
+      // New-format: key is hashed; return masked hint so dashboard shows "key exists"
+      result.secretKey = 'sk_••••••••••••';
+    }
 
     // Mask legacy openaiApiKey
     if (result.openaiApiKey) {

@@ -8,6 +8,7 @@ import {
   Index,
 } from 'typeorm';
 import { Sponsorship } from './sponsorship.entity';
+import { Organization } from '../organizations/organization.entity';
 
 /**
  * Sponsored Token Entity
@@ -33,13 +34,17 @@ export class SponsoredToken {
   sponsorshipId: string;
 
   // Recipient organization (for claimable sponsorships where multiple orgs can claim)
+  @ManyToOne(() => Organization, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'recipientOrgId' })
+  recipientOrg: Organization;
+
   @Column({ nullable: true })
   @Index()
   recipientOrgId: string;
 
   // Token hash (SHA256) for fast O(1) database lookups
+  // unique: true already creates an index; no separate @Index() needed
   @Column({ unique: true })
-  @Index()
   tokenHash: string;
 
   // Token hint for display (last 4 chars, e.g., "...ab12")

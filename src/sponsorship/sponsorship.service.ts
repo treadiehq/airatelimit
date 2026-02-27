@@ -899,10 +899,16 @@ export class SponsorshipService {
 
     const sponsorship = token.sponsorship;
 
-    // Update usage stats
-    token.lastUsedAt = new Date();
-    token.usageCount += 1;
-    await this.sponsoredTokenRepository.save(token);
+    // Atomic usage update — avoids overwriting isActive on revoked tokens
+    await this.sponsoredTokenRepository
+      .createQueryBuilder()
+      .update()
+      .set({
+        lastUsedAt: new Date(),
+        usageCount: () => '"usageCount" + 1',
+      })
+      .where('id = :id', { id: token.id })
+      .execute();
 
     // Auto-link recipient org on first use if not already set
     if (recipientOrgId && !sponsorship.recipientOrgId) {

@@ -564,6 +564,50 @@ export class UsageService {
     );
   }
 
+  /**
+   * Roll back a usage reservation when the proxied request fails.
+   * Decrements requestsUsed and tokensUsed so failed requests do not consume quota.
+   */
+  async rollbackUsage(params: {
+    project: Project;
+    identity: string;
+    model?: string;
+    session?: string;
+    periodStart: Date;
+    requestedRequests: number;
+    requestedTokens: number;
+  }): Promise<void> {
+    const {
+      project,
+      identity,
+      model = '',
+      session = '',
+      periodStart,
+      requestedRequests,
+      requestedTokens,
+    } = params;
+    if (requestedRequests === 0 && requestedTokens === 0) return;
+    const periodStartStr = periodStart.toISOString().split('T')[0];
+
+    await this.usageRepository.query(
+      `UPDATE usage_counters
+       SET
+         "requestsUsed" = GREATEST(0, "requestsUsed" - $1),
+         "tokensUsed" = GREATEST(0, "tokensUsed" - $2),
+         "updatedAt" = NOW()
+       WHERE "projectId" = $3 AND identity = $4 AND model = $5 AND "session" = $6 AND "periodStart" = $7`,
+      [
+        requestedRequests,
+        requestedTokens,
+        project.id,
+        identity,
+        model,
+        session,
+        periodStartStr,
+      ],
+    );
+  }
+
   async finalizeUsageWithCost(params: {
     project: Project;
     identity: string;

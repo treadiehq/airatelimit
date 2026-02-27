@@ -67,15 +67,19 @@ export class IdentityLimitsService {
     const existing = await this.getForIdentity(projectId, dto.identity);
 
     if (existing) {
-      // Update existing
-      Object.assign(existing, {
-        requestLimit: dto.requestLimit ?? existing.requestLimit,
-        tokenLimit: dto.tokenLimit ?? existing.tokenLimit,
-        customResponse: dto.customResponse ?? existing.customResponse,
-        metadata: dto.metadata ?? existing.metadata,
-        enabled: dto.enabled ?? existing.enabled,
-      });
-      return this.identityLimitRepository.save(existing);
+      // Use a targeted update to avoid overwriting giftedTokens/giftedRequests
+      // with stale values from the loaded entity. Only touch caller-specified fields.
+      const updateData: Record<string, any> = {};
+      if ('requestLimit' in dto) updateData.requestLimit = dto.requestLimit;
+      if ('tokenLimit' in dto) updateData.tokenLimit = dto.tokenLimit;
+      if ('customResponse' in dto) updateData.customResponse = dto.customResponse;
+      if ('metadata' in dto) updateData.metadata = dto.metadata;
+      if ('enabled' in dto) updateData.enabled = dto.enabled;
+
+      if (Object.keys(updateData).length > 0) {
+        await this.identityLimitRepository.update(existing.id, updateData);
+      }
+      return this.getForIdentity(projectId, dto.identity) as Promise<IdentityLimit>;
     }
 
     // Create new
@@ -106,8 +110,9 @@ export class IdentityLimitsService {
       throw new NotFoundException(`No limits found for identity: ${identity}`);
     }
 
-    Object.assign(existing, dto);
-    return this.identityLimitRepository.save(existing);
+    // Targeted update to avoid overwriting gifted credit counters with stale values
+    await this.identityLimitRepository.update(existing.id, dto);
+    return this.getForIdentity(projectId, identity) as Promise<IdentityLimit>;
   }
 
   /**
@@ -236,30 +241,20 @@ export class IdentityLimitsService {
     tokensNeeded: number,
     requestsNeeded: number,
   ): Promise<{ consumed: boolean; tokensConsumed: number; requestsConsumed: number }> {
-    // Atomic consume: the CTE locks the row (FOR UPDATE) and computes consumption
-    // amounts from the current balance, then the UPDATE atomically deducts them.
-    // The WHERE clause (tokens_to_consume > 0 OR requests_to_consume > 0) ensures
-    // the UPDATE only proceeds if there are credits to consume, preventing
-    // double-spending when concurrent requests race for the same credits.
+    // Only consume if gifted balance fully covers the request.
+    // The WHERE clause ensures both token and request balances are sufficient;
+    // if either is short the UPDATE matches zero rows and nothing is deducted.
     const result = await this.identityLimitRepository.query(
-      `WITH to_consume AS (
-        SELECT
-          id,
-          LEAST($3::int, COALESCE("giftedTokens", 0)) as tokens_to_consume,
-          LEAST($4::int, COALESCE("giftedRequests", 0)) as requests_to_consume
-        FROM identity_limits
-        WHERE "projectId" = $1 AND identity = $2
-        FOR UPDATE
-      )
-      UPDATE identity_limits il
-      SET
-        "giftedTokens" = COALESCE(il."giftedTokens", 0) - tc.tokens_to_consume,
-        "giftedRequests" = COALESCE(il."giftedRequests", 0) - tc.requests_to_consume,
-        "updatedAt" = NOW()
-      FROM to_consume tc
-      WHERE il.id = tc.id
-        AND (tc.tokens_to_consume > 0 OR tc.requests_to_consume > 0)
-      RETURNING tc.tokens_to_consume as "tokensConsumed", tc.requests_to_consume as "requestsConsumed"`,
+      `UPDATE identity_limits
+       SET
+         "giftedTokens" = "giftedTokens" - $3,
+         "giftedRequests" = "giftedRequests" - $4,
+         "updatedAt" = NOW()
+       WHERE "projectId" = $1
+         AND identity = $2
+         AND COALESCE("giftedTokens", 0) >= $3
+         AND COALESCE("giftedRequests", 0) >= $4
+       RETURNING $3::int as "tokensConsumed", $4::int as "requestsConsumed"`,
       [projectId, identity, tokensNeeded, requestsNeeded],
     );
 
