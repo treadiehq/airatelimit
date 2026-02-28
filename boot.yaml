@@ -1,0 +1,30 @@
+name: ai-ratelimit
+setup:
+  - npm install
+apps:
+  - name: ai-ratelimit
+    command: npm run dev
+    port: 3000
+  - name: dashboard
+    path: dashboard
+    command: npm run dev
+    port: 3001
+docker:
+  containers:
+    - name: ai-proxy-db
+      image: postgres:15
+      ports:
+        - 5433:5432
+      env:
+        POSTGRES_DB: ai_proxy
+        POSTGRES_PASSWORD: boot_dev_password
+      readyCheck: pg_isready -U postgres
+      timeout: 30
+env:
+  file: .env
+  required:
+    - DATABASE_URL
+    - JWT_SECRET
+  reject:
+    JWT_SECRET:
+      - your-super-secret-jwt-key-change-this
