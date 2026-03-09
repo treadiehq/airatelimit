@@ -20,6 +20,11 @@ export const useApi = () => {
     })
 
     if (!response.ok) {
+      // Session expired or invalid — clear auth and redirect to login
+      if (response.status === 401) {
+        const { logout } = useAuth()
+        logout()
+      }
       const error = await response.json().catch(() => ({ message: 'Request failed' }))
       throw new Error(error.message || 'Request failed')
     }
