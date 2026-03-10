@@ -5,12 +5,12 @@
     <NavHeader />
 
     <!-- Hero Section -->
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-5 relative z-10">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-5 relative z-10">
       <div class="text-center">
         <!-- Main Heading -->
         <div class="mb-14">
-          <h1 class="mx-auto w-full text-balance text-center font-semibold tracking-tight text-white max-w-3xl text-3xl !leading-[1.2] sm:text-4xl md:text-5xl lg:text-6xl">
-            The <span class="text-blue-300">AI backend</span> your mobile app needs
+          <h1 class="mx-auto w-full text-balance text-center font-semibold tracking-tight text-white max-w-4xl text-3xl !leading-[1.2] sm:text-4xl md:text-5xl lg:text-6xl">
+            Rate limits, key management, and cost tracking <span class="text-blue-300">for your AI app</span>.
           </h1>
           
           <!-- Subheading -->
