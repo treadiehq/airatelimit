@@ -32,6 +32,10 @@ export interface FeatureFlags {
   // Allows sponsors to donate API usage to recipients
   sponsoredUsage: boolean;
 
+  // === BYOK - Bring Your Own Key (cloud + enterprise) ===
+  // Allows end-users to store their own API keys
+  byok: boolean;
+
   // === Core Features (always available) ===
   rateLimiting: boolean;
   costTracking: boolean;
@@ -84,6 +88,8 @@ export function getFeatureFlags(): FeatureFlags {
         prioritySupport: true,
         // Sponsored Usage - enabled
         sponsoredUsage: true,
+        // BYOK - enabled (gated by plan)
+        byok: true,
       };
 
     case 'enterprise':
@@ -107,6 +113,8 @@ export function getFeatureFlags(): FeatureFlags {
         prioritySupport: true,
         // Sponsored Usage - enabled
         sponsoredUsage: true,
+        // BYOK - enabled (enterprise license)
+        byok: true,
       };
 
     case 'self-hosted':
@@ -131,6 +139,8 @@ export function getFeatureFlags(): FeatureFlags {
         prioritySupport: false,
         // Sponsored Usage - disabled
         sponsoredUsage: false,
+        // BYOK - disabled (requires enterprise license)
+        byok: false,
       };
   }
 }

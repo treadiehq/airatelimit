@@ -25,6 +25,7 @@ export interface DashboardFeatures {
   showWebhooks: boolean
   showDataExport: boolean
   showSponsoredUsage: boolean  // Show sponsored usage feature
+  showBYOK: boolean            // Show BYOK (Bring Your Own Key) feature
 
   // === Marketing/Upsell ===
   showEnterpriseUpsell: boolean  // Show upgrade CTA for self-hosted
@@ -73,6 +74,7 @@ export const useFeatures = () => {
       showWebhooks: m !== 'self-hosted',
       showDataExport: m !== 'self-hosted',
       showSponsoredUsage: m !== 'self-hosted',
+      showBYOK: m !== 'self-hosted',  // BYOK available in cloud + enterprise
 
       // === Marketing/Upsell ===
       // Show upgrade prompts only to self-hosted users

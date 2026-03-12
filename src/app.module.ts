@@ -16,6 +16,7 @@ import { MembersModule } from './members/members.module';
 import { AdminModule } from './admin/admin.module';
 import { SponsorshipModule } from './sponsorship/sponsorship.module';
 import { OgModule } from './og/og.module';
+import { ByokModule } from './byok/byok.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { OgModule } from './og/og.module';
     AdminModule,
     SponsorshipModule,
     OgModule,
+    ByokModule,
     // Conditionally loaded based on DEPLOYMENT_MODE
     BillingModule.register(),
   ],

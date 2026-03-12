@@ -28,6 +28,7 @@ export interface PlanLimits {
   dedicatedSupport: boolean;
   auditLogs: boolean;
   sso: boolean;
+  byok: boolean;             // BYOK: end-users store their own API keys
 }
 
 export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
@@ -51,6 +52,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     dedicatedSupport: false,
     auditLogs: false,
     sso: false,
+    byok: false,
   },
   
   basic: {
@@ -72,6 +74,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     dedicatedSupport: false,
     auditLogs: false,
     sso: false,
+    byok: false,
   },
   
   pro: {
@@ -93,6 +96,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     dedicatedSupport: false,
     auditLogs: false,
     sso: false,
+    byok: true,  // Pro feature
   },
   
   enterprise: {
@@ -114,6 +118,7 @@ export const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
     dedicatedSupport: true,
     auditLogs: true,
     sso: true,
+    byok: true,  // Enterprise feature
   },
 };
 
@@ -168,6 +173,7 @@ export const FEATURE_NAMES: Record<keyof PlanLimits, string> = {
   dedicatedSupport: 'Dedicated Support',
   auditLogs: 'Audit Logs',
   sso: 'SSO / SAML',
+  byok: 'BYOK (Bring Your Own Key)',
 };
 
 /**
@@ -192,5 +198,6 @@ export const FEATURE_MIN_PLAN: Record<keyof PlanLimits, PlanType> = {
   dedicatedSupport: 'enterprise',
   auditLogs: 'enterprise',
   sso: 'enterprise',
+  byok: 'pro',
 };
 

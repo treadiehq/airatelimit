@@ -35,6 +35,8 @@ import { isCloudMode, isFeatureEnabled } from '../config/features';
 import { LicenseGuard } from '../common/guards/license.guard';
 import { SponsorshipService } from '../sponsorship/sponsorship.service';
 import { PoolService } from '../sponsorship/pool.service';
+import { ByokService } from '../byok/byok.service';
+import { ByokProvider } from '../byok/user-key.entity';
 
 // ====================================
 // SECURITY CONSTANTS
@@ -76,6 +78,7 @@ export class TransparentProxyController {
     private readonly sponsorshipService: SponsorshipService,
     @Inject(forwardRef(() => PoolService))
     private readonly poolService: PoolService,
+    private readonly byokService: ByokService,
     @InjectRepository(SecurityEvent)
     private readonly securityEventRepository: Repository<SecurityEvent>,
     @InjectRepository(AnonymizationLog)
@@ -893,7 +896,7 @@ export class TransparentProxyController {
       }
 
       // ====================================
-      // RESOLVE API KEY: Stored keys, sponsored tokens, or pass-through
+      // RESOLVE API KEY: BYOK, Stored keys, sponsored tokens, or pass-through
       // ====================================
       // Detect provider from model to look up stored key (may be re-detected after smart routing)
       let provider = this.transparentProxyService.detectProvider(model);
@@ -902,8 +905,45 @@ export class TransparentProxyController {
         sponsorshipId: string;
         tokenProvider: string;
       } | null = null;
+      let byokUsed = false;
 
-      if (!authorization) {
+      // ====================================
+      // BYOK: Check for user's own API key first
+      // ====================================
+      if (!authorization && identity && isFeatureEnabled('byok')) {
+        try {
+          const byokKey = await this.byokService.getDecryptedKey(
+            project.organizationId,
+            identity,
+            provider as ByokProvider,
+          );
+
+          if (byokKey) {
+            resolvedAuthorization = `Bearer ${byokKey.apiKey}`;
+            byokUsed = true;
+            console.log('Using BYOK user key:', {
+              projectId: project.id,
+              identity,
+              provider,
+            });
+
+            // Update usage stats asynchronously (don't await)
+            this.byokService
+              .updateUsageStats(
+                project.organizationId,
+                identity,
+                provider as ByokProvider,
+                0, // Tokens will be updated after response
+              )
+              .catch((err) => console.error('Failed to update BYOK usage:', err));
+          }
+        } catch (err) {
+          // BYOK lookup failed, continue with other key resolution methods
+          console.warn('BYOK key lookup failed:', err.message);
+        }
+      }
+
+      if (!authorization && !byokUsed) {
         // Check if project has stored provider keys
         const storedConfig = project.providerKeys?.[provider];
         if (storedConfig?.apiKey) {
@@ -981,10 +1021,11 @@ export class TransparentProxyController {
           }
         } else {
           throw new UnauthorizedException(
-            `Missing Authorization header. Either pass your ${provider} API key in the Authorization header, or configure it in the dashboard under Provider Keys.`,
+            `Missing Authorization header. Either pass your ${provider} API key in the Authorization header, configure it in the dashboard under Provider Keys, or enable BYOK for user-provided keys.`,
           );
         }
       } else if (
+        !byokUsed &&
         this.isSponsoredToken(authorization) &&
         isFeatureEnabled('sponsoredUsage')
       ) {
@@ -1015,6 +1056,7 @@ export class TransparentProxyController {
           provider: sponsoredAuth.provider,
         });
       } else if (
+        !byokUsed &&
         this.isPoolToken(authorization) &&
         isFeatureEnabled('sponsoredUsage')
       ) {

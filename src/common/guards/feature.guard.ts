@@ -87,6 +87,7 @@ export class FeatureGuard implements CanActivate {
       dataExport: 'Data Export',
       prioritySupport: 'Priority Support',
       sponsoredUsage: 'Sponsored Usage',
+      byok: 'BYOK (Bring Your Own Key)',
       rateLimiting: 'Rate Limiting',
       costTracking: 'Cost Tracking',
       multiProvider: 'Multi-Provider Support',

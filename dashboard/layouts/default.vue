@@ -36,6 +36,18 @@
             >
               Sponsorship
             </NuxtLink>
+            <NuxtLink
+              v-if="features.showBYOK && hasFeature('byok')"
+              to="/byok"
+              :class="[
+                'text-xs font-medium px-3 py-1.5 border rounded-lg border-transparent transition-colors',
+                $route.path.startsWith('/byok')
+                  ? 'text-white !border-gray-500/10 bg-gray-500/15'
+                  : 'text-gray-500 hover:text-white hover:bg-gray-500/15 hover:!border-gray-500/10'
+              ]"
+            >
+              BYOK
+            </NuxtLink>
           </div>
           
           <div class="flex items-center space-x-4">
@@ -221,6 +233,7 @@ const { features, mode, enterpriseUpgradeUrl, isEnterprise } = useFeatures()
 const { loadLicense, expirationWarning, isExpired: licenseExpired, daysRemaining: licenseDaysRemaining } = useLicense()
 const { isOwner, loadMembers } = useTeam()
 const { isAdmin, loadAdminStatus } = useAdmin()
+const { hasFeature } = usePlan()
 const api = useApi()
 
 const showDropdown = ref(false)

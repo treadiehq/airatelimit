@@ -23,6 +23,7 @@ export interface PlanLimits {
   dedicatedSupport: boolean;
   auditLogs: boolean;
   sso: boolean;
+  byok: boolean;
 }
 
 export interface PlanUsage {
@@ -54,6 +55,7 @@ const DEFAULT_LIMITS: PlanLimits = {
   dedicatedSupport: false,
   auditLogs: false,
   sso: false,
+  byok: false,
 };
 
 // Feature display names
@@ -76,6 +78,7 @@ export const FEATURE_NAMES: Record<keyof PlanLimits, string> = {
   dedicatedSupport: 'Dedicated Support',
   auditLogs: 'Audit Logs',
   sso: 'SSO / SAML',
+  byok: 'BYOK (Bring Your Own Key)',
 };
 
 // Minimum plan for each feature
@@ -98,6 +101,7 @@ export const FEATURE_MIN_PLAN: Record<keyof PlanLimits, string> = {
   dedicatedSupport: 'enterprise',
   auditLogs: 'enterprise',
   sso: 'enterprise',
+  byok: 'pro',
 };
 
 export function usePlan() {
@@ -137,6 +141,7 @@ export function usePlan() {
         dedicatedSupport: true,
         auditLogs: true,
         sso: true,
+        byok: true,
       };
       plan.value = 'enterprise';
       loaded.value = true;
@@ -164,6 +169,7 @@ export function usePlan() {
         dedicatedSupport: false,
         auditLogs: false,
         sso: false,
+        byok: false,  // BYOK requires enterprise license for self-hosted
       };
       plan.value = 'pro';
       loaded.value = true;
